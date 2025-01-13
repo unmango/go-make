@@ -8,3 +8,5 @@ type (
 	File     = token.File
 	FileSet  = token.FileSet
 )
+
+const NoPos = token.NoPos
