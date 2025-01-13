@@ -24,6 +24,10 @@ test_all:
 cover: cover.profile
 	go tool cover -func=$<
 
+clean:
+	rm -rf .make
+	rm -f cover.profile
+
 cover.profile: $(shell $(DEVCTL) list --go) | bin/ginkgo bin/devctl
 	$(GINKGO) run --coverprofile=cover.profile -r ./
 
