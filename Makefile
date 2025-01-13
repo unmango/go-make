@@ -21,6 +21,12 @@ tidy: go.sum
 test_all:
 	$(GINKGO) run -r ./
 
+cover: cover.profile
+	go tool cover -func=$<
+
+cover.profile: $(shell $(DEVCTL) list --go) | bin/ginkgo bin/devctl
+	$(GINKGO) run --coverprofile=cover.profile -r ./
+
 go.sum: go.mod $(shell $(DEVCTL) list --go) | bin/devctl
 	go mod tidy
 

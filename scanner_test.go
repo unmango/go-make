@@ -8,6 +8,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/unmango/go-make"
+	"github.com/unmango/go-make/internal/testing"
 	"github.com/unmango/go-make/token"
 )
 
@@ -116,5 +117,12 @@ var _ = Describe("Scanner", func() {
 
 		Expect(s.Scan()).To(BeTrue())
 		Expect(s.Token()).To(Equal(token.NEWLINE))
+	})
+
+	It("should return IO errors", func() {
+		s := make.NewScanner(testing.ErrReader("io error"))
+
+		Expect(s.Scan()).To(BeFalse())
+		Expect(s.Err()).To(MatchError("io error"))
 	})
 })
