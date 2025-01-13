@@ -1,7 +1,6 @@
 package make
 
 import (
-	"fmt"
 	"go/scanner"
 	"io"
 
@@ -20,9 +19,14 @@ type Parser struct {
 }
 
 func NewParser(r io.Reader) *Parser {
+	s := NewScanner(r)
+	s.Scan() // TODO: Cleaner priming
+
 	return &Parser{
-		s:    NewScanner(r),
+		s:    s,
 		file: &token.File{},
+		tok:  s.Token(),
+		lit:  s.Literal(),
 	}
 }
 
@@ -39,7 +43,7 @@ func (p *Parser) ParseFile() (*ast.File, error) {
 func (p *Parser) expect(tok token.Token) token.Pos {
 	pos := p.pos
 	if p.tok != tok {
-		p.error(pos, "'"+tok.String()+"'")
+		p.error(pos, "expected '"+tok.String()+"'")
 	}
 
 	p.next()
@@ -55,7 +59,6 @@ func (p *Parser) next() {
 	if p.s.Scan() {
 		// TODO: p.pos
 		p.tok, p.lit = p.s.Token(), p.s.Literal()
-		fmt.Println("set tok:", p.tok)
 	} else {
 		p.tok = token.EOF
 	}
@@ -80,15 +83,33 @@ func (p *Parser) parseFile() *ast.File {
 }
 
 func (p *Parser) parseRule() *ast.Rule {
-	var names []ast.FileName
+	if p.tok != token.IDENT {
+		p.expect(token.IDENT)
+		return nil
+	}
+
+	var targets []ast.FileName
 	for p.tok != token.COLON && p.tok != token.EOF {
-		names = append(names, p.parseFileName())
+		targets = append(targets, p.parseFileName())
+	}
+
+	var colon token.Pos
+	if p.tok == token.COLON {
+		colon = p.pos
+		p.next()
+	} else {
+		p.expect(token.COLON)
 	}
 
 	return &ast.Rule{
 		Targets: &ast.TargetList{
-			List: names,
+			List: targets,
 		},
+		Colon:   colon,
+		Pipe:    token.NoPos,
+		Semi:    token.NoPos,
+		PreReqs: &ast.PreReqList{},
+		Recipes: []*ast.Recipe{},
 	}
 }
 

@@ -11,11 +11,21 @@ import (
 
 var _ = Describe("Parser", func() {
 	It("should Parse", func() {
-		p := make.NewParser(&bytes.Buffer{})
+		buf := bytes.NewBufferString("target:")
+		p := make.NewParser(buf)
 
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f).NotTo(BeNil())
+	})
+
+	It("should error when starting at a colon", func() {
+		buf := bytes.NewBufferString(":")
+		p := make.NewParser(buf)
+
+		_, err := p.ParseFile()
+
+		Expect(err).To(MatchError("expected 'IDENT'"))
 	})
 })
