@@ -1,0 +1,4 @@
+.make/
+bin/
+*.test
+.envrc
