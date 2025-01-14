@@ -46,4 +46,69 @@ var _ = Describe("Ast", func() {
 			Expect(c.End()).To(Equal(token.Pos(437)))
 		})
 	})
+
+	Describe("Rule", func() {
+		It("should return the position of the first target", func() {
+			c := &ast.Rule{Targets: &ast.TargetList{
+				List: []ast.FileName{&ast.LiteralFileName{
+					Name: &ast.Ident{NamePos: token.Pos(69)},
+				}},
+			}}
+
+			Expect(c.Pos()).To(Equal(token.Pos(69)))
+		})
+
+		It("should return the position after the final recipe", func() {
+			c := &ast.Rule{Recipes: []*ast.Recipe{{
+				TokPos: token.Pos(420),
+			}}}
+
+			// TODO: This is wrong, should be position after text
+			Expect(c.End()).To(Equal(token.Pos(420)))
+		})
+	})
+
+	Describe("TargetList", func() {
+		It("should return the position of the first target", func() {
+			c := &ast.TargetList{
+				List: []ast.FileName{&ast.LiteralFileName{
+					Name: &ast.Ident{NamePos: token.Pos(69)},
+				}},
+			}
+
+			Expect(c.Pos()).To(Equal(token.Pos(69)))
+		})
+
+		It("should return the position of the last target", func() {
+			c := &ast.TargetList{List: []ast.FileName{
+				&ast.LiteralFileName{Name: &ast.Ident{NamePos: token.Pos(69)}},
+				&ast.LiteralFileName{Name: &ast.Ident{NamePos: token.Pos(420)}},
+			}}
+
+			// TODO: This is wrong, should include the length of the name
+			Expect(c.End()).To(Equal(token.Pos(420)))
+		})
+	})
+
+	Describe("PreReqList", func() {
+		It("should return the position of the first target", func() {
+			c := &ast.PreReqList{
+				List: []ast.FileName{&ast.LiteralFileName{
+					Name: &ast.Ident{NamePos: token.Pos(69)},
+				}},
+			}
+
+			Expect(c.Pos()).To(Equal(token.Pos(69)))
+		})
+
+		It("should return the position after the lat prereq", func() {
+			c := &ast.PreReqList{List: []ast.FileName{
+				&ast.LiteralFileName{Name: &ast.Ident{NamePos: token.Pos(69)}},
+				&ast.LiteralFileName{Name: &ast.Ident{NamePos: token.Pos(420)}},
+			}}
+
+			// TODO: This is wrong, should include the length of the name
+			Expect(c.End()).To(Equal(token.Pos(420)))
+		})
+	})
 })
