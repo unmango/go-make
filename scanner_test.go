@@ -111,6 +111,19 @@ var _ = Describe("Scanner", func() {
 		},
 	)
 
+	DescribeTable("Scan comment tokens",
+		Entry(nil, "#", token.COMMENT),
+		func(input string, expected token.Token) {
+			buf := bytes.NewBufferString(input)
+			s := make.NewScanner(buf)
+
+			more := s.Scan()
+
+			Expect(s.Token()).To(Equal(expected))
+			Expect(more).To(BeTrueBecause("more to scan"))
+		},
+	)
+
 	It("should scan newline followed by token", func() {
 		buf := bytes.NewBufferString("\n ident")
 		s := make.NewScanner(buf)
