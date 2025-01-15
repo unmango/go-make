@@ -3,6 +3,7 @@ package make
 import (
 	"bufio"
 	"io"
+	"math"
 
 	"github.com/unmango/go-make/token"
 )
@@ -11,9 +12,10 @@ type Scanner struct {
 	file *token.File
 	s    *bufio.Scanner
 
-	offset int
-	tok    token.Token
-	lit    string
+	offset   int
+	rdOffset int
+	tok      token.Token
+	lit      string
 
 	done bool
 }
@@ -24,7 +26,7 @@ func NewScanner(r io.Reader) *Scanner {
 		s:    bufio.NewScanner(r),
 	}
 	s.s.Split(ScanTokens)
-	s.done = !s.s.Scan()
+	s.next()
 
 	return s
 }
@@ -104,7 +106,7 @@ func (s *Scanner) Scan() bool {
 		}
 	}
 
-	s.done = !s.s.Scan()
+	s.next()
 	if atNewline && s.done {
 		s.tok = token.EOF
 		return false
@@ -113,6 +115,15 @@ func (s *Scanner) Scan() bool {
 	}
 }
 
+func (s *Scanner) next() {
+	s.done = !s.s.Scan()
+	s.offset = s.rdOffset
+	s.rdOffset += len(s.s.Bytes())
+}
+
 func newFile(filename string) *token.File {
-	return newFileSet().AddFile(filename, 1, 0)
+	// TODO: Something about file size.
+	// Drop "streaming" support with [io.Reader]?
+	// Provide a size hint?
+	return newFileSet().AddFile(filename, 1, math.MaxInt-2)
 }
