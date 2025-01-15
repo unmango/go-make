@@ -8,16 +8,21 @@ import (
 )
 
 type Scanner struct {
-	s *bufio.Scanner
+	file *token.File
+	s    *bufio.Scanner
 
-	tok token.Token
-	lit string
+	offset int
+	tok    token.Token
+	lit    string
 
 	done bool
 }
 
 func NewScanner(r io.Reader) *Scanner {
-	s := &Scanner{s: bufio.NewScanner(r)}
+	s := &Scanner{
+		file: newFile("blah"),
+		s:    bufio.NewScanner(r),
+	}
 	s.s.Split(ScanTokens)
 	s.done = !s.s.Scan()
 
@@ -34,6 +39,10 @@ func (s Scanner) Token() token.Token {
 
 func (s Scanner) Literal() string {
 	return s.lit
+}
+
+func (s Scanner) Pos() token.Pos {
+	return s.file.Pos(s.offset)
 }
 
 func (s *Scanner) Scan() bool {
@@ -102,4 +111,8 @@ func (s *Scanner) Scan() bool {
 	} else {
 		return true
 	}
+}
+
+func newFile(filename string) *token.File {
+	return newFileSet().AddFile(filename, 1, 0)
 }
