@@ -514,6 +514,7 @@ var _ = Describe("Token", func() {
 			Entry(nil, "}"),
 			Entry(nil, ":"),
 			Entry(nil, "$"),
+			Entry(nil, "#"),
 			Entry(nil, ","),
 			Entry(nil, "="),
 			Entry(nil, ":="),
