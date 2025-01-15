@@ -1,12 +1,11 @@
 package ast_test
 
 import (
-	"go/token"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/unmango/go-make/ast"
+	"github.com/unmango/go-make/token"
 )
 
 var _ = Describe("Ast", func() {
@@ -82,11 +81,13 @@ var _ = Describe("Ast", func() {
 		It("should return the position of the last target", func() {
 			c := &ast.TargetList{List: []ast.FileName{
 				&ast.LiteralFileName{Name: &ast.Ident{NamePos: token.Pos(69)}},
-				&ast.LiteralFileName{Name: &ast.Ident{NamePos: token.Pos(420)}},
+				&ast.LiteralFileName{Name: &ast.Ident{
+					NamePos: token.Pos(420),
+					Name:    "foo",
+				}},
 			}}
 
-			// TODO: This is wrong, should include the length of the name
-			Expect(c.End()).To(Equal(token.Pos(420)))
+			Expect(c.End()).To(Equal(token.Pos(423)))
 		})
 	})
 
@@ -104,11 +105,71 @@ var _ = Describe("Ast", func() {
 		It("should return the position after the lat prereq", func() {
 			c := &ast.PreReqList{List: []ast.FileName{
 				&ast.LiteralFileName{Name: &ast.Ident{NamePos: token.Pos(69)}},
-				&ast.LiteralFileName{Name: &ast.Ident{NamePos: token.Pos(420)}},
+				&ast.LiteralFileName{Name: &ast.Ident{
+					NamePos: token.Pos(420),
+					Name:    "baz",
+				}},
 			}}
 
-			// TODO: This is wrong, should include the length of the name
-			Expect(c.End()).To(Equal(token.Pos(420)))
+			Expect(c.End()).To(Equal(token.Pos(423)))
+		})
+	})
+
+	Describe("LiteralFileName", func() {
+		It("should return the position of the identifier", func() {
+			c := &ast.LiteralFileName{Name: &ast.Ident{
+				NamePos: token.Pos(69),
+			}}
+
+			Expect(c.Pos()).To(Equal(token.Pos(69)))
+		})
+
+		It("should return the position after the identifier", func() {
+			c := &ast.LiteralFileName{Name: &ast.Ident{
+				NamePos: token.Pos(420),
+				Name:    "bar",
+			}}
+
+			Expect(c.End()).To(Equal(token.Pos(423)))
+		})
+	})
+
+	Describe("Recipe", func() {
+		It("should return the position of the tab", func() {
+			c := &ast.Recipe{
+				TokPos: token.Pos(420),
+			}
+
+			Expect(c.Pos()).To(Equal(token.Pos(420)))
+		})
+
+		It("should return the position after the text", func() {
+			c := &ast.Recipe{
+				TokPos: token.Pos(420),
+				Tok:    token.TAB,
+				Text:   "foo",
+			}
+
+			Expect(c.End()).To(Equal(token.Pos(423)))
+		})
+	})
+
+	Describe("Ident", func() {
+		It("should return the position of the name", func() {
+			c := &ast.Ident{
+				NamePos: token.Pos(69),
+			}
+
+			Expect(c.Pos()).To(Equal(token.Pos(69)))
+		})
+
+		It("should return the position after the name", func() {
+			c := &ast.Ident{
+				NamePos: token.Pos(420),
+				Name:    "foo",
+			}
+
+			Expect(c.End()).To(Equal(token.Pos(423)))
 		})
 	})
 })

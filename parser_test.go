@@ -10,7 +10,7 @@ import (
 )
 
 var _ = Describe("Parser", func() {
-	It("should Parse", func() {
+	It("should Parse a target", func() {
 		buf := bytes.NewBufferString("target:")
 		p := make.NewParser(buf)
 
