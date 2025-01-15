@@ -32,7 +32,9 @@ const (
 	RBRACE  // }
 	DOLLAR  // $
 	COLON   // :
+	SEMI    // ;
 	COMMA   // ,
+	PIPE    // |
 	NEWLINE // \n
 	TAB     // \t
 
@@ -119,7 +121,9 @@ var tokens = [...]string{
 	RBRACE:  "}",
 	DOLLAR:  "$",
 	COLON:   ":",
+	SEMI:    ";",
 	COMMA:   ",",
+	PIPE:    "|",
 	NEWLINE: "\n",
 	TAB:     "\t",
 
@@ -279,7 +283,7 @@ func IsIdentifier(name string) bool {
 		return false
 	}
 	switch name {
-	case "(", ")", "{", "}", "$", ":", ",", "\n", "\t", "#":
+	case "(", ")", "{", "}", "$", ":", ";", ",", "\n", "\t", "|", "#":
 		fallthrough
 	case "=", ":=", "::=", ":::=", "?=", "!=":
 		return false

@@ -508,11 +508,18 @@ var _ = Describe("Token", func() {
 			Entry(nil, "file"),
 			Entry(nil, "value"),
 			Entry(nil, ""),
+			func(keyword string) {
+				Expect(token.IsIdentifier(keyword)).To(BeFalse())
+			},
+		)
+
+		DescribeTable("special characters",
 			Entry(nil, "("),
 			Entry(nil, ")"),
 			Entry(nil, "{"),
 			Entry(nil, "}"),
 			Entry(nil, ":"),
+			Entry(nil, ";"),
 			Entry(nil, "$"),
 			Entry(nil, "#"),
 			Entry(nil, ","),
@@ -524,6 +531,7 @@ var _ = Describe("Token", func() {
 			Entry(nil, "\t"),
 			Entry(nil, "?="),
 			Entry(nil, "!="),
+			Entry(nil, "|"),
 			func(keyword string) {
 				Expect(token.IsIdentifier(keyword)).To(BeFalse())
 			},
