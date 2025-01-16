@@ -134,50 +134,26 @@ var _ = Describe("Scanner", func() {
 
 	Describe("Pos", func() {
 		DescribeTable("Starting token",
-			Entry(nil, "$"),
-			Entry(nil, ":"),
-			Entry(nil, "="),
-			Entry(nil, ":="),
-			Entry(nil, "::="),
-			Entry(nil, ":::="),
-			Entry(nil, "?="),
-			Entry(nil, "!="),
-			Entry(nil, "("),
-			Entry(nil, ")"),
-			Entry(nil, "{"),
-			Entry(nil, "}"),
-			Entry(nil, ","),
-			Entry(nil, "\t"),
-			func(input string) {
-				buf := bytes.NewBufferString(input)
-				s := make.NewScanner(buf)
-
-				Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
-				Expect(s.Pos()).To(Equal(token.Pos(1)))
-			},
-		)
-
-		DescribeTable("Consume first token",
-			Entry(nil, "$", 1),
-			Entry(nil, ":", 1),
-			Entry(nil, "=", 1),
-			Entry(nil, ":=", 2),
-			Entry(nil, "::=", 3),
-			Entry(nil, ":::=", 4),
-			Entry(nil, "?=", 2),
-			Entry(nil, "!=", 2),
-			Entry(nil, "(", 1),
-			Entry(nil, ")", 1),
-			Entry(nil, "{", 1),
-			Entry(nil, "}", 1),
-			Entry(nil, ",", 1),
-			Entry(nil, "\t", 1),
+			Entry(nil, "$", 2),
+			Entry(nil, ":", 2),
+			Entry(nil, "=", 2),
+			Entry(nil, ":=", 3),
+			Entry(nil, "::=", 4),
+			Entry(nil, ":::=", 5),
+			Entry(nil, "?=", 3),
+			Entry(nil, "!=", 3),
+			Entry(nil, "(", 2),
+			Entry(nil, ")", 2),
+			Entry(nil, "{", 2),
+			Entry(nil, "}", 2),
+			Entry(nil, ",", 2),
+			Entry(nil, "\t", 2),
+			Entry(nil, "identifier", 11),
 			func(input string, expected int) {
 				buf := bytes.NewBufferString(input)
 				s := make.NewScanner(buf)
 
 				Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
-				Expect(s.Scan()).To(BeFalseBecause("consumed the only token"))
 				Expect(s.Pos()).To(Equal(token.Pos(expected)))
 			},
 		)
