@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"bytes"
 	"io"
-	"math"
 
 	"github.com/unmango/go-make/token"
 )
@@ -127,11 +126,4 @@ func (s *Scanner) skipWhitespace() {
 	for bytes.ContainsAny(s.s.Bytes(), " \r") {
 		s.next()
 	}
-}
-
-func newFile(filename string) *token.File {
-	// TODO: Something about file size.
-	// Drop "streaming" support with [io.Reader]?
-	// Provide a size hint?
-	return newFileSet().AddFile(filename, 1, math.MaxInt-2)
 }

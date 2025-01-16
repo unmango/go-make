@@ -35,7 +35,7 @@ var _ = Describe("Scanner", func() {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
 
-			Expect(s.Scan()).To(BeTrueBecause("more to scan"))
+			Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
 			Expect(s.Token()).To(Equal(token.IDENT))
 			Expect(s.Literal()).To(Equal(strings.TrimSpace(input)))
 			Expect(s.Scan()).To(BeFalseBecause("at EOF"))
@@ -57,7 +57,7 @@ var _ = Describe("Scanner", func() {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
 
-			Expect(s.Scan()).To(BeTrueBecause("more to scan"))
+			Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
 			Expect(s.Token()).To(Equal(token.IDENT))
 			Expect(s.Literal()).To(Equal(strings.TrimSpace(input)))
 			Expect(s.Scan()).To(BeFalseBecause("at EOF"))
@@ -85,11 +85,11 @@ var _ = Describe("Scanner", func() {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
 
-			more := s.Scan()
+			ok := s.Scan()
 
 			Expect(s.Token()).To(Equal(token.IDENT))
 			Expect(s.Literal()).To(Equal("ident"))
-			Expect(more).To(BeTrueBecause("more to scan"))
+			Expect(ok).To(BeTrueBecause("scanned a token"))
 		},
 	)
 
@@ -112,10 +112,10 @@ var _ = Describe("Scanner", func() {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
 
-			more := s.Scan()
+			ok := s.Scan()
 
 			Expect(s.Token()).To(Equal(expected))
-			Expect(more).To(BeTrueBecause("more to scan"))
+			Expect(ok).To(BeTrueBecause("scanned a token"))
 		},
 	)
 
@@ -125,10 +125,10 @@ var _ = Describe("Scanner", func() {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
 
-			more := s.Scan()
+			ok := s.Scan()
 
 			Expect(s.Token()).To(Equal(expected))
-			Expect(more).To(BeTrueBecause("more to scan"))
+			Expect(ok).To(BeTrueBecause("scanned a token"))
 		},
 	)
 
@@ -197,6 +197,32 @@ var _ = Describe("Scanner", func() {
 			Entry(nil, ", foo", 6),
 			Entry(nil, "\t foo", 6),
 			Entry(nil, "identifier foo", 15),
+			func(input string, expected int) {
+				buf := bytes.NewBufferString(input)
+				s := make.NewScanner(buf, file)
+
+				Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
+				Expect(s.Scan()).To(BeTrueBecause("scanned another token"))
+				Expect(s.Pos()).To(Equal(token.Pos(expected)))
+			},
+		)
+
+		DescribeTable("Track lines",
+			Entry(nil, "$\n", 3),
+			Entry(nil, ":\n", 3),
+			Entry(nil, "=\n", 3),
+			Entry(nil, ":=\n", 4),
+			Entry(nil, "::=\n", 5),
+			Entry(nil, ":::=\n", 6),
+			Entry(nil, "?=\n", 4),
+			Entry(nil, "!=\n", 4),
+			Entry(nil, "(\n", 3),
+			Entry(nil, ")\n", 3),
+			Entry(nil, "{\n", 3),
+			Entry(nil, "}\n", 3),
+			Entry(nil, ",\n", 3),
+			Entry(nil, "\t\n", 3),
+			Entry(nil, "identifier\n", 12),
 			func(input string, expected int) {
 				buf := bytes.NewBufferString(input)
 				s := make.NewScanner(buf, file)
