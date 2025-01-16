@@ -18,13 +18,13 @@ type Parser struct {
 	lit string      // token literal
 }
 
-func NewParser(r io.Reader) *Parser {
-	s := NewScanner(r)
+func NewParser(r io.Reader, file *token.File) *Parser {
+	s := NewScanner(r, file)
 	s.Scan() // TODO: Cleaner priming
 
 	return &Parser{
 		s:    s,
-		file: &token.File{},
+		file: file, // TODO: Same file? Different file?
 		tok:  s.Token(),
 		lit:  s.Literal(),
 	}

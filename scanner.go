@@ -2,24 +2,31 @@ package make
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 
 	"github.com/unmango/go-make/token"
 )
 
 type Scanner struct {
-	s *bufio.Scanner
+	file *token.File
+	s    *bufio.Scanner
 
-	tok token.Token
-	lit string
+	offset   int
+	rdOffset int
+	tok      token.Token
+	lit      string
 
 	done bool
 }
 
-func NewScanner(r io.Reader) *Scanner {
-	s := &Scanner{s: bufio.NewScanner(r)}
+func NewScanner(r io.Reader, file *token.File) *Scanner {
+	s := &Scanner{
+		s:    bufio.NewScanner(r),
+		file: file,
+	}
 	s.s.Split(ScanTokens)
-	s.done = !s.s.Scan()
+	s.next()
 
 	return s
 }
@@ -36,6 +43,10 @@ func (s Scanner) Literal() string {
 	return s.lit
 }
 
+func (s Scanner) Pos() token.Pos {
+	return s.file.Pos(s.offset)
+}
+
 func (s *Scanner) Scan() bool {
 	if s.done {
 		s.tok = token.EOF
@@ -44,6 +55,7 @@ func (s *Scanner) Scan() bool {
 
 	var atNewline bool
 
+	s.skipWhitespace()
 	switch txt := s.s.Text(); {
 	case token.IsIdentifier(txt):
 		s.lit = txt
@@ -85,6 +97,10 @@ func (s *Scanner) Scan() bool {
 			s.tok = token.DOLLAR
 		case ":":
 			s.tok = token.COLON
+		case ";":
+			s.tok = token.SEMI
+		case "|":
+			s.tok = token.PIPE
 		case "#":
 			// TODO
 			// s.lit = s.scanComment()
@@ -95,11 +111,26 @@ func (s *Scanner) Scan() bool {
 		}
 	}
 
-	s.done = !s.s.Scan()
+	s.next()
 	if atNewline && s.done {
 		s.tok = token.EOF
 		return false
 	} else {
 		return true
+	}
+}
+
+func (s *Scanner) next() {
+	s.done = !s.s.Scan()
+	s.offset = s.rdOffset
+	if bytes.ContainsRune(s.s.Bytes(), '\n') {
+		s.file.AddLine(s.offset)
+	}
+	s.rdOffset += len(s.s.Bytes())
+}
+
+func (s *Scanner) skipWhitespace() {
+	for bytes.ContainsAny(s.s.Bytes(), " \r") {
+		s.next()
 	}
 }

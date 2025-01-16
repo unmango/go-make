@@ -2,6 +2,9 @@ package make_test
 
 import (
 	"bytes"
+	"go/token"
+	gotoken "go/token"
+	"math"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -10,9 +13,15 @@ import (
 )
 
 var _ = Describe("Parser", func() {
+	var file *token.File
+
+	BeforeEach(func() {
+		file = gotoken.NewFileSet().AddFile("test", 1, math.MaxInt-2)
+	})
+
 	It("should Parse a target", func() {
 		buf := bytes.NewBufferString("target:")
-		p := make.NewParser(buf)
+		p := make.NewParser(buf, file)
 
 		f, err := p.ParseFile()
 
@@ -22,7 +31,7 @@ var _ = Describe("Parser", func() {
 
 	It("should error when starting at a colon", func() {
 		buf := bytes.NewBufferString(":")
-		p := make.NewParser(buf)
+		p := make.NewParser(buf, file)
 
 		_, err := p.ParseFile()
 
