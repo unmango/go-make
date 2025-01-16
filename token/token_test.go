@@ -532,6 +532,7 @@ var _ = Describe("Token", func() {
 			Entry(nil, "?="),
 			Entry(nil, "!="),
 			Entry(nil, "|"),
+			Entry(nil, " "),
 			func(keyword string) {
 				Expect(token.IsIdentifier(keyword)).To(BeFalse())
 			},

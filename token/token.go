@@ -283,7 +283,7 @@ func IsIdentifier(name string) bool {
 		return false
 	}
 	switch name {
-	case "(", ")", "{", "}", "$", ":", ";", ",", "\n", "\t", "|", "#":
+	case "(", ")", "{", "}", "$", ":", ";", ",", "\n", "\t", "|", "#", " ":
 		fallthrough
 	case "=", ":=", "::=", ":::=", "?=", "!=":
 		return false
