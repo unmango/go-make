@@ -21,10 +21,10 @@ type Scanner struct {
 	done bool
 }
 
-func NewScanner(r io.Reader) *Scanner {
+func NewScanner(r io.Reader, file *token.File) *Scanner {
 	s := &Scanner{
-		file: newFile("blah"),
 		s:    bufio.NewScanner(r),
+		file: file,
 	}
 	s.s.Split(ScanTokens)
 	s.next()
