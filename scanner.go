@@ -2,6 +2,7 @@ package make
 
 import (
 	"bufio"
+	"bytes"
 	"io"
 	"math"
 
@@ -55,6 +56,7 @@ func (s *Scanner) Scan() bool {
 
 	var atNewline bool
 
+	s.skipWhitespace()
 	switch txt := s.s.Text(); {
 	case token.IsIdentifier(txt):
 		s.lit = txt
@@ -119,6 +121,12 @@ func (s *Scanner) next() {
 	s.done = !s.s.Scan()
 	s.offset = s.rdOffset
 	s.rdOffset += len(s.s.Bytes())
+}
+
+func (s *Scanner) skipWhitespace() {
+	for bytes.ContainsAny(s.s.Bytes(), " \r") {
+		s.next()
+	}
 }
 
 func newFile(filename string) *token.File {

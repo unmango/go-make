@@ -149,11 +149,52 @@ var _ = Describe("Scanner", func() {
 			Entry(nil, ",", 2),
 			Entry(nil, "\t", 2),
 			Entry(nil, "identifier", 11),
+			Entry(nil, "$ foo", 2),
+			Entry(nil, ": foo", 2),
+			Entry(nil, "= foo", 2),
+			Entry(nil, ":= foo", 3),
+			Entry(nil, "::= foo", 4),
+			Entry(nil, ":::= foo", 5),
+			Entry(nil, "?= foo", 3),
+			Entry(nil, "!= foo", 3),
+			Entry(nil, "( foo", 2),
+			Entry(nil, ") foo", 2),
+			Entry(nil, "{ foo", 2),
+			Entry(nil, "} foo", 2),
+			Entry(nil, ", foo", 2),
+			Entry(nil, "\t foo", 2),
+			Entry(nil, "identifier foo", 11),
 			func(input string, expected int) {
 				buf := bytes.NewBufferString(input)
 				s := make.NewScanner(buf)
 
 				Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
+				Expect(s.Pos()).To(Equal(token.Pos(expected)))
+			},
+		)
+
+		DescribeTable("Second token",
+			Entry(nil, "$ foo", 6),
+			Entry(nil, ": foo", 6),
+			Entry(nil, "= foo", 6),
+			Entry(nil, ":= foo", 7),
+			Entry(nil, "::= foo", 8),
+			Entry(nil, ":::= foo", 9),
+			Entry(nil, "?= foo", 7),
+			Entry(nil, "!= foo", 7),
+			Entry(nil, "( foo", 6),
+			Entry(nil, ") foo", 6),
+			Entry(nil, "{ foo", 6),
+			Entry(nil, "} foo", 6),
+			Entry(nil, ", foo", 6),
+			Entry(nil, "\t foo", 6),
+			Entry(nil, "identifier foo", 15),
+			func(input string, expected int) {
+				buf := bytes.NewBufferString(input)
+				s := make.NewScanner(buf)
+
+				Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
+				Expect(s.Scan()).To(BeTrueBecause("scanned another token"))
 				Expect(s.Pos()).To(Equal(token.Pos(expected)))
 			},
 		)
