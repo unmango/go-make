@@ -69,6 +69,8 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "ident $"),
 		Entry(nil, "ident:"),
 		Entry(nil, "ident :"),
+		Entry(nil, "ident ;"),
+		Entry(nil, "ident |"),
 		Entry(nil, "ident ="),
 		Entry(nil, "ident :="),
 		Entry(nil, "ident ::="),
@@ -96,6 +98,8 @@ var _ = Describe("Scanner", func() {
 	DescribeTable("Scan non-ident tokens",
 		Entry(nil, "$", token.DOLLAR),
 		Entry(nil, ":", token.COLON),
+		Entry(nil, ";", token.SEMI),
+		Entry(nil, "|", token.PIPE),
 		Entry(nil, "=", token.RECURSIVE_ASSIGN),
 		Entry(nil, ":=", token.SIMPLE_ASSIGN),
 		Entry(nil, "::=", token.POSIX_ASSIGN),
@@ -144,6 +148,8 @@ var _ = Describe("Scanner", func() {
 		DescribeTable("Starting token",
 			Entry(nil, "$", 2),
 			Entry(nil, ":", 2),
+			Entry(nil, ";", 2),
+			Entry(nil, "|", 2),
 			Entry(nil, "=", 2),
 			Entry(nil, ":=", 3),
 			Entry(nil, "::=", 4),
@@ -159,6 +165,8 @@ var _ = Describe("Scanner", func() {
 			Entry(nil, "identifier", 11),
 			Entry(nil, "$ foo", 2),
 			Entry(nil, ": foo", 2),
+			Entry(nil, "; foo", 2),
+			Entry(nil, "| foo", 2),
 			Entry(nil, "= foo", 2),
 			Entry(nil, ":= foo", 3),
 			Entry(nil, "::= foo", 4),
@@ -184,6 +192,8 @@ var _ = Describe("Scanner", func() {
 		DescribeTable("Second token",
 			Entry(nil, "$ foo", 6),
 			Entry(nil, ": foo", 6),
+			Entry(nil, "; foo", 6),
+			Entry(nil, "| foo", 6),
 			Entry(nil, "= foo", 6),
 			Entry(nil, ":= foo", 7),
 			Entry(nil, "::= foo", 8),
@@ -197,6 +207,23 @@ var _ = Describe("Scanner", func() {
 			Entry(nil, ", foo", 6),
 			Entry(nil, "\t foo", 6),
 			Entry(nil, "identifier foo", 15),
+			Entry(nil, "$ foo bar", 6),
+			Entry(nil, ": foo bar", 6),
+			Entry(nil, "; foo bar", 6),
+			Entry(nil, "| foo bar", 6),
+			Entry(nil, "= foo bar", 6),
+			Entry(nil, ":= foo bar", 7),
+			Entry(nil, "::= foo bar", 8),
+			Entry(nil, ":::= foo bar", 9),
+			Entry(nil, "?= foo bar", 7),
+			Entry(nil, "!= foo bar", 7),
+			Entry(nil, "( foo bar", 6),
+			Entry(nil, ") foo bar", 6),
+			Entry(nil, "{ foo bar", 6),
+			Entry(nil, "} foo bar", 6),
+			Entry(nil, ", foo bar", 6),
+			Entry(nil, "\t foo bar", 6),
+			Entry(nil, "identifier foo bar", 15),
 			func(input string, expected int) {
 				buf := bytes.NewBufferString(input)
 				s := make.NewScanner(buf, file)
@@ -207,9 +234,45 @@ var _ = Describe("Scanner", func() {
 			},
 		)
 
-		DescribeTable("Track lines",
+		DescribeTable("Scan newline",
+			Entry(nil, "$\nfoo", 3),
+			Entry(nil, ":\nfoo", 3),
+			Entry(nil, ";\nfoo", 3),
+			Entry(nil, "|\nfoo", 3),
+			Entry(nil, "=\nfoo", 3),
+			Entry(nil, ":=\nfoo", 4),
+			Entry(nil, "::=\nfoo", 5),
+			Entry(nil, ":::=\nfoo", 6),
+			Entry(nil, "?=\nfoo", 4),
+			Entry(nil, "!=\nfoo", 4),
+			Entry(nil, "(\nfoo", 3),
+			Entry(nil, ")\nfoo", 3),
+			Entry(nil, "{\nfoo", 3),
+			Entry(nil, "}\nfoo", 3),
+			Entry(nil, ",\nfoo", 3),
+			Entry(nil, "\t\nfoo", 3),
+			Entry(nil, "identifier\nfoo", 12),
+			func(input string, expected int) {
+				buf := bytes.NewBufferString(input)
+				s := make.NewScanner(buf, file)
+
+				Expect(s.Scan()).To(BeTrueBecause("scanned first token"))
+				Expect(s.Scan()).To(BeTrueBecause("scanned newline token"))
+				Expect(s.Pos()).To(Equal(token.Pos(expected)))
+				Expect(file.PositionFor(s.Pos(), false)).To(Equal(token.Position{
+					Filename: file.Name(),
+					Offset:   expected - file.Base(),
+					Line:     2,
+					Column:   2,
+				}))
+			},
+		)
+
+		DescribeTable("Scan final newline",
 			Entry(nil, "$\n", 3),
 			Entry(nil, ":\n", 3),
+			Entry(nil, ";\n", 3),
+			Entry(nil, "|\n", 3),
 			Entry(nil, "=\n", 3),
 			Entry(nil, ":=\n", 4),
 			Entry(nil, "::=\n", 5),
@@ -228,8 +291,14 @@ var _ = Describe("Scanner", func() {
 				s := make.NewScanner(buf, file)
 
 				Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
-				Expect(s.Scan()).To(BeTrueBecause("scanned another token"))
+				Expect(s.Scan()).To(BeFalseBecause("scanned final newline"))
 				Expect(s.Pos()).To(Equal(token.Pos(expected)))
+				Expect(file.PositionFor(s.Pos(), false)).To(Equal(token.Position{
+					Filename: file.Name(),
+					Offset:   expected - file.Base(),
+					Line:     2,
+					Column:   2,
+				}))
 			},
 		)
 	})

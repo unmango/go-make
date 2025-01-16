@@ -97,6 +97,10 @@ func (s *Scanner) Scan() bool {
 			s.tok = token.DOLLAR
 		case ":":
 			s.tok = token.COLON
+		case ";":
+			s.tok = token.SEMI
+		case "|":
+			s.tok = token.PIPE
 		case "#":
 			// TODO
 			// s.lit = s.scanComment()
@@ -119,6 +123,9 @@ func (s *Scanner) Scan() bool {
 func (s *Scanner) next() {
 	s.done = !s.s.Scan()
 	s.offset = s.rdOffset
+	if bytes.ContainsRune(s.s.Bytes(), '\n') {
+		s.file.AddLine(s.offset)
+	}
 	s.rdOffset += len(s.s.Bytes())
 }
 
