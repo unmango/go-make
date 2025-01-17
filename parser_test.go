@@ -10,6 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/unmango/go-make"
+	"github.com/unmango/go-make/ast"
 )
 
 var _ = Describe("Parser", func() {
@@ -26,17 +27,32 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f).NotTo(BeNil())
+		Expect(f.Rules).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(8),
+			Targets: &ast.TargetList{List: []ast.FileName{
+				&ast.LiteralFileName{Name: &ast.Ident{
+					Name:    "target",
+					NamePos: token.Pos(0),
+				}},
+			}},
+		}))
 	})
 
-	It("should error when starting at a colon", func() {
-		buf := bytes.NewBufferString(":")
-		p := make.NewParser(buf, file)
+	DescribeTable("should error on invalid starting token",
+		Entry(nil, ","),
+		Entry(nil, ":"),
+		Entry(nil, ";"),
+		Entry(nil, "|"),
+		Entry(nil, "="),
+		func(input string) {
+			buf := bytes.NewBufferString(input)
+			p := make.NewParser(buf, file)
 
-		_, err := p.ParseFile()
+			_, err := p.ParseFile()
 
-		Expect(err).To(MatchError(
-			ContainSubstring("expected 'IDENT'"),
-		))
-	})
+			Expect(err).To(MatchError(
+				ContainSubstring("expected 'IDENT'"),
+			))
+		},
+	)
 })

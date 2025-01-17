@@ -38,19 +38,33 @@ func (p *Parser) ParseFile() (*ast.File, error) {
 	}
 }
 
+func (p *Parser) error(pos token.Pos, msg string) {
+	epos := p.file.Position(pos)
+	p.errors.Add(epos, msg)
+}
+
+func (p *Parser) errorExpected(pos token.Pos, msg string) {
+	msg = "expected " + msg
+	if p.pos == pos {
+		switch {
+		case p.tok.IsLiteral():
+			msg += ", found " + p.lit
+		default:
+			msg += ", found '" + p.tok.String() + "'"
+		}
+	}
+
+	p.error(pos, msg)
+}
+
 func (p *Parser) expect(tok token.Token) token.Pos {
 	pos := p.pos
 	if p.tok != tok {
-		p.error(pos, "expected '"+tok.String()+"'")
+		p.errorExpected(pos, "'"+tok.String()+"'")
 	}
 
 	p.next()
 	return pos
-}
-
-func (p *Parser) error(pos token.Pos, msg string) {
-	epos := p.file.Position(pos)
-	p.errors.Add(epos, msg)
 }
 
 func (p *Parser) next() {
@@ -76,15 +90,7 @@ func (p *Parser) parseFile() *ast.File {
 }
 
 func (p *Parser) parseRule() *ast.Rule {
-	if p.tok != token.IDENT {
-		p.expect(token.IDENT)
-		return nil
-	}
-
-	var targets []ast.FileName
-	for p.tok != token.COLON && p.tok != token.EOF {
-		targets = append(targets, p.parseFileName())
-	}
+	targets := p.parseTargets()
 
 	var colon token.Pos
 	if p.tok == token.COLON {
@@ -101,9 +107,22 @@ func (p *Parser) parseRule() *ast.Rule {
 		Colon:   colon,
 		Pipe:    token.NoPos,
 		Semi:    token.NoPos,
-		PreReqs: &ast.PreReqList{},
-		Recipes: []*ast.Recipe{},
+		PreReqs: nil,
+		Recipes: nil,
 	}
+}
+
+func (p *Parser) parseTargets() (targets []ast.FileName) {
+	if p.tok != token.IDENT {
+		p.expect(token.IDENT)
+		return nil
+	}
+
+	for p.tok != token.COLON && p.tok != token.EOF {
+		targets = append(targets, p.parseFileName())
+	}
+
+	return
 }
 
 func (p *Parser) parseFileName() ast.FileName {
