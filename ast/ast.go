@@ -8,8 +8,6 @@ import (
 
 type Node = ast.Node
 
-var Walk = ast.Walk
-
 // A File represents text content interpreted as the make syntax.
 // Most commonly this is a Makefile, but could also be any file
 // understood by make, i.e. include-me.mk
