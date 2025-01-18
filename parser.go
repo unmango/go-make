@@ -19,15 +19,13 @@ type Parser struct {
 }
 
 func NewParser(r io.Reader, file *token.File) *Parser {
-	s := NewScanner(r, file)
-	s.Scan() // TODO: Cleaner priming
-
-	return &Parser{
-		s:    s,
-		file: file, // TODO: Same file? Different file?
-		tok:  s.Token(),
-		lit:  s.Literal(),
+	p := &Parser{
+		s:    NewScanner(r, file),
+		file: file,
 	}
+	p.next()
+
+	return p
 }
 
 func (p *Parser) ParseFile() (*ast.File, error) {
@@ -56,12 +54,7 @@ func (p *Parser) error(pos token.Pos, msg string) {
 }
 
 func (p *Parser) next() {
-	if p.s.Scan() {
-		// TODO: p.pos
-		p.tok, p.lit = p.s.Token(), p.s.Literal()
-	} else {
-		p.tok = token.EOF
-	}
+	p.pos, p.tok, p.lit = p.s.Scan()
 }
 
 func (p *Parser) parseFile() *ast.File {
