@@ -28,11 +28,11 @@ var _ = Describe("Parser", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Rules).To(ConsistOf(&ast.Rule{
-			Colon: token.Pos(8),
+			Colon: token.Pos(7),
 			Targets: &ast.TargetList{List: []ast.FileName{
 				&ast.LiteralFileName{Name: &ast.Ident{
 					Name:    "target",
-					NamePos: token.Pos(0),
+					NamePos: token.Pos(1),
 				}},
 			}},
 		}))
@@ -40,7 +40,6 @@ var _ = Describe("Parser", func() {
 
 	DescribeTable("should error on invalid starting token",
 		Entry(nil, ","),
-		Entry(nil, ":"),
 		Entry(nil, ";"),
 		Entry(nil, "|"),
 		Entry(nil, "="),

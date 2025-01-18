@@ -90,7 +90,13 @@ func (p *Parser) parseFile() *ast.File {
 }
 
 func (p *Parser) parseRule() *ast.Rule {
-	targets := p.parseTargets()
+	targets := new(ast.TargetList)
+	for p.tok != token.COLON && p.tok != token.EOF {
+		targets.Add(p.parseFileName())
+	}
+	if p.errors.Len() > 0 {
+		return nil
+	}
 
 	var colon token.Pos
 	if p.tok == token.COLON {
@@ -99,11 +105,12 @@ func (p *Parser) parseRule() *ast.Rule {
 	} else {
 		p.expect(token.COLON)
 	}
+	if p.errors.Len() > 0 {
+		return nil
+	}
 
 	return &ast.Rule{
-		Targets: &ast.TargetList{
-			List: targets,
-		},
+		Targets: targets,
 		Colon:   colon,
 		Pipe:    token.NoPos,
 		Semi:    token.NoPos,
@@ -112,22 +119,11 @@ func (p *Parser) parseRule() *ast.Rule {
 	}
 }
 
-func (p *Parser) parseTargets() (targets []ast.FileName) {
-	if p.tok != token.IDENT {
-		p.expect(token.IDENT)
-		return nil
-	}
-
-	for p.tok != token.COLON && p.tok != token.EOF {
-		targets = append(targets, p.parseFileName())
-	}
-
-	return
-}
-
 func (p *Parser) parseFileName() ast.FileName {
+	name := p.parseIdent()
+
 	return &ast.LiteralFileName{
-		Name: p.parseIdent(),
+		Name: name,
 	}
 }
 
