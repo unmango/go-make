@@ -21,11 +21,13 @@ type Scanner struct {
 }
 
 func NewScanner(r io.Reader, file *token.File) *Scanner {
+	scanner := bufio.NewScanner(r)
+	scanner.Split(ScanTokens)
+
 	s := &Scanner{
-		s:    bufio.NewScanner(r),
+		s:    scanner,
 		file: file,
 	}
-	s.s.Split(ScanTokens)
 	s.next()
 
 	return s
@@ -33,6 +35,10 @@ func NewScanner(r io.Reader, file *token.File) *Scanner {
 
 func (s Scanner) Err() error {
 	return s.s.Err()
+}
+
+func (s Scanner) Position(pos token.Pos) token.Position {
+	return token.PositionFor(s.file, pos)
 }
 
 func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {

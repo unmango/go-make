@@ -71,9 +71,8 @@ var _ = Describe("Scanner", func() {
 		},
 	)
 
-	DescribeTable("Scan ident followed by token",
+	DescribeTable("Scan ident followed by whitespace",
 		Entry(nil, "ident $"),
-		Entry(nil, "ident:"),
 		Entry(nil, "ident :"),
 		Entry(nil, "ident ;"),
 		Entry(nil, "ident |"),
@@ -88,16 +87,19 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "ident {"),
 		Entry(nil, "ident }"),
 		Entry(nil, "ident ,"),
-		Entry(nil, "ident\n\t"),
 		func(input string) {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
 
 			pos, tok, lit := s.Scan()
-
 			Expect(tok).To(Equal(token.IDENT))
 			Expect(lit).To(Equal("ident"))
 			Expect(pos).To(Equal(token.Pos(1)))
+
+			pos, tok, lit = s.Scan()
+			// File base + Length of the identifier + whitespace
+			Expect(pos).To(Equal(token.Pos(7)))
+			Expect(tok).NotTo(Equal(token.IDENT))
 		},
 	)
 
@@ -123,9 +125,11 @@ var _ = Describe("Scanner", func() {
 			s := make.NewScanner(buf, file)
 
 			pos, tok, _ := s.Scan()
-
 			Expect(tok).To(Equal(expected))
 			Expect(pos).To(Equal(token.Pos(1)))
+
+			pos, tok, _ = s.Scan()
+			Expect(tok).To(Equal(token.EOF))
 		},
 	)
 
