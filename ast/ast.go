@@ -77,6 +77,11 @@ type TargetList struct {
 	List []FileName
 }
 
+// Add appends target to t.List
+func (t *TargetList) Add(target FileName) {
+	t.List = append(t.List, target)
+}
+
 // Pos implements Node
 func (t *TargetList) Pos() token.Pos {
 	return t.List[0].Pos()
