@@ -5,6 +5,7 @@ import (
 	gotoken "go/token"
 	"math"
 	"strings"
+	"testing/quick"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -19,6 +20,23 @@ var _ = Describe("Scanner", func() {
 
 	BeforeEach(func() {
 		file = gotoken.NewFileSet().AddFile("test", 1, math.MaxInt-2)
+	})
+
+	Describe("Position", func() {
+		It("should be equivalent to calling file.PositionFor(p, false)", func() {
+			s := make.NewScanner(&bytes.Buffer{}, file)
+
+			err := quick.Check(func(p int) bool {
+				pos := token.Pos(p)
+
+				expected := file.PositionFor(pos, false)
+				actual := s.Position(pos)
+
+				return actual == expected
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
 	})
 
 	DescribeTable("Scan identifier",
@@ -68,6 +86,12 @@ var _ = Describe("Scanner", func() {
 			pos, tok, lit = s.Scan()
 			Expect(tok).To(Equal(token.EOF))
 			Expect(pos).To(Equal(token.Pos(len(input))))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   len(input) - 1,
+				Line:     2,
+				Column:   1,
+			}))
 		},
 	)
 
@@ -120,6 +144,7 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "}", token.RBRACE),
 		Entry(nil, ",", token.COMMA),
 		Entry(nil, "\t", token.TAB),
+		Entry(nil, "\n\n", token.NEWLINE),
 		func(input string, expected token.Token) {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
@@ -147,7 +172,7 @@ var _ = Describe("Scanner", func() {
 	)
 
 	It("should scan newline followed by token", func() {
-		buf := bytes.NewBufferString("\n ident")
+		buf := bytes.NewBufferString("\nident")
 		s := make.NewScanner(buf, file)
 
 		pos, tok, _ := s.Scan()
