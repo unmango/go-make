@@ -21,11 +21,13 @@ type Scanner struct {
 }
 
 func NewScanner(r io.Reader, file *token.File) *Scanner {
+	scanner := bufio.NewScanner(r)
+	scanner.Split(ScanTokens)
+
 	s := &Scanner{
-		s:    bufio.NewScanner(r),
+		s:    scanner,
 		file: file,
 	}
-	s.s.Split(ScanTokens)
 	s.next()
 
 	return s
@@ -35,97 +37,93 @@ func (s Scanner) Err() error {
 	return s.s.Err()
 }
 
-func (s Scanner) Token() token.Token {
-	return s.tok
+func (s Scanner) Position(pos token.Pos) token.Position {
+	return token.PositionFor(s.file, pos)
 }
 
-func (s Scanner) Literal() string {
-	return s.lit
-}
-
-func (s Scanner) Pos() token.Pos {
-	return s.file.Pos(s.offset)
-}
-
-func (s *Scanner) Scan() bool {
+func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 	if s.done {
-		s.tok = token.EOF
-		return false
+		pos = s.file.Pos(s.offset)
+		tok = token.EOF
+		return
 	}
 
+	s.skipWhitespace()
+
+	// current token start
+	pos = s.file.Pos(s.offset)
 	var atNewline bool
 
-	s.skipWhitespace()
 	switch txt := s.s.Text(); {
 	case token.IsIdentifier(txt):
-		s.lit = txt
+		lit = txt
+		s.next()
 		if len(txt) > 1 {
-			s.tok = token.Lookup(txt)
+			tok = token.Lookup(txt)
 		} else {
-			s.tok = token.IDENT
+			tok = token.IDENT
 		}
 	default:
+		s.next()
 		switch txt {
 		case "=":
-			s.tok = token.RECURSIVE_ASSIGN
+			tok = token.RECURSIVE_ASSIGN
 		case ":=":
-			s.tok = token.SIMPLE_ASSIGN
+			tok = token.SIMPLE_ASSIGN
 		case "::=":
-			s.tok = token.POSIX_ASSIGN
+			tok = token.POSIX_ASSIGN
 		case ":::=":
-			s.tok = token.IMMEDIATE_ASSIGN
+			tok = token.IMMEDIATE_ASSIGN
 		case "?=":
-			s.tok = token.IFNDEF_ASSIGN
+			tok = token.IFNDEF_ASSIGN
 		case "!=":
-			s.tok = token.SHELL_ASSIGN
+			tok = token.SHELL_ASSIGN
 		case ",":
-			s.tok = token.COMMA
+			tok = token.COMMA
 		case "\n":
 			atNewline = true
-			s.tok = token.NEWLINE
+			tok = token.NEWLINE
 		case "\t":
-			s.tok = token.TAB
+			tok = token.TAB
 		case "(":
-			s.tok = token.LPAREN
+			tok = token.LPAREN
 		case ")":
-			s.tok = token.RPAREN
+			tok = token.RPAREN
 		case "{":
-			s.tok = token.LBRACE
+			tok = token.LBRACE
 		case "}":
-			s.tok = token.RBRACE
+			tok = token.RBRACE
 		case "$":
-			s.tok = token.DOLLAR
+			tok = token.DOLLAR
 		case ":":
-			s.tok = token.COLON
+			tok = token.COLON
 		case ";":
-			s.tok = token.SEMI
+			tok = token.SEMI
 		case "|":
-			s.tok = token.PIPE
+			tok = token.PIPE
 		case "#":
 			// TODO
 			// s.lit = s.scanComment()
-			s.tok = token.COMMENT
+			tok = token.COMMENT
 		default:
-			s.tok = token.UNSUPPORTED
+			tok = token.UNSUPPORTED
 			s.lit = txt
 		}
 	}
 
-	s.next()
 	if atNewline && s.done {
-		s.tok = token.EOF
-		return false
-	} else {
-		return true
+		tok = token.EOF
 	}
+
+	return
 }
 
 func (s *Scanner) next() {
-	s.done = !s.s.Scan()
 	s.offset = s.rdOffset
 	if bytes.ContainsRune(s.s.Bytes(), '\n') {
 		s.file.AddLine(s.offset)
 	}
+	s.done = !s.s.Scan()
 	s.rdOffset += len(s.s.Bytes())
 }
 

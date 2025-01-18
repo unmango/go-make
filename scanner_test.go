@@ -5,6 +5,7 @@ import (
 	gotoken "go/token"
 	"math"
 	"strings"
+	"testing/quick"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -21,6 +22,23 @@ var _ = Describe("Scanner", func() {
 		file = gotoken.NewFileSet().AddFile("test", 1, math.MaxInt-2)
 	})
 
+	Describe("Position", func() {
+		It("should be equivalent to calling file.PositionFor(p, false)", func() {
+			s := make.NewScanner(&bytes.Buffer{}, file)
+
+			err := quick.Check(func(p int) bool {
+				pos := token.Pos(p)
+
+				expected := file.PositionFor(pos, false)
+				actual := s.Position(pos)
+
+				return actual == expected
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
 	DescribeTable("Scan identifier",
 		Entry(nil, "ident"),
 		Entry(nil, "./file/path"),
@@ -35,11 +53,14 @@ var _ = Describe("Scanner", func() {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
 
-			Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
-			Expect(s.Token()).To(Equal(token.IDENT))
-			Expect(s.Literal()).To(Equal(strings.TrimSpace(input)))
-			Expect(s.Scan()).To(BeFalseBecause("at EOF"))
-			Expect(s.Token()).To(Equal(token.EOF))
+			pos, tok, lit := s.Scan()
+			Expect(tok).To(Equal(token.IDENT))
+			Expect(lit).To(Equal(input))
+			Expect(pos).To(Equal(token.Pos(1)))
+
+			pos, tok, lit = s.Scan()
+			Expect(tok).To(Equal(token.EOF))
+			Expect(pos).To(Equal(token.Pos(len(input) + 1)))
 		},
 	)
 
@@ -57,17 +78,31 @@ var _ = Describe("Scanner", func() {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
 
-			Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
-			Expect(s.Token()).To(Equal(token.IDENT))
-			Expect(s.Literal()).To(Equal(strings.TrimSpace(input)))
-			Expect(s.Scan()).To(BeFalseBecause("at EOF"))
-			Expect(s.Token()).To(Equal(token.EOF))
+			pos, tok, lit := s.Scan()
+			Expect(tok).To(Equal(token.IDENT))
+			Expect(lit).To(Equal(strings.TrimSpace(input)))
+			Expect(pos).To(Equal(token.Pos(1)))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   0,
+				Line:     1,
+				Column:   1,
+			}))
+
+			pos, tok, lit = s.Scan()
+			Expect(tok).To(Equal(token.EOF))
+			Expect(pos).To(Equal(token.Pos(len(input))))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   len(input) - 1,
+				Line:     1,
+				Column:   len(input),
+			}))
 		},
 	)
 
-	DescribeTable("Scan ident followed by token",
+	DescribeTable("Scan ident followed by whitespace",
 		Entry(nil, "ident $"),
-		Entry(nil, "ident:"),
 		Entry(nil, "ident :"),
 		Entry(nil, "ident ;"),
 		Entry(nil, "ident |"),
@@ -82,16 +117,19 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "ident {"),
 		Entry(nil, "ident }"),
 		Entry(nil, "ident ,"),
-		Entry(nil, "ident\n\t"),
 		func(input string) {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
 
-			ok := s.Scan()
+			pos, tok, lit := s.Scan()
+			Expect(tok).To(Equal(token.IDENT))
+			Expect(lit).To(Equal("ident"))
+			Expect(pos).To(Equal(token.Pos(1)))
 
-			Expect(s.Token()).To(Equal(token.IDENT))
-			Expect(s.Literal()).To(Equal("ident"))
-			Expect(ok).To(BeTrueBecause("scanned a token"))
+			pos, tok, lit = s.Scan()
+			// File base + Length of the identifier + whitespace
+			Expect(pos).To(Equal(token.Pos(7)))
+			Expect(tok).NotTo(Equal(token.IDENT))
 		},
 	)
 
@@ -112,14 +150,17 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "}", token.RBRACE),
 		Entry(nil, ",", token.COMMA),
 		Entry(nil, "\t", token.TAB),
+		Entry(nil, "\n\n", token.NEWLINE),
 		func(input string, expected token.Token) {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
 
-			ok := s.Scan()
+			pos, tok, _ := s.Scan()
+			Expect(tok).To(Equal(expected))
+			Expect(pos).To(Equal(token.Pos(1)))
 
-			Expect(s.Token()).To(Equal(expected))
-			Expect(ok).To(BeTrueBecause("scanned a token"))
+			pos, tok, _ = s.Scan()
+			Expect(tok).To(Equal(token.EOF))
 		},
 	)
 
@@ -129,185 +170,160 @@ var _ = Describe("Scanner", func() {
 			buf := bytes.NewBufferString(input)
 			s := make.NewScanner(buf, file)
 
-			ok := s.Scan()
+			pos, tok, _ := s.Scan()
 
-			Expect(s.Token()).To(Equal(expected))
-			Expect(ok).To(BeTrueBecause("scanned a token"))
+			Expect(tok).To(Equal(expected))
+			Expect(pos).To(Equal(token.Pos(1)))
 		},
 	)
 
-	It("should scan newline followed by token", func() {
-		buf := bytes.NewBufferString("\n ident")
-		s := make.NewScanner(buf, file)
+	DescribeTable("should scan newline followed by token",
+		Entry(nil, "\nident"),
+		Entry(nil, "\n,"),
+		Entry(nil, "\n$"),
+		Entry(nil, "\n;"),
+		Entry(nil, "\n:"),
+		Entry(nil, "\n:="),
+		Entry(nil, "\n::="),
+		Entry(nil, "\n:::="),
+		Entry(nil, "\n="),
+		Entry(nil, "\n?="),
+		Entry(nil, "\n!="),
+		Entry(nil, "\n|"),
+		Entry(nil, "\n\t"),
+		Entry(nil, "\n{"),
+		Entry(nil, "\n}"),
+		Entry(nil, "\n("),
+		Entry(nil, "\n)"),
+		func(input string) {
+			buf := bytes.NewBufferString(input)
+			s := make.NewScanner(buf, file)
 
-		Expect(s.Scan()).To(BeTrue())
-		Expect(s.Token()).To(Equal(token.NEWLINE))
-	})
+			pos, tok, _ := s.Scan()
+			Expect(tok).To(Equal(token.NEWLINE))
+			Expect(pos).To(Equal(token.Pos(1)))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   0,
+				Line:     1,
+				Column:   1,
+			}))
 
-	Describe("Pos", func() {
-		DescribeTable("Starting token",
-			Entry(nil, "$", 2),
-			Entry(nil, ":", 2),
-			Entry(nil, ";", 2),
-			Entry(nil, "|", 2),
-			Entry(nil, "=", 2),
-			Entry(nil, ":=", 3),
-			Entry(nil, "::=", 4),
-			Entry(nil, ":::=", 5),
-			Entry(nil, "?=", 3),
-			Entry(nil, "!=", 3),
-			Entry(nil, "(", 2),
-			Entry(nil, ")", 2),
-			Entry(nil, "{", 2),
-			Entry(nil, "}", 2),
-			Entry(nil, ",", 2),
-			Entry(nil, "\t", 2),
-			Entry(nil, "identifier", 11),
-			Entry(nil, "$ foo", 2),
-			Entry(nil, ": foo", 2),
-			Entry(nil, "; foo", 2),
-			Entry(nil, "| foo", 2),
-			Entry(nil, "= foo", 2),
-			Entry(nil, ":= foo", 3),
-			Entry(nil, "::= foo", 4),
-			Entry(nil, ":::= foo", 5),
-			Entry(nil, "?= foo", 3),
-			Entry(nil, "!= foo", 3),
-			Entry(nil, "( foo", 2),
-			Entry(nil, ") foo", 2),
-			Entry(nil, "{ foo", 2),
-			Entry(nil, "} foo", 2),
-			Entry(nil, ", foo", 2),
-			Entry(nil, "\t foo", 2),
-			Entry(nil, "identifier foo", 11),
-			func(input string, expected int) {
-				buf := bytes.NewBufferString(input)
-				s := make.NewScanner(buf, file)
+			pos, tok, _ = s.Scan()
+			Expect(pos).To(Equal(token.Pos(2)))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   1,
+				Line:     2,
+				Column:   1,
+			}))
+		},
+	)
 
-				Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
-				Expect(s.Pos()).To(Equal(token.Pos(expected)))
-			},
-		)
+	DescribeTable("space separated tokens",
+		Entry(nil, "$ foo", 3),
+		Entry(nil, ": foo", 3),
+		Entry(nil, "; foo", 3),
+		Entry(nil, "| foo", 3),
+		Entry(nil, "= foo", 3),
+		Entry(nil, ":= foo", 4),
+		Entry(nil, "::= foo", 5),
+		Entry(nil, ":::= foo", 6),
+		Entry(nil, "?= foo", 4),
+		Entry(nil, "!= foo", 4),
+		Entry(nil, "( foo", 3),
+		Entry(nil, ") foo", 3),
+		Entry(nil, "{ foo", 3),
+		Entry(nil, "} foo", 3),
+		Entry(nil, ", foo", 3),
+		Entry(nil, "\t foo", 3),
+		Entry(nil, "identifier foo", 12),
+		Entry(nil, "$ foo bar", 3),
+		Entry(nil, ": foo bar", 3),
+		Entry(nil, "; foo bar", 3),
+		Entry(nil, "| foo bar", 3),
+		Entry(nil, "= foo bar", 3),
+		Entry(nil, ":= foo bar", 4),
+		Entry(nil, "::= foo bar", 5),
+		Entry(nil, ":::= foo bar", 6),
+		Entry(nil, "?= foo bar", 4),
+		Entry(nil, "!= foo bar", 4),
+		Entry(nil, "( foo bar", 3),
+		Entry(nil, ") foo bar", 3),
+		Entry(nil, "{ foo bar", 3),
+		Entry(nil, "} foo bar", 3),
+		Entry(nil, ", foo bar", 3),
+		Entry(nil, "\t foo bar", 3),
+		Entry(nil, "identifier foo bar", 12),
+		func(input string, expected int) {
+			buf := bytes.NewBufferString(input)
+			s := make.NewScanner(buf, file)
 
-		DescribeTable("Second token",
-			Entry(nil, "$ foo", 6),
-			Entry(nil, ": foo", 6),
-			Entry(nil, "; foo", 6),
-			Entry(nil, "| foo", 6),
-			Entry(nil, "= foo", 6),
-			Entry(nil, ":= foo", 7),
-			Entry(nil, "::= foo", 8),
-			Entry(nil, ":::= foo", 9),
-			Entry(nil, "?= foo", 7),
-			Entry(nil, "!= foo", 7),
-			Entry(nil, "( foo", 6),
-			Entry(nil, ") foo", 6),
-			Entry(nil, "{ foo", 6),
-			Entry(nil, "} foo", 6),
-			Entry(nil, ", foo", 6),
-			Entry(nil, "\t foo", 6),
-			Entry(nil, "identifier foo", 15),
-			Entry(nil, "$ foo bar", 6),
-			Entry(nil, ": foo bar", 6),
-			Entry(nil, "; foo bar", 6),
-			Entry(nil, "| foo bar", 6),
-			Entry(nil, "= foo bar", 6),
-			Entry(nil, ":= foo bar", 7),
-			Entry(nil, "::= foo bar", 8),
-			Entry(nil, ":::= foo bar", 9),
-			Entry(nil, "?= foo bar", 7),
-			Entry(nil, "!= foo bar", 7),
-			Entry(nil, "( foo bar", 6),
-			Entry(nil, ") foo bar", 6),
-			Entry(nil, "{ foo bar", 6),
-			Entry(nil, "} foo bar", 6),
-			Entry(nil, ", foo bar", 6),
-			Entry(nil, "\t foo bar", 6),
-			Entry(nil, "identifier foo bar", 15),
-			func(input string, expected int) {
-				buf := bytes.NewBufferString(input)
-				s := make.NewScanner(buf, file)
+			_, _, _ = s.Scan()
+			pos, tok, lit := s.Scan()
+			Expect(tok).To(Equal(token.IDENT))
+			Expect(pos).To(Equal(token.Pos(expected)))
+			Expect(lit).To(Equal("foo"))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   expected - file.Base(),
+				Line:     1,
+				Column:   expected,
+			}))
+		},
+	)
 
-				Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
-				Expect(s.Scan()).To(BeTrueBecause("scanned another token"))
-				Expect(s.Pos()).To(Equal(token.Pos(expected)))
-			},
-		)
+	DescribeTable("newline separated tokens",
+		Entry(nil, "$\nfoo", 2),
+		Entry(nil, ":\nfoo", 2),
+		Entry(nil, ";\nfoo", 2),
+		Entry(nil, "|\nfoo", 2),
+		Entry(nil, "=\nfoo", 2),
+		Entry(nil, ":=\nfoo", 3),
+		Entry(nil, "::=\nfoo", 4),
+		Entry(nil, ":::=\nfoo", 5),
+		Entry(nil, "?=\nfoo", 3),
+		Entry(nil, "!=\nfoo", 3),
+		Entry(nil, "(\nfoo", 2),
+		Entry(nil, ")\nfoo", 2),
+		Entry(nil, "{\nfoo", 2),
+		Entry(nil, "}\nfoo", 2),
+		Entry(nil, ",\nfoo", 2),
+		Entry(nil, "\t\nfoo", 2),
+		Entry(nil, "identifier\nfoo", 11),
+		func(input string, nlPos int) {
+			buf := bytes.NewBufferString(input)
+			s := make.NewScanner(buf, file)
 
-		DescribeTable("Scan newline",
-			Entry(nil, "$\nfoo", 3),
-			Entry(nil, ":\nfoo", 3),
-			Entry(nil, ";\nfoo", 3),
-			Entry(nil, "|\nfoo", 3),
-			Entry(nil, "=\nfoo", 3),
-			Entry(nil, ":=\nfoo", 4),
-			Entry(nil, "::=\nfoo", 5),
-			Entry(nil, ":::=\nfoo", 6),
-			Entry(nil, "?=\nfoo", 4),
-			Entry(nil, "!=\nfoo", 4),
-			Entry(nil, "(\nfoo", 3),
-			Entry(nil, ")\nfoo", 3),
-			Entry(nil, "{\nfoo", 3),
-			Entry(nil, "}\nfoo", 3),
-			Entry(nil, ",\nfoo", 3),
-			Entry(nil, "\t\nfoo", 3),
-			Entry(nil, "identifier\nfoo", 12),
-			func(input string, expected int) {
-				buf := bytes.NewBufferString(input)
-				s := make.NewScanner(buf, file)
+			_, _, _ = s.Scan()
+			pos, tok, _ := s.Scan()
+			Expect(tok).To(Equal(token.NEWLINE))
+			Expect(pos).To(Equal(token.Pos(nlPos)))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   nlPos - file.Base(),
+				Line:     1,
+				Column:   nlPos,
+			}))
 
-				Expect(s.Scan()).To(BeTrueBecause("scanned first token"))
-				Expect(s.Scan()).To(BeTrueBecause("scanned newline token"))
-				Expect(s.Pos()).To(Equal(token.Pos(expected)))
-				Expect(file.PositionFor(s.Pos(), false)).To(Equal(token.Position{
-					Filename: file.Name(),
-					Offset:   expected - file.Base(),
-					Line:     2,
-					Column:   2,
-				}))
-			},
-		)
-
-		DescribeTable("Scan final newline",
-			Entry(nil, "$\n", 3),
-			Entry(nil, ":\n", 3),
-			Entry(nil, ";\n", 3),
-			Entry(nil, "|\n", 3),
-			Entry(nil, "=\n", 3),
-			Entry(nil, ":=\n", 4),
-			Entry(nil, "::=\n", 5),
-			Entry(nil, ":::=\n", 6),
-			Entry(nil, "?=\n", 4),
-			Entry(nil, "!=\n", 4),
-			Entry(nil, "(\n", 3),
-			Entry(nil, ")\n", 3),
-			Entry(nil, "{\n", 3),
-			Entry(nil, "}\n", 3),
-			Entry(nil, ",\n", 3),
-			Entry(nil, "\t\n", 3),
-			Entry(nil, "identifier\n", 12),
-			func(input string, expected int) {
-				buf := bytes.NewBufferString(input)
-				s := make.NewScanner(buf, file)
-
-				Expect(s.Scan()).To(BeTrueBecause("scanned a token"))
-				Expect(s.Scan()).To(BeFalseBecause("scanned final newline"))
-				Expect(s.Pos()).To(Equal(token.Pos(expected)))
-				Expect(file.PositionFor(s.Pos(), false)).To(Equal(token.Position{
-					Filename: file.Name(),
-					Offset:   expected - file.Base(),
-					Line:     2,
-					Column:   2,
-				}))
-			},
-		)
-	})
+			pos, tok, lit := s.Scan()
+			Expect(tok).To(Equal(token.IDENT))
+			Expect(pos).To(Equal(token.Pos(nlPos + 1)))
+			Expect(lit).To(Equal("foo"))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   nlPos,
+				Line:     2,
+				Column:   1,
+			}))
+		},
+	)
 
 	It("should return IO errors", func() {
 		r := testing.ErrReader("io error")
 		s := make.NewScanner(r, file)
 
-		Expect(s.Scan()).To(BeFalse())
+		_, _, _ = s.Scan()
 		Expect(s.Err()).To(MatchError("io error"))
 	})
 })

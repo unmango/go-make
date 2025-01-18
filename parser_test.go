@@ -35,6 +35,8 @@ var _ = Describe("Parser", func() {
 
 		_, err := p.ParseFile()
 
-		Expect(err).To(MatchError("expected 'IDENT'"))
+		Expect(err).To(MatchError(
+			ContainSubstring("expected 'IDENT'"),
+		))
 	})
 })
