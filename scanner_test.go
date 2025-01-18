@@ -82,6 +82,12 @@ var _ = Describe("Scanner", func() {
 			Expect(tok).To(Equal(token.IDENT))
 			Expect(lit).To(Equal(strings.TrimSpace(input)))
 			Expect(pos).To(Equal(token.Pos(1)))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   0,
+				Line:     1,
+				Column:   1,
+			}))
 
 			pos, tok, lit = s.Scan()
 			Expect(tok).To(Equal(token.EOF))
@@ -89,8 +95,8 @@ var _ = Describe("Scanner", func() {
 			Expect(s.Position(pos)).To(Equal(token.Position{
 				Filename: file.Name(),
 				Offset:   len(input) - 1,
-				Line:     2,
-				Column:   1,
+				Line:     1,
+				Column:   len(input),
 			}))
 		},
 	)
@@ -171,14 +177,48 @@ var _ = Describe("Scanner", func() {
 		},
 	)
 
-	It("should scan newline followed by token", func() {
-		buf := bytes.NewBufferString("\nident")
-		s := make.NewScanner(buf, file)
+	DescribeTable("should scan newline followed by token",
+		Entry(nil, "\nident"),
+		Entry(nil, "\n,"),
+		Entry(nil, "\n$"),
+		Entry(nil, "\n;"),
+		Entry(nil, "\n:"),
+		Entry(nil, "\n:="),
+		Entry(nil, "\n::="),
+		Entry(nil, "\n:::="),
+		Entry(nil, "\n="),
+		Entry(nil, "\n?="),
+		Entry(nil, "\n!="),
+		Entry(nil, "\n|"),
+		Entry(nil, "\n\t"),
+		Entry(nil, "\n{"),
+		Entry(nil, "\n}"),
+		Entry(nil, "\n("),
+		Entry(nil, "\n)"),
+		func(input string) {
+			buf := bytes.NewBufferString(input)
+			s := make.NewScanner(buf, file)
 
-		pos, tok, _ := s.Scan()
-		Expect(tok).To(Equal(token.NEWLINE))
-		Expect(pos).To(Equal(token.Pos(1)))
-	})
+			pos, tok, _ := s.Scan()
+			Expect(tok).To(Equal(token.NEWLINE))
+			Expect(pos).To(Equal(token.Pos(1)))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   0,
+				Line:     1,
+				Column:   1,
+			}))
+
+			pos, tok, _ = s.Scan()
+			Expect(pos).To(Equal(token.Pos(2)))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   1,
+				Line:     2,
+				Column:   1,
+			}))
+		},
+	)
 
 	// Describe("Pos", func() {
 	// 	DescribeTable("Starting token",

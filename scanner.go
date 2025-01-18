@@ -119,11 +119,11 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 }
 
 func (s *Scanner) next() {
-	s.done = !s.s.Scan()
 	s.offset = s.rdOffset
 	if bytes.ContainsRune(s.s.Bytes(), '\n') {
 		s.file.AddLine(s.offset)
 	}
+	s.done = !s.s.Scan()
 	s.rdOffset += len(s.s.Bytes())
 }
 
