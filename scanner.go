@@ -51,6 +51,7 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 	switch txt := s.s.Text(); {
 	case token.IsIdentifier(txt):
 		lit = txt
+		s.next()
 		if len(txt) > 1 {
 			tok = token.Lookup(txt)
 		} else {

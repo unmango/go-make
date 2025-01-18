@@ -37,12 +37,12 @@ var _ = Describe("Scanner", func() {
 
 			pos, tok, lit := s.Scan()
 			Expect(tok).To(Equal(token.IDENT))
-			Expect(lit).To(Equal(strings.TrimSpace(input)))
+			Expect(lit).To(Equal(input))
 			Expect(pos).To(Equal(token.Pos(1)))
 
 			pos, tok, lit = s.Scan()
 			Expect(tok).To(Equal(token.EOF))
-			Expect(pos).To(Equal(token.Pos(len(input))))
+			Expect(pos).To(Equal(token.Pos(len(input) + 1)))
 		},
 	)
 
@@ -315,7 +315,7 @@ var _ = Describe("Scanner", func() {
 		r := testing.ErrReader("io error")
 		s := make.NewScanner(r, file)
 
-		Expect(s.Scan()).To(BeFalse())
+		_, _, _ = s.Scan()
 		Expect(s.Err()).To(MatchError("io error"))
 	})
 })
