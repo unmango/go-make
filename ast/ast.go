@@ -98,6 +98,11 @@ type PreReqList struct {
 	List []FileName
 }
 
+// Add appends prereq to p.List
+func (p *PreReqList) Add(prereq FileName) {
+	p.List = append(p.List, prereq)
+}
+
 // Pos implements Node
 func (p *PreReqList) Pos() token.Pos {
 	return p.List[0].Pos()

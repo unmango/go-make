@@ -3,6 +3,7 @@ package make
 import (
 	"go/scanner"
 	"io"
+	"strings"
 
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/token"
@@ -16,12 +17,16 @@ type Parser struct {
 	pos token.Pos
 	tok token.Token // one token look-ahead
 	lit string      // token literal
+
+	recipePrefix token.Token
 }
 
 func NewParser(r io.Reader, file *token.File) *Parser {
 	p := &Parser{
 		s:    NewScanner(r, file),
 		file: file,
+
+		recipePrefix: token.TAB,
 	}
 	p.next()
 
@@ -109,13 +114,60 @@ func (p *Parser) parseRule() *ast.Rule {
 		return nil
 	}
 
+	prereqs := new(ast.PreReqList)
+	for p.tok != token.NEWLINE && p.tok != token.EOF {
+		prereqs.Add(p.parseFileName())
+	}
+	if p.errors.Len() > 0 {
+		return nil
+	}
+	if p.tok == token.NEWLINE {
+		p.next()
+	}
+
+	recipes := make([]*ast.Recipe, 0)
+	for p.isRecipePrefix() && p.tok != token.EOF {
+		recipes = append(recipes, p.parseRecipe())
+	}
+	if p.errors.Len() > 0 {
+		return nil
+	}
+
 	return &ast.Rule{
 		Targets: targets,
 		Colon:   colon,
 		Pipe:    token.NoPos,
 		Semi:    token.NoPos,
-		PreReqs: nil,
-		Recipes: nil,
+		PreReqs: prereqs,
+		Recipes: recipes,
+	}
+}
+
+func (p Parser) isRecipePrefix() bool {
+	return p.tok == p.recipePrefix
+}
+
+func (p *Parser) parseRecipe() *ast.Recipe {
+	if !p.isRecipePrefix() {
+		p.expect(p.recipePrefix)
+		return nil
+	}
+
+	tokPos := p.pos
+	b := &strings.Builder{}
+	p.next()
+	for p.tok != token.NEWLINE && p.tok != token.EOF {
+		b.WriteString(p.lit)
+		p.next()
+	}
+	if p.tok == token.NEWLINE {
+		p.next()
+	}
+
+	return &ast.Recipe{
+		Tok:    token.TAB,
+		TokPos: tokPos,
+		Text:   b.String(),
 	}
 }
 
