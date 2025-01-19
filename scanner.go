@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"io"
+	"math"
 
 	"github.com/unmango/go-make/token"
 )
@@ -24,6 +25,9 @@ func NewScanner(r io.Reader, file *token.File) *Scanner {
 	scanner := bufio.NewScanner(r)
 	scanner.Split(ScanTokens)
 
+	if file == nil {
+		file = token.NewFileSet().AddFile("", 1, math.MaxInt-2)
+	}
 	s := &Scanner{
 		s:    scanner,
 		file: file,

@@ -8,8 +8,6 @@ import (
 
 type Node = ast.Node
 
-var Walk = ast.Walk
-
 // A File represents text content interpreted as the make syntax.
 // Most commonly this is a Makefile, but could also be any file
 // understood by make, i.e. include-me.mk
@@ -79,6 +77,11 @@ type TargetList struct {
 	List []FileName
 }
 
+// Add appends target to t.List
+func (t *TargetList) Add(target FileName) {
+	t.List = append(t.List, target)
+}
+
 // Pos implements Node
 func (t *TargetList) Pos() token.Pos {
 	return t.List[0].Pos()
@@ -93,6 +96,11 @@ func (t *TargetList) End() token.Pos {
 type PreReqList struct {
 	Pipe token.Pos
 	List []FileName
+}
+
+// Add appends prereq to p.List
+func (p *PreReqList) Add(prereq FileName) {
+	p.List = append(p.List, prereq)
 }
 
 // Pos implements Node

@@ -18,3 +18,5 @@ const NoPos = token.NoPos
 func PositionFor(file *File, p Pos) Position {
 	return file.PositionFor(p, false)
 }
+
+var NewFileSet = token.NewFileSet

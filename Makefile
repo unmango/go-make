@@ -21,6 +21,8 @@ tidy: go.sum
 test_all:
 	$(GINKGO) run -r ./
 
+validate_codecov: .make/validate_codecov
+
 cover: cover.profile
 	go tool cover -func=$<
 
@@ -56,4 +58,8 @@ bin/devctl: .versions/devctl
 
 .make/test: $(shell $(DEVCTL) list --go) | bin/ginkgo bin/devctl
 	$(GINKGO) run ${TEST_FLAGS} $(sort $(dir $?))
+	@touch $@
+
+.make/validate_codecov: codecov.yml
+	curl -X POST --data-binary @codecov.yml https://codecov.io/validate
 	@touch $@
