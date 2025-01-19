@@ -3,6 +3,7 @@ package make
 import (
 	"go/scanner"
 	"io"
+	"math"
 	"strings"
 
 	"github.com/unmango/go-make/ast"
@@ -22,6 +23,10 @@ type Parser struct {
 }
 
 func NewParser(r io.Reader, file *token.File) *Parser {
+	if file == nil {
+		file = token.NewFileSet().AddFile("", 1, math.MaxInt-2)
+	}
+
 	p := &Parser{
 		s:    NewScanner(r, file),
 		file: file,
