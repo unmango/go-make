@@ -126,12 +126,18 @@ type LiteralFileName struct {
 
 func (*LiteralFileName) fileNameNode() {}
 
+// Pos implements Node
 func (l *LiteralFileName) Pos() token.Pos {
 	return l.Name.Pos()
 }
 
+// End implements Node
 func (l *LiteralFileName) End() token.Pos {
 	return l.Name.End()
+}
+
+func (l *LiteralFileName) String() string {
+	return l.Name.String()
 }
 
 // A Recipe represents a line of text to be passed to the shell to build a Target.
@@ -165,4 +171,8 @@ func (i *Ident) Pos() token.Pos {
 // End implements Node
 func (i *Ident) End() token.Pos {
 	return token.Pos(int(i.NamePos) + len(i.Name))
+}
+
+func (i *Ident) String() string {
+	return i.Name
 }
