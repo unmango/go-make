@@ -326,4 +326,14 @@ var _ = Describe("Scanner", func() {
 		_, _, _ = s.Scan()
 		Expect(s.Err()).To(MatchError("io error"))
 	})
+
+	It("should support a nil *token.File value", func() {
+		buf := bytes.NewBufferString("target:")
+		s := make.NewScanner(buf, nil)
+
+		pos, tok, lit := s.Scan()
+		Expect(tok).To(Equal(token.IDENT))
+		Expect(lit).To(Equal("target"))
+		Expect(pos).To(Equal(token.Pos(1)))
+	})
 })

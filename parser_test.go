@@ -218,4 +218,14 @@ var _ = Describe("Parser", func() {
 			))
 		},
 	)
+
+	It("should support a nil *token.File value", func() {
+		buf := bytes.NewBufferString("target:")
+		s := make.NewParser(buf, nil)
+
+		f, err := s.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Rules).NotTo(BeEmpty())
+	})
 })

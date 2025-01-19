@@ -60,10 +60,10 @@ var _ = Describe("Ast", func() {
 		It("should return the position after the final recipe", func() {
 			c := &ast.Rule{Recipes: []*ast.Recipe{{
 				TokPos: token.Pos(420),
+				Text:   "some text",
 			}}}
 
-			// TODO: This is wrong, should be position after text
-			Expect(c.End()).To(Equal(token.Pos(420)))
+			Expect(c.End()).To(Equal(token.Pos(429)))
 		})
 	})
 
@@ -89,6 +89,17 @@ var _ = Describe("Ast", func() {
 
 			Expect(c.End()).To(Equal(token.Pos(423)))
 		})
+
+		It("should append the given target", func() {
+			c := &ast.TargetList{}
+			elem := &ast.LiteralFileName{Name: &ast.Ident{
+				NamePos: token.Pos(69),
+			}}
+
+			c.Add(elem)
+
+			Expect(c.List).To(ContainElement(elem))
+		})
 	})
 
 	Describe("PreReqList", func() {
@@ -102,7 +113,7 @@ var _ = Describe("Ast", func() {
 			Expect(c.Pos()).To(Equal(token.Pos(69)))
 		})
 
-		It("should return the position after the lat prereq", func() {
+		It("should return the position after the last prereq", func() {
 			c := &ast.PreReqList{List: []ast.FileName{
 				&ast.LiteralFileName{Name: &ast.Ident{NamePos: token.Pos(69)}},
 				&ast.LiteralFileName{Name: &ast.Ident{
@@ -112,6 +123,17 @@ var _ = Describe("Ast", func() {
 			}}
 
 			Expect(c.End()).To(Equal(token.Pos(423)))
+		})
+
+		It("should append the given prereq", func() {
+			c := &ast.PreReqList{}
+			elem := &ast.LiteralFileName{Name: &ast.Ident{
+				NamePos: token.Pos(69),
+			}}
+
+			c.Add(elem)
+
+			Expect(c.List).To(ContainElement(elem))
 		})
 	})
 
