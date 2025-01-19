@@ -136,6 +136,7 @@ func (l *LiteralFileName) End() token.Pos {
 	return l.Name.End()
 }
 
+// String returns the literal identifier
 func (l *LiteralFileName) String() string {
 	return l.Name.String()
 }
@@ -173,6 +174,7 @@ func (i *Ident) End() token.Pos {
 	return token.Pos(int(i.NamePos) + len(i.Name))
 }
 
+// String returns the literal identifier.
 func (i *Ident) String() string {
 	return i.Name
 }
