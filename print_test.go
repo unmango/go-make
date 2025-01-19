@@ -8,6 +8,7 @@ import (
 
 	"github.com/unmango/go-make"
 	"github.com/unmango/go-make/ast"
+	"github.com/unmango/go-make/token"
 )
 
 var _ = Describe("Print", func() {
@@ -50,6 +51,44 @@ var _ = Describe("Print", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(buf.String()).To(Equal("prereq"))
+		})
+
+		It("should print a recipe", func() {
+			buf := &bytes.Buffer{}
+			r := &ast.Recipe{
+				Tok:  token.TAB,
+				Text: "recipe",
+			}
+
+			err := make.Fprint(buf, r)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("\trecipe\n"))
+		})
+
+		It("should print a rule", func() {
+			buf := &bytes.Buffer{}
+			r := &ast.Rule{
+				Targets: &ast.TargetList{List: []ast.FileName{
+					&ast.LiteralFileName{Name: &ast.Ident{
+						Name: "target",
+					}},
+				}},
+				PreReqs: &ast.PreReqList{List: []ast.FileName{
+					&ast.LiteralFileName{Name: &ast.Ident{
+						Name: "prereq",
+					}},
+				}},
+				Recipes: []*ast.Recipe{{
+					Tok:  token.TAB,
+					Text: "recipe",
+				}},
+			}
+
+			err := make.Fprint(buf, r)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("target: prereq\n\trecipe\n"))
 		})
 	})
 })
