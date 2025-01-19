@@ -4,7 +4,20 @@ Makefile parsing and utilities in Go
 
 ## Usage
 
-At present the scanning utilities are the most tested.
+### Reading
+
+The `make.Parser` is the primary way to read Makefiles.
+
+```go
+f := os.Open("Makefile")
+p := make.NewParser(f, nil)
+
+m, err := p.ParseFile()
+
+fmt.Println(m.Rules)
+```
+
+The more primitive `make.Scanner` and `make.ScanTokens` used by `make.Parser` can be used individually.
 
 Using `make.ScanTokens` with a `bufio.Scanner`
 
@@ -23,19 +36,15 @@ Using `make.Scanner`
 
 ```go
 f := os.Open("Makefile")
-s := make.NewScanner(f)
+s := make.NewScanner(f, nil)
 
-for s.Scan() {
-  s.Token() // The current token.Token i.e. token.SIMPLE_ASSIGN
-  s.Literal() // Literal tokens as a string i.e. "identifier"
+for pos, tok, lit := s.Scan(); tok != token.EOF {
+  fmt.Println(pos) // The position of tok
+  fmt.Println(tok) // The current token.Token i.e. token.SIMPLE_ASSIGN
+  fmt.Println(lit) // Literal tokens as a string i.e. "identifier"
 }
 
 if err := s.Err(); err != nil {
   fmt.Println(err)
 }
 ```
-
-## Future
-
-- `make.Parser`
-- `make.Parse(file)`
