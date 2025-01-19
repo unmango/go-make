@@ -48,3 +48,13 @@ if err := s.Err(); err != nil {
   fmt.Println(err)
 }
 ```
+
+### Writing
+
+Use `make.Fprint` to write ast nodes.
+
+```go
+var file *ast.File
+
+err := make.Fprint(os.Stdout, file)
+```
