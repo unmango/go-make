@@ -154,6 +154,14 @@ var _ = Describe("Ast", func() {
 
 			Expect(c.End()).To(Equal(token.Pos(423)))
 		})
+
+		It("should stringify", func() {
+			c := &ast.LiteralFileName{Name: &ast.Ident{
+				Name: "foo",
+			}}
+
+			Expect(c.String()).To(Equal("foo"))
+		})
 	})
 
 	Describe("Recipe", func() {
@@ -192,6 +200,14 @@ var _ = Describe("Ast", func() {
 			}
 
 			Expect(c.End()).To(Equal(token.Pos(423)))
+		})
+
+		It("should stringify", func() {
+			c := &ast.Ident{
+				Name: "baz",
+			}
+
+			Expect(c.String()).To(Equal("baz"))
 		})
 	})
 })
