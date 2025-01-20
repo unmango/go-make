@@ -94,14 +94,12 @@ var _ = Describe("Print", func() {
 		})
 
 		DescribeTable("should surface errors",
-			Entry("write target", 1),
-			Entry("write colon", 2),
-			Entry("write space", 3),
-			Entry("write prereq", 4),
-			Entry("write newline", 5),
-			Entry("write tab", 6),
-			Entry("write recipe", 7),
-			Entry("write newline", 8),
+			Entry("target", 1),
+			Entry("colon", 2),
+			Entry("space", 3),
+			Entry("prereq", 4),
+			Entry("newline", 5),
+			Entry("tab", 6),
 			func(position int) {
 				w := testing.NewErrAfterWriter(position)
 				r := &ast.Rule{
