@@ -3,11 +3,13 @@ package make
 import (
 	"fmt"
 	"io"
-	"strings"
+	"reflect"
+
+	"github.com/unmango/go-make/ast"
 )
 
 type Writer struct {
-	w io.Writer
+	io.Writer
 }
 
 func NewWriter(w io.Writer) *Writer {
@@ -15,77 +17,104 @@ func NewWriter(w io.Writer) *Writer {
 }
 
 func (w *Writer) WriteLine() (n int, err error) {
-	return io.WriteString(w.w, "\n")
+	return io.WriteString(w, "\n")
 }
 
-func (w *Writer) WriteMakefile(m Makefile) (n int, err error) {
-	for _, r := range m.Rules {
-		if x, err := w.WriteRule(r); err != nil {
+func (w *Writer) WritFile(f *ast.File) (n int, err error) {
+	if f == nil {
+		err = fmt.Errorf("f was nil")
+		return
+	}
+
+	for _, r := range f.Rules {
+		if c, err := w.WriteRule(r); err != nil {
 			return 0, err
 		} else {
-			n += x
+			n += c
 		}
 	}
 
 	return
 }
 
-func (w *Writer) WritePreReq(p string) (n int, err error) {
-	return io.WriteString(w.w, " "+p)
-}
+func (w *Writer) WritePreReqList(l *ast.PreReqList) (n int, err error) {
+	if l == nil {
+		return
+	}
 
-func (w *Writer) WritePreReqs(ps []string) (n int, err error) {
-	for _, p := range ps {
-		if x, err := w.WritePreReq(p); err != nil {
+	if c, err := io.WriteString(w, " "); err != nil {
+		return 0, err
+	} else {
+		n += c
+	}
+
+	for i, p := range l.List {
+		if c, err := w.WriteFileName(p); err != nil {
 			return 0, err
 		} else {
-			n += x
+			n += c
+		}
+
+		if i+1 >= len(l.List) {
+			continue
+		}
+
+		if c, err := io.WriteString(w, " "); err != nil {
+			return 0, err
+		} else {
+			n += c
 		}
 	}
 
 	return
 }
 
-func (w *Writer) WriteRecipe(r string) (n int, err error) {
-	return io.WriteString(w.w, "\t"+r)
-}
-
-func (w *Writer) WriteRecipes(rs []string) (n int, err error) {
-	for _, p := range rs {
-		if x, err := w.WriteRecipe(p); err != nil {
-			return 0, err
-		} else {
-			n += x
-		}
+func (w *Writer) WriteRecipe(r *ast.Recipe) (n int, err error) {
+	if r == nil {
+		err = fmt.Errorf("r was nil")
+		return
 	}
 
-	return
+	return fmt.Fprintf(w, "%s%s", r.Tok, r.Text)
 }
 
-func (w *Writer) WriteRule(r Rule) (n int, err error) {
-	if len(r.Target) == 0 {
+func (w *Writer) WriteRule(r *ast.Rule) (n int, err error) {
+	if r == nil {
+		err = fmt.Errorf("r was nil")
+		return
+	}
+
+	if r.Targets == nil || len(r.Targets.List) == 0 {
 		return 0, fmt.Errorf("no targets")
 	}
 
-	if n, err = w.WriteTargets(r.Target); err != nil {
-		return
+	if c, err := w.WriteTargetList(r.Targets); err != nil {
+		return 0, err
+	} else {
+		n += c
 	}
-	if x, err := w.WritePreReqs(r.PreReqs); err != nil {
+
+	if x, err := w.WritePreReqList(r.PreReqs); err != nil {
 		return 0, err
 	} else {
 		n += x
 	}
+
 	if x, err := w.WriteLine(); err != nil {
 		return 0, err
 	} else {
 		n += x
 	}
-	if x, err := w.WriteRecipes(r.Recipe); err != nil {
-		return 0, err
-	} else {
-		n += x
+
+	for _, r := range r.Recipes {
+		if c, err := w.WriteRecipe(r); err != nil {
+			return 0, err
+		} else {
+			n += c
+		}
 	}
-	if len(r.Recipe) > 0 {
+
+	if len(r.Recipes) > 0 {
 		if x, err := w.WriteLine(); err != nil {
 			return 0, err
 		} else {
@@ -96,11 +125,48 @@ func (w *Writer) WriteRule(r Rule) (n int, err error) {
 	return
 }
 
-func (w *Writer) WriteTarget(t string) (n int, err error) {
-	return io.WriteString(w.w, t+":")
+func (w *Writer) WriteTargetList(l *ast.TargetList) (n int, err error) {
+	if l == nil {
+		return
+	}
+
+	for i, t := range l.List {
+		if c, err := w.WriteFileName(t); err != nil {
+			return 0, err
+		} else {
+			n += c
+		}
+
+		if i+1 >= len(l.List) {
+			continue
+		}
+
+		if c, err := io.WriteString(w, " "); err != nil {
+			return 0, err
+		} else {
+			n += c
+		}
+	}
+
+	if c, err := io.WriteString(w, ":"); err != nil {
+		return 0, err
+	} else {
+		n += c
+	}
+
+	return
 }
 
-func (w *Writer) WriteTargets(ts []string) (n int, err error) {
-	t := strings.Join(ts, " ")
-	return io.WriteString(w.w, t+":")
+func (w *Writer) WriteFileName(f ast.FileName) (n int, err error) {
+	if f == nil {
+		err = fmt.Errorf("f was nil")
+		return
+	}
+
+	switch node := f.(type) {
+	case *ast.LiteralFileName:
+		return fmt.Fprint(w, node.Name)
+	default:
+		return 0, fmt.Errorf("unsupported node type: %s", reflect.TypeOf(f))
+	}
 }
