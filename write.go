@@ -175,15 +175,10 @@ func WriteTargetList(w *Writer, l *ast.TargetList) (n int, err error) {
 }
 
 func WriteFileName(w *Writer, f ast.FileName) (n int, err error) {
-	if f == nil {
-		err = fmt.Errorf("f was nil")
-		return
-	}
-
 	switch node := f.(type) {
 	case *ast.LiteralFileName:
 		return w.WriteIdent(node.Name)
 	default:
-		return 0, fmt.Errorf("unsupported node type: %s", reflect.TypeOf(f))
+		return 0, fmt.Errorf("unsupported filename node: %v", reflect.TypeOf(f))
 	}
 }
