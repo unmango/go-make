@@ -28,7 +28,7 @@ var _ = Describe("Write", func() {
 		buf := &bytes.Buffer{}
 		w := make.NewWriter(buf)
 
-		n, err := w.WriteTargetList(&ast.TargetList{
+		n, err := make.WriteTargetList(w, &ast.TargetList{
 			List: []ast.FileName{
 				&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
 				&ast.LiteralFileName{Name: &ast.Ident{Name: "target2"}},
@@ -97,7 +97,7 @@ var _ = Describe("Write", func() {
 				buf := &bytes.Buffer{}
 				w := make.NewWriter(buf)
 
-				n, err := w.WriteRule(r)
+				n, err := make.WriteRule(w, r)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(buf.String()).To(Equal(expected))
@@ -109,11 +109,11 @@ var _ = Describe("Write", func() {
 			buf := &bytes.Buffer{}
 			w := make.NewWriter(buf)
 
-			_, err := w.WriteRule(&ast.Rule{Targets: &ast.TargetList{List: []ast.FileName{
+			_, err := make.WriteRule(w, &ast.Rule{Targets: &ast.TargetList{List: []ast.FileName{
 				&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
 			}}})
 			Expect(err).NotTo(HaveOccurred())
-			_, err = w.WriteRule(&ast.Rule{Targets: &ast.TargetList{List: []ast.FileName{
+			_, err = make.WriteRule(w, &ast.Rule{Targets: &ast.TargetList{List: []ast.FileName{
 				&ast.LiteralFileName{Name: &ast.Ident{Name: "target2"}},
 			}}})
 			Expect(err).NotTo(HaveOccurred())
@@ -133,7 +133,7 @@ var _ = Describe("Write", func() {
 				buf := &bytes.Buffer{}
 				w := make.NewWriter(buf)
 
-				_, err := w.WriteRule(rule)
+				_, err := make.WriteRule(w, rule)
 
 				Expect(err).To(MatchError("no targets"))
 			},
@@ -149,7 +149,7 @@ var _ = Describe("Write", func() {
 				writer := testing.NewErrAfterWriter(5)
 				w := make.NewWriter(writer)
 
-				_, err := w.WriteRule(&ast.Rule{
+				_, err := make.WriteRule(w, &ast.Rule{
 					Targets: &ast.TargetList{List: []ast.FileName{
 						&ast.LiteralFileName{Name: &ast.Ident{Name: "foo"}},
 					}},
@@ -171,7 +171,7 @@ var _ = Describe("Write", func() {
 		buf := &bytes.Buffer{}
 		w := make.NewWriter(buf)
 
-		_, err := w.WritFile(&ast.File{
+		_, err := make.WriteFile(w, &ast.File{
 			Rules: []*ast.Rule{{
 				Targets: &ast.TargetList{List: []ast.FileName{
 					&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
@@ -185,7 +185,7 @@ var _ = Describe("Write", func() {
 	It("should return errors found when writing a Makefile", func() {
 		w := make.NewWriter(testing.ErrWriter("io error"))
 
-		_, err := w.WritFile(&ast.File{
+		_, err := make.WriteFile(w, &ast.File{
 			Rules: []*ast.Rule{{
 				Targets: &ast.TargetList{List: []ast.FileName{
 					&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
