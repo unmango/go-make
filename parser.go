@@ -177,10 +177,18 @@ func (p *Parser) parseRecipe() *ast.Recipe {
 }
 
 func (p *Parser) parseFileName() ast.FileName {
-	name := p.parseIdent()
+	// TODO: Is IDENT the correct token for this?
+	pos, name := p.pos, "_"
+	if p.tok == token.IDENT {
+		name = p.lit
+		p.next()
+	} else {
+		p.expect(token.IDENT)
+	}
 
 	return &ast.LiteralFileName{
-		Name: name,
+		NamePos: pos,
+		Name:    name,
 	}
 }
 

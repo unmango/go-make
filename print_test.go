@@ -17,9 +17,9 @@ var _ = Describe("Print", func() {
 	Describe("Fprint", func() {
 		It("should print a literal file name", func() {
 			buf := &bytes.Buffer{}
-			l := &ast.LiteralFileName{Name: &ast.Ident{
+			l := &ast.LiteralFileName{
 				Name: "target",
-			}}
+			}
 
 			err := make.Fprint(buf, l)
 
@@ -30,9 +30,9 @@ var _ = Describe("Print", func() {
 		It("should print a target list", func() {
 			buf := &bytes.Buffer{}
 			t := &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name: "target",
-				}},
+				},
 			}}
 
 			err := make.Fprint(buf, t)
@@ -44,9 +44,9 @@ var _ = Describe("Print", func() {
 		It("should print a prereq list", func() {
 			buf := &bytes.Buffer{}
 			t := &ast.PreReqList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name: "prereq",
-				}},
+				},
 			}}
 
 			err := make.Fprint(buf, t)
@@ -72,14 +72,14 @@ var _ = Describe("Print", func() {
 			buf := &bytes.Buffer{}
 			r := &ast.Rule{
 				Targets: &ast.TargetList{List: []ast.FileName{
-					&ast.LiteralFileName{Name: &ast.Ident{
+					&ast.LiteralFileName{
 						Name: "target",
-					}},
+					},
 				}},
 				PreReqs: &ast.PreReqList{List: []ast.FileName{
-					&ast.LiteralFileName{Name: &ast.Ident{
+					&ast.LiteralFileName{
 						Name: "prereq",
-					}},
+					},
 				}},
 				Recipes: []*ast.Recipe{{
 					Tok:  token.TAB,
@@ -104,14 +104,14 @@ var _ = Describe("Print", func() {
 				w := testing.NewErrAfterWriter(position)
 				r := &ast.Rule{
 					Targets: &ast.TargetList{List: []ast.FileName{
-						&ast.LiteralFileName{Name: &ast.Ident{
+						&ast.LiteralFileName{
 							Name: "target",
-						}},
+						},
 					}},
 					PreReqs: &ast.PreReqList{List: []ast.FileName{
-						&ast.LiteralFileName{Name: &ast.Ident{
+						&ast.LiteralFileName{
 							Name: "prereq",
-						}},
+						},
 					}},
 					Recipes: []*ast.Recipe{{
 						Tok:  token.TAB,

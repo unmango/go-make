@@ -121,24 +121,25 @@ type FileName interface {
 
 // A LiteralFileName represents a name identifier with no additional syntax.
 type LiteralFileName struct {
-	Name *Ident
+	Name    string
+	NamePos token.Pos
 }
 
 func (*LiteralFileName) fileNameNode() {}
 
 // Pos implements Node
 func (l *LiteralFileName) Pos() token.Pos {
-	return l.Name.Pos()
+	return l.NamePos
 }
 
 // End implements Node
 func (l *LiteralFileName) End() token.Pos {
-	return l.Name.End()
+	return token.Pos(int(l.NamePos) + len(l.Name))
 }
 
 // String returns the literal identifier
 func (l *LiteralFileName) String() string {
-	return l.Name.String()
+	return l.Name
 }
 
 // A Recipe represents a line of text to be passed to the shell to build a Target.

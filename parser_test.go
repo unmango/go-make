@@ -30,10 +30,10 @@ var _ = Describe("Parser", func() {
 		Expect(f.Rules).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name:    "target",
 					NamePos: token.Pos(1),
-				}},
+				},
 			}},
 			PreReqs: &ast.PreReqList{},
 			Recipes: []*ast.Recipe{},
@@ -50,14 +50,14 @@ var _ = Describe("Parser", func() {
 		Expect(f.Rules).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(15),
 			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name:    "target",
 					NamePos: token.Pos(1),
-				}},
-				&ast.LiteralFileName{Name: &ast.Ident{
+				},
+				&ast.LiteralFileName{
 					Name:    "target2",
 					NamePos: token.Pos(8),
-				}},
+				},
 			}},
 			PreReqs: &ast.PreReqList{},
 			Recipes: []*ast.Recipe{},
@@ -74,16 +74,16 @@ var _ = Describe("Parser", func() {
 		Expect(f.Rules).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name:    "target",
 					NamePos: token.Pos(1),
-				}},
+				},
 			}},
 			PreReqs: &ast.PreReqList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name:    "prereq",
 					NamePos: token.Pos(9),
-				}},
+				},
 			}},
 			Recipes: []*ast.Recipe{},
 		}))
@@ -99,20 +99,20 @@ var _ = Describe("Parser", func() {
 		Expect(f.Rules).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name:    "target",
 					NamePos: token.Pos(1),
-				}},
+				},
 			}},
 			PreReqs: &ast.PreReqList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name:    "prereq",
 					NamePos: token.Pos(9),
-				}},
-				&ast.LiteralFileName{Name: &ast.Ident{
+				},
+				&ast.LiteralFileName{
 					Name:    "prereq2",
 					NamePos: token.Pos(16),
-				}},
+				},
 			}},
 			Recipes: []*ast.Recipe{},
 		}))
@@ -128,10 +128,10 @@ var _ = Describe("Parser", func() {
 		Expect(f.Rules).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name:    "target",
 					NamePos: token.Pos(1),
-				}},
+				},
 			}},
 			PreReqs: &ast.PreReqList{},
 			Recipes: []*ast.Recipe{{
@@ -152,10 +152,10 @@ var _ = Describe("Parser", func() {
 		Expect(f.Rules).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name:    "target",
 					NamePos: token.Pos(1),
-				}},
+				},
 			}},
 			PreReqs: &ast.PreReqList{},
 			Recipes: []*ast.Recipe{
@@ -183,16 +183,16 @@ var _ = Describe("Parser", func() {
 		Expect(f.Rules).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name:    "target",
 					NamePos: token.Pos(1),
-				}},
+				},
 			}},
 			PreReqs: &ast.PreReqList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{
 					Name:    "prereq",
 					NamePos: token.Pos(9),
-				}},
+				},
 			}},
 			Recipes: []*ast.Recipe{{
 				Tok:    token.TAB,

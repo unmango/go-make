@@ -50,7 +50,7 @@ var _ = Describe("Ast", func() {
 		It("should return the position of the first target", func() {
 			c := &ast.Rule{Targets: &ast.TargetList{
 				List: []ast.FileName{&ast.LiteralFileName{
-					Name: &ast.Ident{NamePos: token.Pos(69)},
+					NamePos: token.Pos(69),
 				}},
 			}}
 
@@ -71,7 +71,7 @@ var _ = Describe("Ast", func() {
 		It("should return the position of the first target", func() {
 			c := &ast.TargetList{
 				List: []ast.FileName{&ast.LiteralFileName{
-					Name: &ast.Ident{NamePos: token.Pos(69)},
+					NamePos: token.Pos(69),
 				}},
 			}
 
@@ -80,11 +80,11 @@ var _ = Describe("Ast", func() {
 
 		It("should return the position of the last target", func() {
 			c := &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{NamePos: token.Pos(69)}},
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{NamePos: token.Pos(69)},
+				&ast.LiteralFileName{
 					NamePos: token.Pos(420),
 					Name:    "foo",
-				}},
+				},
 			}}
 
 			Expect(c.End()).To(Equal(token.Pos(423)))
@@ -92,9 +92,9 @@ var _ = Describe("Ast", func() {
 
 		It("should append the given target", func() {
 			c := &ast.TargetList{}
-			elem := &ast.LiteralFileName{Name: &ast.Ident{
+			elem := &ast.LiteralFileName{
 				NamePos: token.Pos(69),
-			}}
+			}
 
 			c.Add(elem)
 
@@ -106,7 +106,7 @@ var _ = Describe("Ast", func() {
 		It("should return the position of the first target", func() {
 			c := &ast.PreReqList{
 				List: []ast.FileName{&ast.LiteralFileName{
-					Name: &ast.Ident{NamePos: token.Pos(69)},
+					NamePos: token.Pos(69),
 				}},
 			}
 
@@ -115,11 +115,11 @@ var _ = Describe("Ast", func() {
 
 		It("should return the position after the last prereq", func() {
 			c := &ast.PreReqList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{NamePos: token.Pos(69)}},
-				&ast.LiteralFileName{Name: &ast.Ident{
+				&ast.LiteralFileName{NamePos: token.Pos(69)},
+				&ast.LiteralFileName{
 					NamePos: token.Pos(420),
 					Name:    "baz",
-				}},
+				},
 			}}
 
 			Expect(c.End()).To(Equal(token.Pos(423)))
@@ -127,9 +127,9 @@ var _ = Describe("Ast", func() {
 
 		It("should append the given prereq", func() {
 			c := &ast.PreReqList{}
-			elem := &ast.LiteralFileName{Name: &ast.Ident{
+			elem := &ast.LiteralFileName{
 				NamePos: token.Pos(69),
-			}}
+			}
 
 			c.Add(elem)
 
@@ -139,26 +139,26 @@ var _ = Describe("Ast", func() {
 
 	Describe("LiteralFileName", func() {
 		It("should return the position of the identifier", func() {
-			c := &ast.LiteralFileName{Name: &ast.Ident{
+			c := &ast.LiteralFileName{
 				NamePos: token.Pos(69),
-			}}
+			}
 
 			Expect(c.Pos()).To(Equal(token.Pos(69)))
 		})
 
 		It("should return the position after the identifier", func() {
-			c := &ast.LiteralFileName{Name: &ast.Ident{
+			c := &ast.LiteralFileName{
 				NamePos: token.Pos(420),
 				Name:    "bar",
-			}}
+			}
 
 			Expect(c.End()).To(Equal(token.Pos(423)))
 		})
 
 		It("should stringify", func() {
-			c := &ast.LiteralFileName{Name: &ast.Ident{
+			c := &ast.LiteralFileName{
 				Name: "foo",
-			}}
+			}
 
 			Expect(c.String()).To(Equal("foo"))
 		})
