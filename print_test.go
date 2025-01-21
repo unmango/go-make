@@ -17,8 +17,8 @@ var _ = Describe("Print", func() {
 	Describe("Fprint", func() {
 		It("should print a literal file name", func() {
 			buf := &bytes.Buffer{}
-			l := &ast.LiteralFileName{
-				Name: "target",
+			l := &ast.String{
+				Text: "target",
 			}
 
 			err := make.Fprint(buf, l)
@@ -29,9 +29,9 @@ var _ = Describe("Print", func() {
 
 		It("should print a target list", func() {
 			buf := &bytes.Buffer{}
-			t := &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{
-					Name: "target",
+			t := &ast.TargetList{List: []ast.Expr{
+				&ast.String{
+					Text: "target",
 				},
 			}}
 
@@ -43,9 +43,9 @@ var _ = Describe("Print", func() {
 
 		It("should print a prereq list", func() {
 			buf := &bytes.Buffer{}
-			t := &ast.PreReqList{List: []ast.FileName{
-				&ast.LiteralFileName{
-					Name: "prereq",
+			t := &ast.PreReqList{List: []ast.Expr{
+				&ast.String{
+					Text: "prereq",
 				},
 			}}
 
@@ -71,14 +71,14 @@ var _ = Describe("Print", func() {
 		It("should print a rule", func() {
 			buf := &bytes.Buffer{}
 			r := &ast.Rule{
-				Targets: &ast.TargetList{List: []ast.FileName{
-					&ast.LiteralFileName{
-						Name: "target",
+				Targets: &ast.TargetList{List: []ast.Expr{
+					&ast.String{
+						Text: "target",
 					},
 				}},
-				PreReqs: &ast.PreReqList{List: []ast.FileName{
-					&ast.LiteralFileName{
-						Name: "prereq",
+				PreReqs: &ast.PreReqList{List: []ast.Expr{
+					&ast.String{
+						Text: "prereq",
 					},
 				}},
 				Recipes: []*ast.Recipe{{
@@ -103,14 +103,14 @@ var _ = Describe("Print", func() {
 			func(position int) {
 				w := testing.NewErrAfterWriter(position)
 				r := &ast.Rule{
-					Targets: &ast.TargetList{List: []ast.FileName{
-						&ast.LiteralFileName{
-							Name: "target",
+					Targets: &ast.TargetList{List: []ast.Expr{
+						&ast.String{
+							Text: "target",
 						},
 					}},
-					PreReqs: &ast.PreReqList{List: []ast.FileName{
-						&ast.LiteralFileName{
-							Name: "prereq",
+					PreReqs: &ast.PreReqList{List: []ast.Expr{
+						&ast.String{
+							Text: "prereq",
 						},
 					}},
 					Recipes: []*ast.Recipe{{

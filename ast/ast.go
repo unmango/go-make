@@ -74,11 +74,11 @@ func (r *Rule) End() token.Pos {
 
 // A TargetList represents a list of Targets in a single Rule.
 type TargetList struct {
-	List []FileName
+	List []Expr
 }
 
 // Add appends target to t.List
-func (t *TargetList) Add(target FileName) {
+func (t *TargetList) Add(target Expr) {
 	t.List = append(t.List, target)
 }
 
@@ -95,11 +95,11 @@ func (t *TargetList) End() token.Pos {
 // A PreReqList represents all normal and order-only prerequisites in a single Rule.
 type PreReqList struct {
 	Pipe token.Pos
-	List []FileName
+	List []Expr
 }
 
 // Add appends prereq to p.List
-func (p *PreReqList) Add(prereq FileName) {
+func (p *PreReqList) Add(prereq Expr) {
 	p.List = append(p.List, prereq)
 }
 
@@ -113,38 +113,38 @@ func (p *PreReqList) End() token.Pos {
 	return p.List[len(p.List)-1].End()
 }
 
-// A FileName represents any Node that can appear where a file name is expected.
-type FileName interface {
+// A Expr represents any Node that can appear where a file name is expected.
+type Expr interface {
 	Node
-	fileNameNode()
+	exprNode()
 }
 
-// A LiteralFileName represents a name identifier with no additional syntax.
-type LiteralFileName struct {
-	Name    string
-	NamePos token.Pos
+// A String represents plain text not interpreted by make.
+type String struct {
+	Text    string
+	TextPos token.Pos
 }
 
-func (*LiteralFileName) fileNameNode() {}
+func (*String) exprNode() {}
 
 // Pos implements Node
-func (l *LiteralFileName) Pos() token.Pos {
-	return l.NamePos
+func (l *String) Pos() token.Pos {
+	return l.TextPos
 }
 
 // End implements Node
-func (l *LiteralFileName) End() token.Pos {
-	return token.Pos(int(l.NamePos) + len(l.Name))
+func (l *String) End() token.Pos {
+	return token.Pos(int(l.TextPos) + len(l.Text))
 }
 
 // String returns the literal identifier
-func (l *LiteralFileName) String() string {
-	return l.Name
+func (l *String) String() string {
+	return l.Text
 }
 
 // A Recipe represents a line of text to be passed to the shell to build a Target.
 type Recipe struct {
-	Tok    token.Token // TAB or SEMI
+	Tok    token.Token // TAB, SEMI, or .RECIPEPREFIX
 	TokPos token.Pos   // position of Tok
 	Text   string      // recipe text excluding '\n'
 }
@@ -178,4 +178,11 @@ func (i *Ident) End() token.Pos {
 // String returns the literal identifier.
 func (i *Ident) String() string {
 	return i.Name
+}
+
+type AssignStmt struct {
+	Lhs    []Expr
+	Tok    token.Token
+	TokPos token.Pos
+	Rhs    []Expr
 }

@@ -176,7 +176,7 @@ func (p *Parser) parseRecipe() *ast.Recipe {
 	}
 }
 
-func (p *Parser) parseFileName() ast.FileName {
+func (p *Parser) parseFileName() ast.Expr {
 	// TODO: Is IDENT the correct token for this?
 	pos, name := p.pos, "_"
 	if p.tok == token.IDENT {
@@ -186,9 +186,9 @@ func (p *Parser) parseFileName() ast.FileName {
 		p.expect(token.IDENT)
 	}
 
-	return &ast.LiteralFileName{
-		NamePos: pos,
-		Name:    name,
+	return &ast.String{
+		TextPos: pos,
+		Text:    name,
 	}
 }
 
