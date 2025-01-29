@@ -203,5 +203,16 @@ var _ = Describe("Ast", func() {
 
 			Expect(v.End()).To(Equal(token.Pos(423)))
 		})
+
+		When("there is no value", func() {
+			It("should return the position after the operator", func() {
+				v := &ast.Variable{
+					Name: &ast.Text{ValuePos: token.Pos(69)},
+					Op:   token.SIMPLE_ASSIGN,
+				}
+
+				Expect(v.End()).To(Equal(token.Pos(71)))
+			})
+		})
 	})
 })
