@@ -1,6 +1,8 @@
 package ast_test
 
 import (
+	"testing/quick"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -184,30 +186,51 @@ var _ = Describe("Ast", func() {
 		})
 	})
 
-	Describe("Ident", func() {
+	Describe("Variable", func() {
 		It("should return the position of the name", func() {
-			c := &ast.Ident{
-				NamePos: token.Pos(69),
-			}
+			err := quick.Check(func(n int) bool {
+				v := &ast.Variable{Name: &ast.Text{ValuePos: token.Pos(n)}}
 
-			Expect(c.Pos()).To(Equal(token.Pos(69)))
+				return v.Pos() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should return the position after the name", func() {
-			c := &ast.Ident{
-				NamePos: token.Pos(420),
-				Name:    "foo",
-			}
+		It("should return the position after the value", func() {
+			err := quick.Check(func(n int) bool {
+				v := &ast.Variable{Value: []ast.Expr{&ast.Text{
+					ValuePos: token.Pos(n),
+					Value:    "foo",
+				}}}
 
-			Expect(c.End()).To(Equal(token.Pos(423)))
+				return v.End() == token.Pos(n+3)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should stringify", func() {
-			c := &ast.Ident{
-				Name: "baz",
-			}
+		When("there is no value", func() {
+			DescribeTable("should return the position after the operator",
+				Entry(":=", token.SIMPLE_ASSIGN, 2),
+				Entry("=", token.RECURSIVE_ASSIGN, 1),
+				Entry("::=", token.POSIX_ASSIGN, 3),
+				Entry(":::=", token.IMMEDIATE_ASSIGN, 4),
+				Entry("?=", token.IFNDEF_ASSIGN, 2),
+				Entry("!=", token.SHELL_ASSIGN, 2),
+				func(tok token.Token, l int) {
+					err := quick.Check(func(n int) bool {
+						v := &ast.Variable{
+							Name: &ast.Text{ValuePos: token.Pos(n)},
+							Op:   tok,
+						}
 
-			Expect(c.String()).To(Equal("baz"))
+						return v.End() == token.Pos(n+l)
+					}, nil)
+
+					Expect(err).NotTo(HaveOccurred())
+				},
+			)
 		})
 	})
 })

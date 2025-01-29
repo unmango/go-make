@@ -169,23 +169,27 @@ func (r *Recipe) End() token.Pos {
 	return token.Pos(int(r.TokPos) + len(r.Text))
 }
 
-// An Ident represents an identifier.
-type Ident struct {
-	Name    string
-	NamePos token.Pos
+// An Variable represents a variable assignment.
+type Variable struct {
+	Name  Expr        // left-hand side of the assignment
+	Op    token.Token // =, :=, ::=, :::=, !=, ?=
+	OpPos token.Pos   // position of Tok
+	Value []Expr      // right-hand side of the assignment
 }
 
+// declNode implements Decl
+func (*Variable) declNode() {}
+
 // Pos implements Node
-func (i *Ident) Pos() token.Pos {
-	return i.NamePos
+func (s *Variable) Pos() token.Pos {
+	return s.Name.Pos()
 }
 
 // End implements Node
-func (i *Ident) End() token.Pos {
-	return token.Pos(int(i.NamePos) + len(i.Name))
-}
-
-// String returns the literal identifier.
-func (i *Ident) String() string {
-	return i.Name
+func (s *Variable) End() token.Pos {
+	if len(s.Value) > 0 {
+		return s.Value[len(s.Value)-1].End()
+	} else {
+		return token.Pos(int(s.Pos()) + len(s.Op.String()))
+	}
 }

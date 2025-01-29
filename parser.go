@@ -197,18 +197,3 @@ func (p *Parser) parseExpression() ast.Expr {
 		Value:    name,
 	}
 }
-
-func (p *Parser) parseIdent() *ast.Ident {
-	pos, name := p.pos, "_"
-	if p.tok == token.TEXT {
-		name = p.lit
-		p.next()
-	} else {
-		p.expect(token.TEXT)
-	}
-
-	return &ast.Ident{
-		NamePos: pos,
-		Name:    name,
-	}
-}
