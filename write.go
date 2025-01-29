@@ -228,10 +228,14 @@ func WriteVar(w *Writer, v *ast.Variable) (n int, err error) {
 		return
 	}
 
-	if c, err := fillSpace(w, v.OpPos, v.Value[0].Pos()); err != nil {
-		return 0, err
-	} else {
-		n += c
+	// yuck
+	opEnd := token.Pos(int(v.OpPos) + len(v.Op.String()))
+	for range v.Value[0].Pos() - opEnd {
+		if c, err := w.WriteSpace(); err != nil {
+			return 0, err
+		} else {
+			n += c
+		}
 	}
 
 	for _, e := range v.Value {
