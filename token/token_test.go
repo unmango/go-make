@@ -10,7 +10,7 @@ import (
 )
 
 var Literals = []TableEntry{
-	Entry(nil, token.IDENT),
+	Entry(nil, token.TEXT),
 }
 
 var Operators = []TableEntry{
@@ -149,7 +149,7 @@ var _ = Describe("Token", func() {
 	})
 
 	DescribeTable("String",
-		Entry(nil, token.IDENT, "IDENT"),
+		Entry(nil, token.TEXT, "TEXT"),
 		Entry(nil, token.LPAREN, "("),
 		Entry(nil, token.LBRACE, "{"),
 		Entry(nil, token.RPAREN, ")"),
@@ -286,9 +286,9 @@ var _ = Describe("Token", func() {
 			},
 		)
 
-		It("should lookup identifiers", func() {
+		It("should lookup text", func() {
 			err := quick.Check(func(s string) bool {
-				return token.Lookup(s) == token.IDENT
+				return token.Lookup(s) == token.TEXT
 			}, nil)
 
 			Expect(err).NotTo(HaveOccurred())
@@ -451,7 +451,7 @@ var _ = Describe("Token", func() {
 		})
 	})
 
-	Describe("IsIdentifier", func() {
+	Describe("IsToken", func() {
 		DescribeTable("keywords",
 			Entry(nil, "define"),
 			Entry(nil, "endef"),
@@ -509,7 +509,7 @@ var _ = Describe("Token", func() {
 			Entry(nil, "value"),
 			Entry(nil, ""),
 			func(keyword string) {
-				Expect(token.IsIdentifier(keyword)).To(BeFalse())
+				Expect(token.IsToken(keyword)).To(BeFalse())
 			},
 		)
 
@@ -534,7 +534,7 @@ var _ = Describe("Token", func() {
 			Entry(nil, "|"),
 			Entry(nil, " "),
 			func(keyword string) {
-				Expect(token.IsIdentifier(keyword)).To(BeFalse())
+				Expect(token.IsToken(keyword)).To(BeFalse())
 			},
 		)
 
@@ -548,7 +548,7 @@ var _ = Describe("Token", func() {
 			Entry(nil, "/abs/path"),
 			Entry(nil, "12"),
 			func(s string) {
-				Expect(token.IsIdentifier(s)).To(BeTrue())
+				Expect(token.IsToken(s)).To(BeTrue())
 			},
 		)
 	})

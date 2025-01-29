@@ -27,13 +27,13 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Rules).To(ConsistOf(&ast.Rule{
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "target",
-					NamePos: token.Pos(1),
-				}},
+			Targets: &ast.TargetList{List: []ast.Expr{
+				&ast.Text{
+					Value:    "target",
+					ValuePos: token.Pos(1),
+				},
 			}},
 			PreReqs: &ast.PreReqList{},
 			Recipes: []*ast.Recipe{},
@@ -47,17 +47,17 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Rules).To(ConsistOf(&ast.Rule{
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(15),
-			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "target",
-					NamePos: token.Pos(1),
-				}},
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "target2",
-					NamePos: token.Pos(8),
-				}},
+			Targets: &ast.TargetList{List: []ast.Expr{
+				&ast.Text{
+					Value:    "target",
+					ValuePos: token.Pos(1),
+				},
+				&ast.Text{
+					Value:    "target2",
+					ValuePos: token.Pos(8),
+				},
 			}},
 			PreReqs: &ast.PreReqList{},
 			Recipes: []*ast.Recipe{},
@@ -71,19 +71,19 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Rules).To(ConsistOf(&ast.Rule{
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "target",
-					NamePos: token.Pos(1),
-				}},
+			Targets: &ast.TargetList{List: []ast.Expr{
+				&ast.Text{
+					Value:    "target",
+					ValuePos: token.Pos(1),
+				},
 			}},
-			PreReqs: &ast.PreReqList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "prereq",
-					NamePos: token.Pos(9),
-				}},
+			PreReqs: &ast.PreReqList{List: []ast.Expr{
+				&ast.Text{
+					Value:    "prereq",
+					ValuePos: token.Pos(9),
+				},
 			}},
 			Recipes: []*ast.Recipe{},
 		}))
@@ -96,23 +96,23 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Rules).To(ConsistOf(&ast.Rule{
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "target",
-					NamePos: token.Pos(1),
-				}},
+			Targets: &ast.TargetList{List: []ast.Expr{
+				&ast.Text{
+					Value:    "target",
+					ValuePos: token.Pos(1),
+				},
 			}},
-			PreReqs: &ast.PreReqList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "prereq",
-					NamePos: token.Pos(9),
-				}},
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "prereq2",
-					NamePos: token.Pos(16),
-				}},
+			PreReqs: &ast.PreReqList{List: []ast.Expr{
+				&ast.Text{
+					Value:    "prereq",
+					ValuePos: token.Pos(9),
+				},
+				&ast.Text{
+					Value:    "prereq2",
+					ValuePos: token.Pos(16),
+				},
 			}},
 			Recipes: []*ast.Recipe{},
 		}))
@@ -125,13 +125,13 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Rules).To(ConsistOf(&ast.Rule{
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "target",
-					NamePos: token.Pos(1),
-				}},
+			Targets: &ast.TargetList{List: []ast.Expr{
+				&ast.Text{
+					Value:    "target",
+					ValuePos: token.Pos(1),
+				},
 			}},
 			PreReqs: &ast.PreReqList{},
 			Recipes: []*ast.Recipe{{
@@ -149,13 +149,13 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Rules).To(ConsistOf(&ast.Rule{
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "target",
-					NamePos: token.Pos(1),
-				}},
+			Targets: &ast.TargetList{List: []ast.Expr{
+				&ast.Text{
+					Value:    "target",
+					ValuePos: token.Pos(1),
+				},
 			}},
 			PreReqs: &ast.PreReqList{},
 			Recipes: []*ast.Recipe{
@@ -180,19 +180,19 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Rules).To(ConsistOf(&ast.Rule{
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "target",
-					NamePos: token.Pos(1),
-				}},
+			Targets: &ast.TargetList{List: []ast.Expr{
+				&ast.Text{
+					Value:    "target",
+					ValuePos: token.Pos(1),
+				},
 			}},
-			PreReqs: &ast.PreReqList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name:    "prereq",
-					NamePos: token.Pos(9),
-				}},
+			PreReqs: &ast.PreReqList{List: []ast.Expr{
+				&ast.Text{
+					Value:    "prereq",
+					ValuePos: token.Pos(9),
+				},
 			}},
 			Recipes: []*ast.Recipe{{
 				Tok:    token.TAB,
@@ -214,7 +214,7 @@ var _ = Describe("Parser", func() {
 			_, err := p.ParseFile()
 
 			Expect(err).To(MatchError(
-				ContainSubstring("expected 'IDENT'"),
+				ContainSubstring("expected 'TEXT'"),
 			))
 		},
 	)
@@ -226,6 +226,6 @@ var _ = Describe("Parser", func() {
 		f, err := s.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Rules).NotTo(BeEmpty())
+		Expect(f.Decls).NotTo(BeEmpty())
 	})
 })

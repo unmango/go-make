@@ -43,14 +43,14 @@ func (w *Writer) WriteString(s string) (n int, err error) {
 	return w.Write([]byte(s))
 }
 
-func WriteFile(w *Writer, f *ast.File) (n int, err error) {
+func WriteFile(w io.Writer, f *ast.File) (n int, err error) {
 	if f == nil {
 		err = fmt.Errorf("f was nil")
 		return
 	}
 
-	for _, r := range f.Rules {
-		if c, err := WriteRule(w, r); err != nil {
+	for _, r := range f.Decls {
+		if c, err := WriteDecl(w, r); err != nil {
 			return 0, err
 		} else {
 			n += c
@@ -60,13 +60,22 @@ func WriteFile(w *Writer, f *ast.File) (n int, err error) {
 	return
 }
 
+func WriteDecl(w io.Writer, decl ast.Decl) (n int, err error) {
+	switch decl := decl.(type) {
+	case *ast.Rule:
+		return WriteRule(NewWriter(w), decl)
+	}
+
+	return // TODO
+}
+
 func WritePreReqList(w *Writer, l *ast.PreReqList) (n int, err error) {
 	if l == nil {
 		return
 	}
 
 	for i, p := range l.List {
-		if c, err := WriteFileName(w, p); err != nil {
+		if c, err := WriteExpr(w, p); err != nil {
 			return 0, err
 		} else {
 			n += c
@@ -148,7 +157,7 @@ func WriteTargetList(w *Writer, l *ast.TargetList) (n int, err error) {
 	}
 
 	for i, t := range l.List {
-		if c, err := WriteFileName(w, t); err != nil {
+		if c, err := WriteExpr(w, t); err != nil {
 			return 0, err
 		} else {
 			n += c
@@ -174,16 +183,11 @@ func WriteTargetList(w *Writer, l *ast.TargetList) (n int, err error) {
 	return
 }
 
-func WriteFileName(w *Writer, f ast.FileName) (n int, err error) {
-	if f == nil {
-		err = fmt.Errorf("f was nil")
-		return
-	}
-
+func WriteExpr(w *Writer, f ast.Expr) (n int, err error) {
 	switch node := f.(type) {
-	case *ast.LiteralFileName:
-		return w.WriteIdent(node.Name)
+	case *ast.Text:
+		return w.WriteString(node.Value)
 	default:
-		return 0, fmt.Errorf("unsupported node type: %s", reflect.TypeOf(f))
+		return 0, fmt.Errorf("unsupported filename node: %v", reflect.TypeOf(f))
 	}
 }

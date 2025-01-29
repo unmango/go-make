@@ -59,13 +59,13 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 	var atNewline bool
 
 	switch txt := s.s.Text(); {
-	case token.IsIdentifier(txt):
+	case token.IsToken(txt):
 		lit = txt
 		s.next()
 		if len(txt) > 1 {
 			tok = token.Lookup(txt)
 		} else {
-			tok = token.IDENT
+			tok = token.TEXT
 		}
 	default:
 		s.next()
