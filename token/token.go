@@ -21,7 +21,7 @@ const (
 	COMMENT // #comment text
 
 	literal_beg
-	IDENT // some_name
+	TEXT // ./some/file/path
 	literal_end
 
 	operator_beg
@@ -113,7 +113,7 @@ var tokens = [...]string{
 	ILLEGAL: "ILLEGAL",
 	EOF:     "EOF",
 	COMMENT: "COMMENT",
-	IDENT:   "IDENT",
+	TEXT:    "TEXT",
 
 	LPAREN:  "(",
 	LBRACE:  "{",
@@ -235,7 +235,7 @@ func Lookup(ident string) Token {
 		return tok
 	}
 
-	return IDENT
+	return TEXT
 }
 
 // IsLiteral returns true for tokens corresponding to identifiers.
@@ -276,13 +276,12 @@ func IsBuiltinFunction(name string) bool {
 	return ok
 }
 
-// IsIdentifier reports whether name is a valid identifier.
-// Keywords are not identifiers.
-func IsIdentifier(name string) bool {
-	if name == "" || IsKeyword(name) {
+// IsToken reports whether text contains a token interpreted by make.
+func IsToken(text string) bool {
+	if text == "" || IsKeyword(text) {
 		return false
 	}
-	switch name {
+	switch text {
 	case "(", ")", "{", "}", "$", ":", ";", ",", "\n", "\t", "|", "#", " ":
 		fallthrough
 	case "=", ":=", "::=", ":::=", "?=", "!=":

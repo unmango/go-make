@@ -17,9 +17,9 @@ var _ = Describe("Print", func() {
 	Describe("Fprint", func() {
 		It("should print a literal file name", func() {
 			buf := &bytes.Buffer{}
-			l := &ast.LiteralFileName{Name: &ast.Ident{
-				Name: "target",
-			}}
+			l := &ast.Text{
+				Value: "target",
+			}
 
 			err := make.Fprint(buf, l)
 
@@ -29,10 +29,10 @@ var _ = Describe("Print", func() {
 
 		It("should print a target list", func() {
 			buf := &bytes.Buffer{}
-			t := &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name: "target",
-				}},
+			t := &ast.TargetList{List: []ast.Expr{
+				&ast.Text{
+					Value: "target",
+				},
 			}}
 
 			err := make.Fprint(buf, t)
@@ -43,10 +43,10 @@ var _ = Describe("Print", func() {
 
 		It("should print a prereq list", func() {
 			buf := &bytes.Buffer{}
-			t := &ast.PreReqList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{
-					Name: "prereq",
-				}},
+			t := &ast.PreReqList{List: []ast.Expr{
+				&ast.Text{
+					Value: "prereq",
+				},
 			}}
 
 			err := make.Fprint(buf, t)
@@ -71,15 +71,15 @@ var _ = Describe("Print", func() {
 		It("should print a rule", func() {
 			buf := &bytes.Buffer{}
 			r := &ast.Rule{
-				Targets: &ast.TargetList{List: []ast.FileName{
-					&ast.LiteralFileName{Name: &ast.Ident{
-						Name: "target",
-					}},
+				Targets: &ast.TargetList{List: []ast.Expr{
+					&ast.Text{
+						Value: "target",
+					},
 				}},
-				PreReqs: &ast.PreReqList{List: []ast.FileName{
-					&ast.LiteralFileName{Name: &ast.Ident{
-						Name: "prereq",
-					}},
+				PreReqs: &ast.PreReqList{List: []ast.Expr{
+					&ast.Text{
+						Value: "prereq",
+					},
 				}},
 				Recipes: []*ast.Recipe{{
 					Tok:  token.TAB,
@@ -103,15 +103,15 @@ var _ = Describe("Print", func() {
 			func(position int) {
 				w := testing.NewErrAfterWriter(position)
 				r := &ast.Rule{
-					Targets: &ast.TargetList{List: []ast.FileName{
-						&ast.LiteralFileName{Name: &ast.Ident{
-							Name: "target",
-						}},
+					Targets: &ast.TargetList{List: []ast.Expr{
+						&ast.Text{
+							Value: "target",
+						},
 					}},
-					PreReqs: &ast.PreReqList{List: []ast.FileName{
-						&ast.LiteralFileName{Name: &ast.Ident{
-							Name: "prereq",
-						}},
+					PreReqs: &ast.PreReqList{List: []ast.Expr{
+						&ast.Text{
+							Value: "prereq",
+						},
 					}},
 					Recipes: []*ast.Recipe{{
 						Tok:  token.TAB,

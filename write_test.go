@@ -24,55 +24,57 @@ var _ = Describe("Write", func() {
 		Expect(n).To(Equal(1))
 	})
 
-	It("should write multiple targets", func() {
-		buf := &bytes.Buffer{}
-		w := make.NewWriter(buf)
+	Describe("WriteTargetList", func() {
+		It("should write multiple targets", func() {
+			buf := &bytes.Buffer{}
+			w := make.NewWriter(buf)
 
-		n, err := make.WriteTargetList(w, &ast.TargetList{
-			List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
-				&ast.LiteralFileName{Name: &ast.Ident{Name: "target2"}},
-			},
+			n, err := make.WriteTargetList(w, &ast.TargetList{
+				List: []ast.Expr{
+					&ast.Text{Value: "target"},
+					&ast.Text{Value: "target2"},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("target target2:"))
+			Expect(n).To(Equal(15))
 		})
-
-		Expect(err).NotTo(HaveOccurred())
-		Expect(buf.String()).To(Equal("target target2:"))
-		Expect(n).To(Equal(15))
 	})
 
 	Describe("WriteRule", func() {
 		DescribeTable("Rules",
 			Entry("target",
-				&ast.Rule{Targets: &ast.TargetList{List: []ast.FileName{
-					&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
+				&ast.Rule{Targets: &ast.TargetList{List: []ast.Expr{
+					&ast.Text{Value: "target"},
 				}}},
 				"target:\n",
 			),
 			Entry("multiple targets",
-				&ast.Rule{Targets: &ast.TargetList{List: []ast.FileName{
-					&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
-					&ast.LiteralFileName{Name: &ast.Ident{Name: "target2"}},
+				&ast.Rule{Targets: &ast.TargetList{List: []ast.Expr{
+					&ast.Text{Value: "target"},
+					&ast.Text{Value: "target2"},
 				}}},
 				"target target2:\n",
 			),
 			Entry("target with prereq",
 				&ast.Rule{
-					Targets: &ast.TargetList{List: []ast.FileName{
-						&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
+					Targets: &ast.TargetList{List: []ast.Expr{
+						&ast.Text{Value: "target"},
 					}},
-					PreReqs: &ast.PreReqList{List: []ast.FileName{
-						&ast.LiteralFileName{Name: &ast.Ident{Name: "prereq"}},
+					PreReqs: &ast.PreReqList{List: []ast.Expr{
+						&ast.Text{Value: "prereq"},
 					}},
 				},
 				"target: prereq\n",
 			),
 			Entry("target, prereq, and recipe",
 				&ast.Rule{
-					Targets: &ast.TargetList{List: []ast.FileName{
-						&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
+					Targets: &ast.TargetList{List: []ast.Expr{
+						&ast.Text{Value: "target"},
 					}},
-					PreReqs: &ast.PreReqList{List: []ast.FileName{
-						&ast.LiteralFileName{Name: &ast.Ident{Name: "prereq"}},
+					PreReqs: &ast.PreReqList{List: []ast.Expr{
+						&ast.Text{Value: "prereq"},
 					}},
 					Recipes: []*ast.Recipe{{
 						Tok:  token.TAB,
@@ -83,8 +85,8 @@ var _ = Describe("Write", func() {
 			),
 			Entry("target with recipe",
 				&ast.Rule{
-					Targets: &ast.TargetList{List: []ast.FileName{
-						&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
+					Targets: &ast.TargetList{List: []ast.Expr{
+						&ast.Text{Value: "target"},
 					}},
 					Recipes: []*ast.Recipe{{
 						Tok:  token.TAB,
@@ -109,12 +111,12 @@ var _ = Describe("Write", func() {
 			buf := &bytes.Buffer{}
 			w := make.NewWriter(buf)
 
-			_, err := make.WriteRule(w, &ast.Rule{Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
+			_, err := make.WriteRule(w, &ast.Rule{Targets: &ast.TargetList{List: []ast.Expr{
+				&ast.Text{Value: "target"},
 			}}})
 			Expect(err).NotTo(HaveOccurred())
-			_, err = make.WriteRule(w, &ast.Rule{Targets: &ast.TargetList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{Name: "target2"}},
+			_, err = make.WriteRule(w, &ast.Rule{Targets: &ast.TargetList{List: []ast.Expr{
+				&ast.Text{Value: "target2"},
 			}}})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(buf.String()).To(Equal("target:\ntarget2:\n"))
@@ -122,8 +124,8 @@ var _ = Describe("Write", func() {
 
 		DescribeTable("should error when rule has no targets",
 			Entry("empty rule", &ast.Rule{}),
-			Entry("with prereqs", &ast.Rule{PreReqs: &ast.PreReqList{List: []ast.FileName{
-				&ast.LiteralFileName{Name: &ast.Ident{Name: "foo"}},
+			Entry("with prereqs", &ast.Rule{PreReqs: &ast.PreReqList{List: []ast.Expr{
+				&ast.Text{Value: "foo"},
 			}}}),
 			Entry("with recipes", &ast.Rule{Recipes: []*ast.Recipe{{
 				Tok:  token.TAB,
@@ -150,11 +152,11 @@ var _ = Describe("Write", func() {
 				w := make.NewWriter(writer)
 
 				_, err := make.WriteRule(w, &ast.Rule{
-					Targets: &ast.TargetList{List: []ast.FileName{
-						&ast.LiteralFileName{Name: &ast.Ident{Name: "foo"}},
+					Targets: &ast.TargetList{List: []ast.Expr{
+						&ast.Text{Value: "foo"},
 					}},
-					PreReqs: &ast.PreReqList{List: []ast.FileName{
-						&ast.LiteralFileName{Name: &ast.Ident{Name: "bar"}},
+					PreReqs: &ast.PreReqList{List: []ast.Expr{
+						&ast.Text{Value: "bar"},
 					}},
 					Recipes: []*ast.Recipe{{
 						Tok:  token.TAB,
@@ -167,32 +169,49 @@ var _ = Describe("Write", func() {
 		)
 	})
 
-	It("should write a Makefile", func() {
-		buf := &bytes.Buffer{}
-		w := make.NewWriter(buf)
+	Describe("WriteFile", func() {
+		It("should write a Makefile", func() {
+			buf := &bytes.Buffer{}
+			w := make.NewWriter(buf)
 
-		_, err := make.WriteFile(w, &ast.File{
-			Rules: []*ast.Rule{{
-				Targets: &ast.TargetList{List: []ast.FileName{
-					&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
+			_, err := make.WriteFile(w, &ast.File{
+				Decls: []ast.Decl{&ast.Rule{
+					Targets: &ast.TargetList{List: []ast.Expr{
+						&ast.Text{Value: "target"},
+					}},
 				}},
-			}},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		Expect(err).NotTo(HaveOccurred())
+		It("should return errors found when writing a Makefile", func() {
+			w := make.NewWriter(testing.ErrWriter("io error"))
+
+			_, err := make.WriteFile(w, &ast.File{
+				Decls: []ast.Decl{&ast.Rule{
+					Targets: &ast.TargetList{List: []ast.Expr{
+						&ast.Text{Value: "target"},
+					}},
+				}},
+			})
+
+			Expect(err).To(MatchError("io error"))
+		})
 	})
 
-	It("should return errors found when writing a Makefile", func() {
-		w := make.NewWriter(testing.ErrWriter("io error"))
+	Describe("WriteExpr", func() {
+		It("should error on unsupported nodes", func() {
+			w := make.NewWriter(&bytes.Buffer{})
+			_, err := make.WriteExpr(w, nil)
 
-		_, err := make.WriteFile(w, &ast.File{
-			Rules: []*ast.Rule{{
-				Targets: &ast.TargetList{List: []ast.FileName{
-					&ast.LiteralFileName{Name: &ast.Ident{Name: "target"}},
-				}},
-			}},
+			Expect(err).To(MatchError("unsupported filename node: <nil>"))
 		})
+	})
 
-		Expect(err).To(MatchError("io error"))
+	Describe("WriteVar", func() {
+		It("should write a variable", func() {
+
+		})
 	})
 })

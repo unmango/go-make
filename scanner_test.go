@@ -54,7 +54,7 @@ var _ = Describe("Scanner", func() {
 			s := make.NewScanner(buf, file)
 
 			pos, tok, lit := s.Scan()
-			Expect(tok).To(Equal(token.IDENT))
+			Expect(tok).To(Equal(token.TEXT))
 			Expect(lit).To(Equal(input))
 			Expect(pos).To(Equal(token.Pos(1)))
 
@@ -79,7 +79,7 @@ var _ = Describe("Scanner", func() {
 			s := make.NewScanner(buf, file)
 
 			pos, tok, lit := s.Scan()
-			Expect(tok).To(Equal(token.IDENT))
+			Expect(tok).To(Equal(token.TEXT))
 			Expect(lit).To(Equal(strings.TrimSpace(input)))
 			Expect(pos).To(Equal(token.Pos(1)))
 			Expect(s.Position(pos)).To(Equal(token.Position{
@@ -122,14 +122,14 @@ var _ = Describe("Scanner", func() {
 			s := make.NewScanner(buf, file)
 
 			pos, tok, lit := s.Scan()
-			Expect(tok).To(Equal(token.IDENT))
+			Expect(tok).To(Equal(token.TEXT))
 			Expect(lit).To(Equal("ident"))
 			Expect(pos).To(Equal(token.Pos(1)))
 
 			pos, tok, lit = s.Scan()
 			// File base + Length of the identifier + whitespace
 			Expect(pos).To(Equal(token.Pos(7)))
-			Expect(tok).NotTo(Equal(token.IDENT))
+			Expect(tok).NotTo(Equal(token.TEXT))
 		},
 	)
 
@@ -261,7 +261,7 @@ var _ = Describe("Scanner", func() {
 
 			_, _, _ = s.Scan()
 			pos, tok, lit := s.Scan()
-			Expect(tok).To(Equal(token.IDENT))
+			Expect(tok).To(Equal(token.TEXT))
 			Expect(pos).To(Equal(token.Pos(expected)))
 			Expect(lit).To(Equal("foo"))
 			Expect(s.Position(pos)).To(Equal(token.Position{
@@ -307,7 +307,7 @@ var _ = Describe("Scanner", func() {
 			}))
 
 			pos, tok, lit := s.Scan()
-			Expect(tok).To(Equal(token.IDENT))
+			Expect(tok).To(Equal(token.TEXT))
 			Expect(pos).To(Equal(token.Pos(nlPos + 1)))
 			Expect(lit).To(Equal("foo"))
 			Expect(s.Position(pos)).To(Equal(token.Position{
@@ -332,7 +332,7 @@ var _ = Describe("Scanner", func() {
 		s := make.NewScanner(buf, nil)
 
 		pos, tok, lit := s.Scan()
-		Expect(tok).To(Equal(token.IDENT))
+		Expect(tok).To(Equal(token.TEXT))
 		Expect(lit).To(Equal("target"))
 		Expect(pos).To(Equal(token.Pos(1)))
 	})

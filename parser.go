@@ -86,28 +86,35 @@ func (p *Parser) parseFile() *ast.File {
 		return nil
 	}
 
-	var rules []*ast.Rule
+	var decls []ast.Decl
 	for p.tok != token.EOF {
-		rules = append(rules, p.parseRule())
+		decls = append(decls, p.parseDecl())
 	}
 
 	return &ast.File{
 		Comments:  []*ast.CommentGroup{},
-		Rules:     rules,
+		Decls:     decls,
 		FileStart: token.Pos(p.file.Base()),
 		FileEnd:   token.Pos(p.file.Base() + p.file.Size()),
 	}
 }
 
-func (p *Parser) parseRule() *ast.Rule {
-	targets := new(ast.TargetList)
-	for p.tok != token.COLON && p.tok != token.EOF {
-		targets.Add(p.parseFileName())
-	}
-	if p.errors.Len() > 0 {
-		return nil
+func (p *Parser) parseDecl() ast.Decl {
+	var l []ast.Expr
+	for p.tok == token.TEXT {
+		l = append(l, p.parseExpression())
 	}
 
+	switch p.tok {
+	case token.COLON:
+		return p.parseRule(l)
+	default: // TODO
+		p.next() // always progress
+		return nil
+	}
+}
+
+func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	var colon token.Pos
 	if p.tok == token.COLON {
 		colon = p.pos
@@ -121,7 +128,7 @@ func (p *Parser) parseRule() *ast.Rule {
 
 	prereqs := new(ast.PreReqList)
 	for p.tok != token.NEWLINE && p.tok != token.EOF {
-		prereqs.Add(p.parseFileName())
+		prereqs.Add(p.parseExpression())
 	}
 	if p.errors.Len() > 0 {
 		return nil
@@ -139,7 +146,7 @@ func (p *Parser) parseRule() *ast.Rule {
 	}
 
 	return &ast.Rule{
-		Targets: targets,
+		Targets: &ast.TargetList{List: targets},
 		Colon:   colon,
 		Pipe:    token.NoPos,
 		Semi:    token.NoPos,
@@ -176,21 +183,28 @@ func (p *Parser) parseRecipe() *ast.Recipe {
 	}
 }
 
-func (p *Parser) parseFileName() ast.FileName {
-	name := p.parseIdent()
+func (p *Parser) parseExpression() ast.Expr {
+	pos, name := p.pos, "_"
+	if p.tok == token.TEXT {
+		name = p.lit
+		p.next()
+	} else {
+		p.expect(token.TEXT)
+	}
 
-	return &ast.LiteralFileName{
-		Name: name,
+	return &ast.Text{
+		ValuePos: pos,
+		Value:    name,
 	}
 }
 
 func (p *Parser) parseIdent() *ast.Ident {
 	pos, name := p.pos, "_"
-	if p.tok == token.IDENT {
+	if p.tok == token.TEXT {
 		name = p.lit
 		p.next()
 	} else {
-		p.expect(token.IDENT)
+		p.expect(token.TEXT)
 	}
 
 	return &ast.Ident{

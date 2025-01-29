@@ -8,13 +8,25 @@ import (
 
 type Node = ast.Node
 
+// All expression nodes implement the Expr interface.
+type Expr interface {
+	Node
+	exprNode()
+}
+
+// All declaration nodes implement the Decl interface.
+type Decl interface {
+	Node
+	declNode()
+}
+
 // A File represents text content interpreted as the make syntax.
 // Most commonly this is a Makefile, but could also be any file
 // understood by make, i.e. include-me.mk
 type File struct {
 	FileStart, FileEnd token.Pos
 	Comments           []*CommentGroup
-	Rules              []*Rule
+	Decls              []Decl // declarations; or nil
 }
 
 // A CommentGroup represents a sequence of comments with no other tokens and no empty lines between.
@@ -62,6 +74,9 @@ type Rule struct {
 	Recipes []*Recipe
 }
 
+// declNode implements Decl
+func (*Rule) declNode() {}
+
 // Pos implements Node
 func (r *Rule) Pos() token.Pos {
 	return r.Targets.Pos()
@@ -72,13 +87,13 @@ func (r *Rule) End() token.Pos {
 	return r.Recipes[len(r.Recipes)-1].End()
 }
 
-// A TargetList represents a list of Targets in a single Rule.
+// A TargetList represents a list of Targets in a Rule.
 type TargetList struct {
-	List []FileName
+	List []Expr
 }
 
 // Add appends target to t.List
-func (t *TargetList) Add(target FileName) {
+func (t *TargetList) Add(target Expr) {
 	t.List = append(t.List, target)
 }
 
@@ -92,14 +107,14 @@ func (t *TargetList) End() token.Pos {
 	return t.List[len(t.List)-1].End()
 }
 
-// A PreReqList represents all normal and order-only prerequisites in a single Rule.
+// A PreReqList represents all normal and order-only prerequisites in a Rule.
 type PreReqList struct {
 	Pipe token.Pos
-	List []FileName
+	List []Expr
 }
 
 // Add appends prereq to p.List
-func (p *PreReqList) Add(prereq FileName) {
+func (p *PreReqList) Add(prereq Expr) {
 	p.List = append(p.List, prereq)
 }
 
@@ -113,37 +128,33 @@ func (p *PreReqList) End() token.Pos {
 	return p.List[len(p.List)-1].End()
 }
 
-// A FileName represents any Node that can appear where a file name is expected.
-type FileName interface {
-	Node
-	fileNameNode()
+// Text represents a string of text that has no special meaning to make.
+type Text struct {
+	Value    string
+	ValuePos token.Pos
 }
 
-// A LiteralFileName represents a name identifier with no additional syntax.
-type LiteralFileName struct {
-	Name *Ident
-}
-
-func (*LiteralFileName) fileNameNode() {}
+// exprNode implements Expr
+func (*Text) exprNode() {}
 
 // Pos implements Node
-func (l *LiteralFileName) Pos() token.Pos {
-	return l.Name.Pos()
+func (l *Text) Pos() token.Pos {
+	return l.ValuePos
 }
 
 // End implements Node
-func (l *LiteralFileName) End() token.Pos {
-	return l.Name.End()
+func (l *Text) End() token.Pos {
+	return token.Pos(int(l.ValuePos) + len(l.Value))
 }
 
 // String returns the literal identifier
-func (l *LiteralFileName) String() string {
-	return l.Name.String()
+func (l *Text) String() string {
+	return l.Value
 }
 
 // A Recipe represents a line of text to be passed to the shell to build a Target.
 type Recipe struct {
-	Tok    token.Token // TAB or SEMI
+	Tok    token.Token // TAB, SEMI, or .RECIPEPREFIX
 	TokPos token.Pos   // position of Tok
 	Text   string      // recipe text excluding '\n'
 }
