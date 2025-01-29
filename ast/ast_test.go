@@ -184,30 +184,24 @@ var _ = Describe("Ast", func() {
 		})
 	})
 
-	Describe("Ident", func() {
+	Describe("Variable", func() {
 		It("should return the position of the name", func() {
-			c := &ast.Ident{
-				NamePos: token.Pos(69),
+			v := &ast.Variable{
+				Name: &ast.Text{ValuePos: token.Pos(69)},
 			}
 
-			Expect(c.Pos()).To(Equal(token.Pos(69)))
+			Expect(v.Pos()).To(Equal(token.Pos(69)))
 		})
 
-		It("should return the position after the name", func() {
-			c := &ast.Ident{
-				NamePos: token.Pos(420),
-				Name:    "foo",
-			}
+		It("should return the position after the value", func() {
+			v := &ast.Variable{Value: []ast.Expr{
+				&ast.Text{
+					ValuePos: token.Pos(420),
+					Value:    "foo",
+				},
+			}}
 
-			Expect(c.End()).To(Equal(token.Pos(423)))
-		})
-
-		It("should stringify", func() {
-			c := &ast.Ident{
-				Name: "baz",
-			}
-
-			Expect(c.String()).To(Equal("baz"))
+			Expect(v.End()).To(Equal(token.Pos(423)))
 		})
 	})
 })

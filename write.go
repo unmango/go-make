@@ -35,10 +35,6 @@ func (w *Writer) WriteSpace() (n int, err error) {
 	return w.WriteString(" ")
 }
 
-func (w *Writer) WriteIdent(i *ast.Ident) (n int, err error) {
-	return w.WriteString(i.Name)
-}
-
 func (w *Writer) WriteString(s string) (n int, err error) {
 	return w.Write([]byte(s))
 }
