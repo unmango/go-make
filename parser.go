@@ -108,14 +108,9 @@ func (p *Parser) parseDecl() ast.Decl {
 	switch p.tok {
 	case token.COLON:
 		return p.parseRule(l)
-	case token.SIMPLE_ASSIGN:
-		if len(l) == 1 {
-			return p.parseVar(l[0])
-		}
-		p.error(p.pos, "variable may have only one name")
-		fallthrough
-	default:
-		return nil // TODO
+	default: // TODO
+		p.next() // always progress
+		return nil
 	}
 }
 

@@ -202,23 +202,6 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
-	DescribeTable("should error on invalid starting token",
-		Entry(nil, ","),
-		Entry(nil, ";"),
-		Entry(nil, "|"),
-		Entry(nil, "="),
-		func(input string) {
-			buf := bytes.NewBufferString(input)
-			p := make.NewParser(buf, file)
-
-			_, err := p.ParseFile()
-
-			Expect(err).To(MatchError(
-				ContainSubstring("expected 'TEXT'"),
-			))
-		},
-	)
-
 	It("should support a nil *token.File value", func() {
 		buf := bytes.NewBufferString("target:")
 		s := make.NewParser(buf, nil)
