@@ -3,7 +3,6 @@ package make
 import (
 	"fmt"
 	"io"
-	"reflect"
 
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/token"
@@ -39,6 +38,27 @@ func (w *Writer) WriteString(s string) (n int, err error) {
 	return w.Write([]byte(s))
 }
 
+func (w *Writer) WriteExpr(e ast.Expr) (n int, err error) {
+	switch node := e.(type) {
+	case *ast.Text:
+		return w.WriteString(node.Value)
+	default:
+		return
+	}
+}
+
+func fillSpace[T ~int](w *Writer, from, to T) (n int, err error) {
+	for range to - (from + 1) {
+		if c, err := w.WriteSpace(); err != nil {
+			return 0, err
+		} else {
+			n += c
+		}
+	}
+
+	return
+}
+
 func WriteFile(w io.Writer, f *ast.File) (n int, err error) {
 	if f == nil {
 		err = fmt.Errorf("f was nil")
@@ -71,7 +91,7 @@ func WritePreReqList(w *Writer, l *ast.PreReqList) (n int, err error) {
 	}
 
 	for i, p := range l.List {
-		if c, err := WriteExpr(w, p); err != nil {
+		if c, err := w.WriteExpr(p); err != nil {
 			return 0, err
 		} else {
 			n += c
@@ -81,7 +101,7 @@ func WritePreReqList(w *Writer, l *ast.PreReqList) (n int, err error) {
 			continue
 		}
 
-		if c, err := io.WriteString(w, " "); err != nil {
+		if c, err := w.WriteString(" "); err != nil {
 			return 0, err
 		} else {
 			n += c
@@ -153,7 +173,7 @@ func WriteTargetList(w *Writer, l *ast.TargetList) (n int, err error) {
 	}
 
 	for i, t := range l.List {
-		if c, err := WriteExpr(w, t); err != nil {
+		if c, err := w.WriteExpr(t); err != nil {
 			return 0, err
 		} else {
 			n += c
@@ -179,11 +199,48 @@ func WriteTargetList(w *Writer, l *ast.TargetList) (n int, err error) {
 	return
 }
 
-func WriteExpr(w *Writer, f ast.Expr) (n int, err error) {
-	switch node := f.(type) {
-	case *ast.Text:
-		return w.WriteString(node.Value)
-	default:
-		return 0, fmt.Errorf("unsupported filename node: %v", reflect.TypeOf(f))
+func WriteVar(w *Writer, v *ast.Variable) (n int, err error) {
+	if v == nil {
+		return
 	}
+
+	if c, err := w.WriteExpr(v.Name); err != nil {
+		return 0, err
+	} else {
+		n += c
+	}
+
+	for range v.OpPos - (v.Name.End() + 1) {
+		if c, err := w.WriteSpace(); err != nil {
+			return 0, err
+		} else {
+			n += c
+		}
+	}
+
+	if c, err := w.WriteToken(v.Op); err != nil {
+		return 0, err
+	} else {
+		n += c
+	}
+
+	if len(v.Value) == 0 {
+		return
+	}
+
+	if c, err := fillSpace(w, v.OpPos, v.Value[0].Pos()); err != nil {
+		return 0, err
+	} else {
+		n += c
+	}
+
+	for _, e := range v.Value {
+		if c, err := w.WriteExpr(e); err != nil {
+			return 0, err
+		} else {
+			n += c
+		}
+	}
+
+	return
 }
