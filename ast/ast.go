@@ -169,11 +169,11 @@ func (r *Recipe) End() token.Pos {
 	return token.Pos(int(r.TokPos) + len(r.Text))
 }
 
-// An Variable represents a variable assignment.
+// An Variable represents a make variable.
 type Variable struct {
 	Name  Expr        // left-hand side of the assignment
 	Op    token.Token // =, :=, ::=, :::=, !=, ?=
-	OpPos token.Pos   // position of Tok
+	OpPos token.Pos   // position of Op
 	Value []Expr      // right-hand side of the assignment
 }
 
