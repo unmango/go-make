@@ -211,4 +211,25 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Decls).NotTo(BeEmpty())
 	})
+
+	It("should parse a variable assignment", func() {
+		buf := bytes.NewBufferString("VAR := test")
+		s := make.NewParser(buf, file)
+
+		f, err := s.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Decls).To(ConsistOf(&ast.Variable{
+			Name: &ast.Text{
+				Value:    "VAR",
+				ValuePos: token.Pos(0),
+			},
+			Op:    token.SIMPLE_ASSIGN,
+			OpPos: token.Pos(5),
+			Value: []ast.Expr{&ast.Text{
+				Value:    "test",
+				ValuePos: token.Pos(8),
+			}},
+		}))
+	})
 })
