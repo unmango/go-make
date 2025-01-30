@@ -211,4 +211,94 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Decls).NotTo(BeEmpty())
 	})
+
+	DescribeTable("should parse a variable definition",
+		func(input string, op token.Token, vpos int) {
+			buf := bytes.NewBufferString(input)
+			s := make.NewParser(buf, file)
+
+			f, err := s.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Decls).To(ConsistOf(&ast.Variable{
+				Name: &ast.Text{
+					Value:    "VAR",
+					ValuePos: token.Pos(1),
+				},
+				Op:    op,
+				OpPos: token.Pos(5),
+				Value: []ast.Expr{&ast.Text{
+					Value:    "test",
+					ValuePos: token.Pos(vpos),
+				}},
+			}))
+		},
+		Entry(nil, "VAR := test", token.SIMPLE_ASSIGN, 8),
+		Entry(nil, "VAR ::= test", token.POSIX_ASSIGN, 9),
+		Entry(nil, "VAR :::= test", token.IMMEDIATE_ASSIGN, 10),
+		Entry(nil, "VAR != test", token.SHELL_ASSIGN, 8),
+		Entry(nil, "VAR ?= test", token.IFNDEF_ASSIGN, 8),
+		Entry(nil, "VAR = test", token.RECURSIVE_ASSIGN, 7),
+	)
+
+	DescribeTable("should parse a space-separated variable definition",
+		func(input string, op token.Token, vpos int) {
+			buf := bytes.NewBufferString(input)
+			s := make.NewParser(buf, file)
+
+			f, err := s.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Decls).To(ConsistOf(&ast.Variable{
+				Name: &ast.Text{
+					Value:    "VAR",
+					ValuePos: token.Pos(1),
+				},
+				Op:    op,
+				OpPos: token.Pos(5),
+				Value: []ast.Expr{
+					&ast.Text{
+						Value:    "test",
+						ValuePos: token.Pos(vpos),
+					},
+					&ast.Text{
+						Value:    "test2",
+						ValuePos: token.Pos(vpos + 5),
+					},
+				},
+			}))
+		},
+		Entry(nil, "VAR := test test2", token.SIMPLE_ASSIGN, 8),
+		Entry(nil, "VAR ::= test test2", token.POSIX_ASSIGN, 9),
+		Entry(nil, "VAR :::= test test2", token.IMMEDIATE_ASSIGN, 10),
+		Entry(nil, "VAR != test test2", token.SHELL_ASSIGN, 8),
+		Entry(nil, "VAR ?= test test2", token.IFNDEF_ASSIGN, 8),
+		Entry(nil, "VAR = test test2", token.RECURSIVE_ASSIGN, 7),
+	)
+
+	DescribeTable("should parse a variable declaration",
+		func(input string, op token.Token) {
+			buf := bytes.NewBufferString(input)
+			s := make.NewParser(buf, file)
+
+			f, err := s.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Decls).To(ConsistOf(&ast.Variable{
+				Name: &ast.Text{
+					Value:    "VAR",
+					ValuePos: token.Pos(1),
+				},
+				Op:    op,
+				OpPos: token.Pos(5),
+				Value: nil,
+			}))
+		},
+		Entry(nil, "VAR :=", token.SIMPLE_ASSIGN),
+		Entry(nil, "VAR ::=", token.POSIX_ASSIGN),
+		Entry(nil, "VAR :::=", token.IMMEDIATE_ASSIGN),
+		Entry(nil, "VAR !=", token.SHELL_ASSIGN),
+		Entry(nil, "VAR ?=", token.IFNDEF_ASSIGN),
+		Entry(nil, "VAR =", token.RECURSIVE_ASSIGN),
+	)
 })

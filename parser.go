@@ -108,9 +108,33 @@ func (p *Parser) parseDecl() ast.Decl {
 	switch p.tok {
 	case token.COLON:
 		return p.parseRule(l)
-	default: // TODO
+	case token.SIMPLE_ASSIGN, token.POSIX_ASSIGN, token.IMMEDIATE_ASSIGN,
+		token.IFNDEF_ASSIGN, token.RECURSIVE_ASSIGN, token.SHELL_ASSIGN:
+		if len(l) == 1 {
+			return p.parseVar(l[0])
+		}
+		p.error(p.pos, "variable may have only one name")
+		fallthrough
+	default:
 		p.next() // always progress
 		return nil
+	}
+}
+
+func (p *Parser) parseVar(name ast.Expr) ast.Decl {
+	op, opPos := p.tok, p.pos
+	p.next()
+
+	var rhs []ast.Expr
+	for p.tok != token.NEWLINE && p.tok != token.EOF {
+		rhs = append(rhs, p.parseExpression())
+	}
+
+	return &ast.Variable{
+		Name:  name,
+		Op:    op,
+		OpPos: opPos,
+		Value: rhs,
 	}
 }
 
