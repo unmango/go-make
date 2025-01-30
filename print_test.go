@@ -15,11 +15,9 @@ import (
 
 var _ = Describe("Print", func() {
 	Describe("Fprint", func() {
-		It("should print a literal file name", func() {
+		It("should print text", func() {
 			buf := &bytes.Buffer{}
-			l := &ast.Text{
-				Value: "target",
-			}
+			l := &ast.Text{Value: "target"}
 
 			err := make.Fprint(buf, l)
 
@@ -30,9 +28,7 @@ var _ = Describe("Print", func() {
 		It("should print a target list", func() {
 			buf := &bytes.Buffer{}
 			t := &ast.TargetList{List: []ast.Expr{
-				&ast.Text{
-					Value: "target",
-				},
+				&ast.Text{Value: "target"},
 			}}
 
 			err := make.Fprint(buf, t)
@@ -44,9 +40,7 @@ var _ = Describe("Print", func() {
 		It("should print a prereq list", func() {
 			buf := &bytes.Buffer{}
 			t := &ast.PreReqList{List: []ast.Expr{
-				&ast.Text{
-					Value: "prereq",
-				},
+				&ast.Text{Value: "prereq"},
 			}}
 
 			err := make.Fprint(buf, t)
@@ -72,14 +66,10 @@ var _ = Describe("Print", func() {
 			buf := &bytes.Buffer{}
 			r := &ast.Rule{
 				Targets: &ast.TargetList{List: []ast.Expr{
-					&ast.Text{
-						Value: "target",
-					},
+					&ast.Text{Value: "target"},
 				}},
 				PreReqs: &ast.PreReqList{List: []ast.Expr{
-					&ast.Text{
-						Value: "prereq",
-					},
+					&ast.Text{Value: "prereq"},
 				}},
 				Recipes: []*ast.Recipe{{
 					Tok:  token.TAB,
@@ -93,7 +83,29 @@ var _ = Describe("Print", func() {
 			Expect(buf.String()).To(Equal("target: prereq\n\trecipe\n"))
 		})
 
-		DescribeTable("should surface errors",
+		It("should print a file", func() {
+			buf := &bytes.Buffer{}
+			r := &ast.Rule{
+				Targets: &ast.TargetList{List: []ast.Expr{
+					&ast.Text{Value: "target"},
+				}},
+				PreReqs: &ast.PreReqList{List: []ast.Expr{
+					&ast.Text{Value: "prereq"},
+				}},
+				Recipes: []*ast.Recipe{{
+					Tok:  token.TAB,
+					Text: "recipe",
+				}},
+			}
+			f := &ast.File{Decls: []ast.Decl{r}}
+
+			err := make.Fprint(buf, f)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("target: prereq\n\trecipe\n"))
+		})
+
+		DescribeTable("should surface write errors",
 			Entry("target", 1),
 			Entry("colon", 2),
 			Entry("space", 3),
@@ -104,14 +116,10 @@ var _ = Describe("Print", func() {
 				w := testing.NewErrAfterWriter(position)
 				r := &ast.Rule{
 					Targets: &ast.TargetList{List: []ast.Expr{
-						&ast.Text{
-							Value: "target",
-						},
+						&ast.Text{Value: "target"},
 					}},
 					PreReqs: &ast.PreReqList{List: []ast.Expr{
-						&ast.Text{
-							Value: "prereq",
-						},
+						&ast.Text{Value: "prereq"},
 					}},
 					Recipes: []*ast.Recipe{{
 						Tok:  token.TAB,

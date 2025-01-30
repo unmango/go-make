@@ -48,7 +48,7 @@ var _ = Describe("E2E", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	DescribeTable("should round-trip", RoundTripEntries(testdata, "testdata"), Pending,
+	DescribeTable("should round-trip", RoundTripEntries(testdata, "testdata/roundtrip"),
 		func(input string) {
 			p := make.NewParser(bytes.NewBufferString(input), nil)
 
