@@ -11,6 +11,46 @@ import (
 )
 
 var _ = Describe("Ast", func() {
+	Describe("File", func() {
+		When("the file contains no declarations", func() {
+			It("should return the start of the file", func() {
+				f := &ast.File{FileStart: token.Pos(69)}
+
+				Expect(f.Pos()).To(Equal(token.Pos(69)))
+			})
+
+			It("should return the end of the file", func() {
+				f := &ast.File{FileEnd: token.Pos(69)}
+
+				Expect(f.End()).To(Equal(token.Pos(69)))
+			})
+		})
+
+		When("the file contains declarations", func() {
+			It("should return the first delcaration", func() {
+				err := quick.Check(func(n int) bool {
+					v := &ast.Variable{Name: &ast.Text{ValuePos: token.Pos(n)}}
+					f := &ast.File{Decls: []ast.Decl{v}}
+
+					return f.Pos() == v.Pos()
+				}, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("should return the end of the file", func() {
+				err := quick.Check(func(n int) bool {
+					v := &ast.Variable{Name: &ast.Text{ValuePos: token.Pos(n)}}
+					f := &ast.File{Decls: []ast.Decl{v}}
+
+					return f.End() == v.End()
+				}, nil)
+
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+	})
+
 	Describe("CommentGroup", func() {
 		It("should return the position of the first comment", func() {
 			c := &ast.CommentGroup{[]*ast.Comment{{
