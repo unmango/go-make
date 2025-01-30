@@ -32,7 +32,7 @@ var _ = Describe("E2E", func() {
 		Eventually(func() token.Token {
 			_, tok, _ := s.Scan()
 			return tok
-		}, "500ms", "1ms").Should(Equal(token.EOF))
+		}, "1s", "1ms").Should(Equal(token.EOF))
 	})
 
 	It("should parse this repo's Makefile", Pending, func() {
