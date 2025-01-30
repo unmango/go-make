@@ -122,6 +122,12 @@ var _ = Describe("Write", func() {
 			Expect(buf.String()).To(Equal("target:\ntarget2:\n"))
 		})
 
+		It("should ignore nil", func() {
+			w := make.NewWriter(&bytes.Buffer{})
+
+			Expect(make.WriteRule(w, nil)).To(Equal(0))
+		})
+
 		DescribeTable("should error when rule has no targets",
 			Entry("empty rule", &ast.Rule{}),
 			Entry("with prereqs", &ast.Rule{PreReqs: &ast.PreReqList{List: []ast.Expr{
@@ -185,6 +191,12 @@ var _ = Describe("Write", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("should ignore nil", func() {
+			w := make.NewWriter(&bytes.Buffer{})
+
+			Expect(make.WriteFile(w, nil)).To(Equal(0))
+		})
+
 		It("should return errors found when writing a Makefile", func() {
 			w := make.NewWriter(testing.ErrWriter("io error"))
 
@@ -201,17 +213,156 @@ var _ = Describe("Write", func() {
 	})
 
 	Describe("WriteExpr", func() {
-		It("should error on unsupported nodes", func() {
-			w := make.NewWriter(&bytes.Buffer{})
-			_, err := make.WriteExpr(w, nil)
+		It("should write text", func() {
+			buf := &bytes.Buffer{}
+			w := make.NewWriter(buf)
 
-			Expect(err).To(MatchError("unsupported filename node: <nil>"))
+			n, err := w.WriteExpr(&ast.Text{
+				Value: "foo",
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(3))
+			Expect(buf.String()).To(Equal("foo"))
+		})
+
+		It("should not write unsupported nodes", func() {
+			buf := &bytes.Buffer{}
+			w := make.NewWriter(buf)
+
+			n, err := w.WriteExpr(nil)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(0))
+			Expect(buf.Len()).To(Equal(0))
+		})
+	})
+
+	Describe("WriteDecl", func() {
+		It("should ignore nil", func() {
+			w := make.NewWriter(&bytes.Buffer{})
+
+			Expect(make.WriteDecl(w, nil)).To(Equal(0))
+		})
+
+		It("should write a variable", func() {
+			w := make.NewWriter(&bytes.Buffer{})
+
+			n, err := make.WriteDecl(w, &ast.Variable{
+				Name:  &ast.Text{Value: "TEST"},
+				Op:    token.SIMPLE_ASSIGN,
+				OpPos: token.Pos(6),
+				Value: []ast.Expr{&ast.Text{
+					Value:    "value",
+					ValuePos: token.Pos(9),
+				}},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(13))
 		})
 	})
 
 	Describe("WriteVar", func() {
-		It("should write a variable", func() {
+		It("should ignore nil variables", func() {
+			w := make.NewWriter(&bytes.Buffer{})
 
+			Expect(make.WriteVar(w, nil)).To(Equal(0))
+		})
+
+		When("Value is empty", func() {
+			It("should write a variable", func() {
+				buf := &bytes.Buffer{}
+				w := make.NewWriter(buf)
+
+				n, err := make.WriteVar(w, &ast.Variable{
+					Name:  &ast.Text{Value: "TEST"},
+					Op:    token.SIMPLE_ASSIGN,
+					OpPos: token.Pos(5),
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal("TEST:="))
+				Expect(n).To(Equal(6))
+			})
+
+			It("should write a space-separated variable", func() {
+				buf := &bytes.Buffer{}
+				w := make.NewWriter(buf)
+
+				n, err := make.WriteVar(w, &ast.Variable{
+					Name:  &ast.Text{Value: "TEST"},
+					Op:    token.SIMPLE_ASSIGN,
+					OpPos: token.Pos(6),
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal("TEST :="))
+				Expect(n).To(Equal(7))
+			})
+		})
+
+		When("Value is defined", func() {
+			It("should write a variable", func() {
+				buf := &bytes.Buffer{}
+				w := make.NewWriter(buf)
+
+				n, err := make.WriteVar(w, &ast.Variable{
+					Name:  &ast.Text{Value: "TEST"},
+					Op:    token.SIMPLE_ASSIGN,
+					OpPos: token.Pos(5),
+					Value: []ast.Expr{
+						&ast.Text{Value: "value"},
+					},
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal("TEST:=value"))
+				Expect(n).To(Equal(11))
+			})
+
+			It("should write a space-separated variable", func() {
+				buf := &bytes.Buffer{}
+				w := make.NewWriter(buf)
+
+				n, err := make.WriteVar(w, &ast.Variable{
+					Name:  &ast.Text{Value: "TEST"},
+					Op:    token.SIMPLE_ASSIGN,
+					OpPos: token.Pos(6),
+					Value: []ast.Expr{&ast.Text{
+						Value:    "value",
+						ValuePos: token.Pos(9),
+					}},
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal("TEST := value"))
+				Expect(n).To(Equal(13))
+			})
+
+			DescribeTable("should return write errors",
+				Entry("Expr", 1),
+				Entry("Whitespace", 2),
+				Entry("Token", 3),
+				Entry("Whitespace", 4),
+				Entry("Value", 5),
+				func(after int) {
+					w := make.NewWriter(
+						testing.NewErrAfterWriter(after),
+					)
+
+					_, err := make.WriteVar(w, &ast.Variable{
+						Name:  &ast.Text{Value: "TEST"},
+						Op:    token.SIMPLE_ASSIGN,
+						OpPos: token.Pos(6),
+						Value: []ast.Expr{
+							&ast.Text{Value: "value", ValuePos: token.Pos(9)},
+						},
+					})
+
+					Expect(err).To(MatchError(ContainSubstring("write err:")))
+				},
+			)
 		})
 	})
 })
