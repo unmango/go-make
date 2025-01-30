@@ -1,6 +1,10 @@
 package make_test
 
 import (
+	"bytes"
+	"embed"
+	"fmt"
+	"io/fs"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -9,6 +13,9 @@ import (
 	"github.com/unmango/go-make"
 	"github.com/unmango/go-make/token"
 )
+
+//go:embed testdata
+var testdata embed.FS
 
 var _ = Describe("E2E", func() {
 	It("should scan this repo's Makefile", func() {
@@ -40,4 +47,44 @@ var _ = Describe("E2E", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 	})
+
+	DescribeTable("should round-trip", RoundTripEntries(testdata, "testdata"), Pending,
+		func(input string) {
+			p := make.NewParser(bytes.NewBufferString(input), nil)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+
+			buf := &bytes.Buffer{}
+			w := make.NewWriter(buf)
+
+			Expect(make.Fprint(w, f)).To(Succeed())
+			Expect(buf.String()).To(Equal(input))
+		},
+	)
 })
+
+func RoundTripEntries(fsys fs.FS, root string) (entries []TableEntry) {
+	err := fs.WalkDir(fsys, root, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		if data, err := fs.ReadFile(fsys, path); err != nil {
+			return fmt.Errorf("reading %s: %w", path, err)
+		} else {
+			entries = append(entries, Entry(path, string(data)))
+		}
+
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return
+}
