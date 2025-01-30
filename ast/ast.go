@@ -29,6 +29,24 @@ type File struct {
 	Decls              []Decl // declarations; or nil
 }
 
+// Pos implements Node.
+func (f *File) Pos() token.Pos {
+	if len(f.Decls) > 0 {
+		return f.Decls[0].Pos()
+	} else {
+		return f.FileStart
+	}
+}
+
+// End implements Node.
+func (f *File) End() token.Pos {
+	if n := len(f.Decls); n > 0 {
+		return f.Decls[n-1].End()
+	} else {
+		return f.FileEnd
+	}
+}
+
 // A CommentGroup represents a sequence of comments with no other tokens and no empty lines between.
 type CommentGroup struct {
 	List []*Comment
