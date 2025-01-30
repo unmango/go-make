@@ -47,21 +47,8 @@ func (w *Writer) WriteExpr(e ast.Expr) (n int, err error) {
 	}
 }
 
-func fillSpace[T ~int](w *Writer, from, to T) (n int, err error) {
-	for range to - (from + 1) {
-		if c, err := w.WriteSpace(); err != nil {
-			return 0, err
-		} else {
-			n += c
-		}
-	}
-
-	return
-}
-
 func WriteFile(w io.Writer, f *ast.File) (n int, err error) {
 	if f == nil {
-		err = fmt.Errorf("f was nil")
 		return
 	}
 
@@ -80,9 +67,11 @@ func WriteDecl(w io.Writer, decl ast.Decl) (n int, err error) {
 	switch decl := decl.(type) {
 	case *ast.Rule:
 		return WriteRule(NewWriter(w), decl)
+	case *ast.Variable:
+		return WriteVar(NewWriter(w), decl)
 	}
 
-	return // TODO
+	return
 }
 
 func WritePreReqList(w *Writer, l *ast.PreReqList) (n int, err error) {
@@ -122,7 +111,6 @@ func WriteRecipe(w *Writer, r *ast.Recipe) (n int, err error) {
 
 func WriteRule(w *Writer, r *ast.Rule) (n int, err error) {
 	if r == nil {
-		err = fmt.Errorf("r was nil")
 		return
 	}
 
