@@ -90,10 +90,8 @@ var _ = Describe("Ast", func() {
 
 	Describe("Rule", func() {
 		It("should return the position of the first target", func() {
-			c := &ast.Rule{Targets: &ast.TargetList{
-				List: []ast.Expr{&ast.Text{
-					ValuePos: token.Pos(69),
-				}},
+			c := &ast.Rule{Targets: []ast.Expr{
+				&ast.Text{ValuePos: token.Pos(69)},
 			}}
 
 			Expect(c.Pos()).To(Equal(token.Pos(69)))
@@ -101,81 +99,11 @@ var _ = Describe("Ast", func() {
 
 		It("should return the position after the final recipe", func() {
 			c := &ast.Rule{Recipes: []*ast.Recipe{{
-				TokPos: token.Pos(420),
-				Text:   "some text",
+				PrefixPos: token.Pos(420),
+				Text:      "some text",
 			}}}
 
 			Expect(c.End()).To(Equal(token.Pos(429)))
-		})
-	})
-
-	Describe("TargetList", func() {
-		It("should return the position of the first target", func() {
-			c := &ast.TargetList{
-				List: []ast.Expr{&ast.Text{
-					ValuePos: token.Pos(69),
-				}},
-			}
-
-			Expect(c.Pos()).To(Equal(token.Pos(69)))
-		})
-
-		It("should return the position of the last target", func() {
-			c := &ast.TargetList{List: []ast.Expr{
-				&ast.Text{ValuePos: token.Pos(69)},
-				&ast.Text{
-					ValuePos: token.Pos(420),
-					Value:    "foo",
-				},
-			}}
-
-			Expect(c.End()).To(Equal(token.Pos(423)))
-		})
-
-		It("should append the given target", func() {
-			c := &ast.TargetList{}
-			elem := &ast.Text{
-				ValuePos: token.Pos(69),
-			}
-
-			c.Add(elem)
-
-			Expect(c.List).To(ContainElement(elem))
-		})
-	})
-
-	Describe("PreReqList", func() {
-		It("should return the position of the first target", func() {
-			c := &ast.PreReqList{
-				List: []ast.Expr{&ast.Text{
-					ValuePos: token.Pos(69),
-				}},
-			}
-
-			Expect(c.Pos()).To(Equal(token.Pos(69)))
-		})
-
-		It("should return the position after the last prereq", func() {
-			c := &ast.PreReqList{List: []ast.Expr{
-				&ast.Text{ValuePos: token.Pos(69)},
-				&ast.Text{
-					ValuePos: token.Pos(420),
-					Value:    "baz",
-				},
-			}}
-
-			Expect(c.End()).To(Equal(token.Pos(423)))
-		})
-
-		It("should append the given prereq", func() {
-			c := &ast.PreReqList{}
-			elem := &ast.Text{
-				ValuePos: token.Pos(69),
-			}
-
-			c.Add(elem)
-
-			Expect(c.List).To(ContainElement(elem))
 		})
 	})
 
@@ -209,7 +137,7 @@ var _ = Describe("Ast", func() {
 	Describe("Recipe", func() {
 		It("should return the position of the tab", func() {
 			c := &ast.Recipe{
-				TokPos: token.Pos(420),
+				PrefixPos: token.Pos(420),
 			}
 
 			Expect(c.Pos()).To(Equal(token.Pos(420)))
@@ -217,9 +145,9 @@ var _ = Describe("Ast", func() {
 
 		It("should return the position after the text", func() {
 			c := &ast.Recipe{
-				TokPos: token.Pos(420),
-				Tok:    token.TAB,
-				Text:   "foo",
+				PrefixPos: token.Pos(420),
+				Prefix:    token.TAB,
+				Text:      "foo",
 			}
 
 			Expect(c.End()).To(Equal(token.Pos(423)))

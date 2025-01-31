@@ -29,13 +29,11 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.Expr{
-				&ast.Text{
-					Value:    "target",
-					ValuePos: token.Pos(1),
-				},
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
 			}},
-			PreReqs: &ast.PreReqList{},
+			PreReqs: []ast.Expr{},
 			Recipes: []*ast.Recipe{},
 		}))
 	})
@@ -49,17 +47,11 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(15),
-			Targets: &ast.TargetList{List: []ast.Expr{
-				&ast.Text{
-					Value:    "target",
-					ValuePos: token.Pos(1),
-				},
-				&ast.Text{
-					Value:    "target2",
-					ValuePos: token.Pos(8),
-				},
-			}},
-			PreReqs: &ast.PreReqList{},
+			Targets: []ast.Expr{
+				&ast.Text{Value: "target", ValuePos: token.Pos(1)},
+				&ast.Text{Value: "target2", ValuePos: token.Pos(8)},
+			},
+			PreReqs: []ast.Expr{},
 			Recipes: []*ast.Recipe{},
 		}))
 	})
@@ -73,17 +65,13 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.Expr{
-				&ast.Text{
-					Value:    "target",
-					ValuePos: token.Pos(1),
-				},
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
 			}},
-			PreReqs: &ast.PreReqList{List: []ast.Expr{
-				&ast.Text{
-					Value:    "prereq",
-					ValuePos: token.Pos(9),
-				},
+			PreReqs: []ast.Expr{&ast.Text{
+				Value:    "prereq",
+				ValuePos: token.Pos(9),
 			}},
 			Recipes: []*ast.Recipe{},
 		}))
@@ -98,22 +86,14 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.Expr{
-				&ast.Text{
-					Value:    "target",
-					ValuePos: token.Pos(1),
-				},
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
 			}},
-			PreReqs: &ast.PreReqList{List: []ast.Expr{
-				&ast.Text{
-					Value:    "prereq",
-					ValuePos: token.Pos(9),
-				},
-				&ast.Text{
-					Value:    "prereq2",
-					ValuePos: token.Pos(16),
-				},
-			}},
+			PreReqs: []ast.Expr{
+				&ast.Text{Value: "prereq", ValuePos: token.Pos(9)},
+				&ast.Text{Value: "prereq2", ValuePos: token.Pos(16)},
+			},
 			Recipes: []*ast.Recipe{},
 		}))
 	})
@@ -127,17 +107,15 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.Expr{
-				&ast.Text{
-					Value:    "target",
-					ValuePos: token.Pos(1),
-				},
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
 			}},
-			PreReqs: &ast.PreReqList{},
+			PreReqs: []ast.Expr{},
 			Recipes: []*ast.Recipe{{
-				Tok:    token.TAB,
-				TokPos: token.Pos(9),
-				Text:   "recipe",
+				Prefix:    token.TAB,
+				PrefixPos: token.Pos(9),
+				Text:      "recipe",
 			}},
 		}))
 	})
@@ -151,23 +129,21 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.Expr{
-				&ast.Text{
-					Value:    "target",
-					ValuePos: token.Pos(1),
-				},
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
 			}},
-			PreReqs: &ast.PreReqList{},
+			PreReqs: []ast.Expr{},
 			Recipes: []*ast.Recipe{
 				{
-					Tok:    token.TAB,
-					TokPos: token.Pos(9),
-					Text:   "recipe",
+					Prefix:    token.TAB,
+					PrefixPos: token.Pos(9),
+					Text:      "recipe",
 				},
 				{
-					Tok:    token.TAB,
-					TokPos: token.Pos(17),
-					Text:   "recipe2",
+					Prefix:    token.TAB,
+					PrefixPos: token.Pos(17),
+					Text:      "recipe2",
 				},
 			},
 		}))
@@ -182,22 +158,18 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Decls).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
-			Targets: &ast.TargetList{List: []ast.Expr{
-				&ast.Text{
-					Value:    "target",
-					ValuePos: token.Pos(1),
-				},
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
 			}},
-			PreReqs: &ast.PreReqList{List: []ast.Expr{
-				&ast.Text{
-					Value:    "prereq",
-					ValuePos: token.Pos(9),
-				},
+			PreReqs: []ast.Expr{&ast.Text{
+				Value:    "prereq",
+				ValuePos: token.Pos(9),
 			}},
 			Recipes: []*ast.Recipe{{
-				Tok:    token.TAB,
-				TokPos: token.Pos(16),
-				Text:   "recipe",
+				Prefix:    token.TAB,
+				PrefixPos: token.Pos(16),
+				Text:      "recipe",
 			}},
 		}))
 	})
