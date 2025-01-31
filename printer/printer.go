@@ -6,49 +6,141 @@ import (
 
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/token"
+	"github.com/unmango/go/option"
 )
 
 type printer struct {
-	w       io.Writer
-	lastTok token.Token
-	pos     token.Pos
-	lastPos token.Pos
+	f   *token.File
+	out []byte
+	pos token.Position
+	err error
+}
+
+type Op func(*printer)
+
+func WithFile(f *token.File) Op {
+	return func(p *printer) {
+		p.f = f
+	}
 }
 
 func (p *printer) setPos(pos token.Pos) {
-	p.pos = pos
+	if pos.IsValid() {
+		p.pos = p.posFor(pos)
+	}
+}
+
+func (p *printer) posFor(pos token.Pos) token.Position {
+	return token.PositionFor(p.f, pos) // TODO
+}
+
+func (p *printer) error(msg string, a ...any) {
+	p.err = fmt.Errorf(msg, a...)
+}
+
+func (p *printer) writeLine() {
+	p.out = append(p.out, '\n')
+	p.pos.Line++
+	p.pos.Offset++
+}
+
+func fillSpace(p *printer, pos token.Pos) {
+	p.writeSpace(int(pos) - (p.pos.Offset + 1))
+}
+
+func (p *printer) writeSpace(n int) {
+	for range n {
+		p.out = append(p.out, ' ')
+	}
+
+	p.pos.Offset += n
+	p.pos.Column += n
+}
+
+func (p *printer) writeString(pos token.Position, s string) {
+	if pos.IsValid() {
+		p.pos = pos
+	}
+
+	p.out = append(p.out, s...)
+	p.pos.Offset += len(s)
+	p.pos.Column += len(s)
+}
+
+func (p *printer) tok(pos token.Position, t token.Token) {
+	p.writeString(pos, t.String())
+}
+
+func (p *printer) text(t *ast.Text) {
+	pos := p.posFor(t.Pos())
+	p.writeString(pos, t.Value)
 }
 
 func (p *printer) expr(expr ast.Expr) {
 	switch n := expr.(type) {
 	case *ast.Text:
-		io.WriteString(p.w, n.Value)
+		p.text(n)
 	}
 }
 
 func (p *printer) exprList(l []ast.Expr) {
 	for _, e := range l {
+		fillSpace(p, e.Pos())
 		p.expr(e)
 	}
 }
 
 func (p *printer) recipe(r *ast.Recipe) {
+	pos := p.posFor(r.TokPos)
+	p.writeString(pos, r.Tok.String())
+	p.writeString(pos, r.Text)
+}
+
+func (p *printer) targetList(l *ast.TargetList) {
+	if l.List != nil {
+		p.exprList(l.List)
+	}
+}
+
+func (p *printer) prereqList(l *ast.PreReqList) {
+	if l.List != nil {
+		p.exprList(l.List)
+	}
 }
 
 func (p *printer) rule(r *ast.Rule) {
-	for _, t := range r.Targets.List {
-		p.expr(t)
+	if r.Targets == nil {
+		p.error("no targets in rule")
+		return
 	}
-	for _, t := range r.PreReqs.List {
-		p.expr(t)
+
+	p.targetList(r.Targets)
+	fillSpace(p, r.Colon)
+	p.tok(p.posFor(r.Colon), token.COLON)
+	if r.PreReqs != nil {
+		fillSpace(p, r.PreReqs.Pos())
+		p.prereqList(r.PreReqs)
+	}
+	if !r.Semi.IsValid() {
+		p.writeLine()
 	}
 	for _, r := range r.Recipes {
 		p.recipe(r)
+	}
+	if len(r.Recipes) > 0 {
+		p.writeLine()
 	}
 }
 
 func (p *printer) variable(v *ast.Variable) {
 	p.expr(v.Name)
+	p.tok(p.posFor(v.OpPos), v.Op)
+	if v.Value == nil {
+		return
+	}
+	for _, x := range v.Value {
+		p.expr(x)
+	}
 }
 
 func (p *printer) decl(decl ast.Decl) {
@@ -82,7 +174,20 @@ func (p *printer) printNode(node any) error {
 		p.declList(n)
 	case *ast.File:
 		p.file(n)
+	default:
+		return fmt.Errorf("unsupported node: %#v", node)
 	}
 
-	return fmt.Errorf("unsupported node: %v", node)
+	return p.err
+}
+
+func Fprint(w io.Writer, node any, opts ...Op) (n int, err error) {
+	p := &printer{f: &token.File{}}
+	option.ApplyAll(p, opts)
+
+	if err = p.printNode(node); err != nil {
+		return
+	} else {
+		return w.Write(p.out)
+	}
 }
