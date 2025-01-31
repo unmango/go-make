@@ -20,32 +20,47 @@ var _ = Describe("Printer", func() {
 					Colon: token.Pos(7),
 					Targets: []ast.Expr{&ast.Text{
 						Value:    "target",
-						ValuePos: token.Pos(1)},
-					},
+						ValuePos: token.Pos(1),
+					}},
 				},
 				"target:\n",
 			),
 			Entry("multiple targets",
 				&ast.Rule{Targets: []ast.Expr{
-					&ast.Text{Value: "target"},
-					&ast.Text{Value: "target2"},
+					&ast.Text{Value: "target", ValuePos: token.Pos(1)},
+					&ast.Text{Value: "target2", ValuePos: token.Pos(8)},
 				}},
 				"target target2:\n",
 			),
 			Entry("target with prereq",
 				&ast.Rule{
-					Targets: []ast.Expr{&ast.Text{Value: "target"}},
-					PreReqs: []ast.Expr{&ast.Text{Value: "prereq"}},
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+					PreReqs: []ast.Expr{&ast.Text{
+						Value:    "prereq",
+						ValuePos: token.Pos(9),
+					}},
 				},
 				"target: prereq\n",
 			),
 			Entry("target, prereq, and recipe",
 				&ast.Rule{
-					Targets: []ast.Expr{&ast.Text{Value: "target"}},
-					PreReqs: []ast.Expr{&ast.Text{Value: "prereq"}},
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+					PreReqs: []ast.Expr{&ast.Text{
+						Value:    "prereq",
+						ValuePos: token.Pos(9),
+					}},
 					Recipes: []*ast.Recipe{{
-						Prefix: token.TAB,
-						Text:   "curl https://example.com",
+						Prefix:    token.TAB,
+						PrefixPos: token.Pos(16),
+						Text:      "curl https://example.com",
 					}},
 				},
 				"target: prereq\n\tcurl https://example.com\n",
@@ -95,24 +110,6 @@ var _ = Describe("Printer", func() {
 		It("should ignore nil", func() {
 			Expect(printer.Fprint(&bytes.Buffer{}, nil)).To(Equal(0))
 		})
-
-		DescribeTable("should error when rule has no targets",
-			Entry("empty rule", &ast.Rule{}),
-			Entry("with prereqs", &ast.Rule{PreReqs: []ast.Expr{
-				&ast.Text{Value: "foo"},
-			}}),
-			Entry("with recipes", &ast.Rule{Recipes: []*ast.Recipe{{
-				Prefix: token.TAB,
-				Text:   "foo",
-			}}}),
-			func(rule *ast.Rule) {
-				buf := &bytes.Buffer{}
-
-				_, err := printer.Fprint(buf, rule)
-
-				Expect(err).To(MatchError("no targets in rule"))
-			},
-		)
 
 		It("should return write errors", func() {
 			w := testing.NewErrAfterWriter(1)
@@ -168,25 +165,6 @@ var _ = Describe("Printer", func() {
 		})
 	})
 
-	Describe("WriteDecl", func() {
-		It("should write a variable", func() {
-			w := &bytes.Buffer{}
-
-			n, err := printer.Fprint(w, &ast.Variable{
-				Name:  &ast.Text{Value: "TEST"},
-				Op:    token.SIMPLE_ASSIGN,
-				OpPos: token.Pos(6),
-				Value: []ast.Expr{&ast.Text{
-					Value:    "value",
-					ValuePos: token.Pos(9),
-				}},
-			})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(n).To(Equal(13))
-		})
-	})
-
 	Describe("WriteVar", func() {
 		When("Value is empty", func() {
 			It("should write a variable", func() {
@@ -199,22 +177,22 @@ var _ = Describe("Printer", func() {
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(buf.String()).To(Equal("TEST:="))
-				Expect(n).To(Equal(6))
+				Expect(buf.String()).To(Equal("TEST:=\n"))
+				Expect(n).To(Equal(7))
 			})
 
 			It("should write a space-separated variable", func() {
 				buf := &bytes.Buffer{}
 
 				n, err := printer.Fprint(buf, &ast.Variable{
-					Name:  &ast.Text{Value: "TEST"},
+					Name:  &ast.Text{Value: "TEST", ValuePos: token.Pos(1)},
 					Op:    token.SIMPLE_ASSIGN,
 					OpPos: token.Pos(6),
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(buf.String()).To(Equal("TEST :="))
-				Expect(n).To(Equal(7))
+				Expect(buf.String()).To(Equal("TEST :=\n"))
+				Expect(n).To(Equal(8))
 			})
 		})
 
@@ -223,24 +201,25 @@ var _ = Describe("Printer", func() {
 				buf := &bytes.Buffer{}
 
 				n, err := printer.Fprint(buf, &ast.Variable{
-					Name:  &ast.Text{Value: "TEST"},
+					Name:  &ast.Text{Value: "TEST", ValuePos: token.Pos(1)},
 					Op:    token.SIMPLE_ASSIGN,
 					OpPos: token.Pos(5),
-					Value: []ast.Expr{
-						&ast.Text{Value: "value"},
-					},
+					Value: []ast.Expr{&ast.Text{
+						Value:    "value",
+						ValuePos: token.Pos(7),
+					}},
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(buf.String()).To(Equal("TEST:=value"))
-				Expect(n).To(Equal(11))
+				Expect(buf.String()).To(Equal("TEST:=value\n"))
+				Expect(n).To(Equal(12))
 			})
 
 			It("should write a space-separated variable", func() {
 				buf := &bytes.Buffer{}
 
 				n, err := printer.Fprint(buf, &ast.Variable{
-					Name:  &ast.Text{Value: "TEST"},
+					Name:  &ast.Text{Value: "TEST", ValuePos: token.Pos(1)},
 					Op:    token.SIMPLE_ASSIGN,
 					OpPos: token.Pos(6),
 					Value: []ast.Expr{&ast.Text{
@@ -250,20 +229,21 @@ var _ = Describe("Printer", func() {
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(buf.String()).To(Equal("TEST := value"))
-				Expect(n).To(Equal(13))
+				Expect(buf.String()).To(Equal("TEST := value\n"))
+				Expect(n).To(Equal(14))
 			})
 
 			It("should return write errors", func() {
 				w := testing.NewErrAfterWriter(1)
 
 				_, err := printer.Fprint(w, &ast.Variable{
-					Name:  &ast.Text{Value: "TEST"},
+					Name:  &ast.Text{Value: "TEST", ValuePos: token.Pos(1)},
 					Op:    token.SIMPLE_ASSIGN,
 					OpPos: token.Pos(6),
-					Value: []ast.Expr{
-						&ast.Text{Value: "value", ValuePos: token.Pos(9)},
-					},
+					Value: []ast.Expr{&ast.Text{
+						Value:    "value",
+						ValuePos: token.Pos(9),
+					}},
 				})
 
 				Expect(err).To(MatchError(ContainSubstring("write err:")))

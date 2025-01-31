@@ -13,7 +13,6 @@ type printer struct {
 	f   *token.File
 	out []byte
 	pos token.Position
-	err error
 }
 
 type Op func(*printer)
@@ -34,10 +33,6 @@ func (p *printer) posFor(pos token.Pos) token.Position {
 	return token.PositionFor(p.f, pos)
 }
 
-func (p *printer) error(msg string, a ...any) {
-	p.err = fmt.Errorf(msg, a...)
-}
-
 func (p *printer) writeLine() {
 	p.out = append(p.out, '\n')
 	p.pos.Line++
@@ -45,6 +40,7 @@ func (p *printer) writeLine() {
 }
 
 func fillSpace(p *printer, pos token.Pos) {
+	fmt.Printf("\npos: %d, offset: %d", pos, p.pos.Offset)
 	p.writeSpace(int(pos) - (p.pos.Offset + 1))
 }
 
@@ -108,12 +104,13 @@ func (p *printer) prereqList(l []ast.Expr) {
 	}
 }
 
-func (p *printer) rule(r *ast.Rule) {
-	if r.Targets == nil {
-		p.error("no targets in rule")
-		return
+func (p *printer) recipeList(l []*ast.Recipe) {
+	for _, r := range l {
+		p.recipe(r)
 	}
+}
 
+func (p *printer) rule(r *ast.Rule) {
 	p.targetList(r.Targets)
 	fillSpace(p, r.Colon)
 	p.tok(p.posFor(r.Colon), token.COLON)
@@ -121,23 +118,18 @@ func (p *printer) rule(r *ast.Rule) {
 	if len(r.Recipes) > 0 && r.Recipes[0].Prefix != token.SEMI {
 		p.writeLine()
 	}
-	for _, r := range r.Recipes {
-		p.recipe(r)
-	}
-	if len(r.Recipes) > 0 {
-		p.writeLine()
-	}
+	p.recipeList(r.Recipes)
+	p.writeLine()
 }
 
 func (p *printer) variable(v *ast.Variable) {
 	p.expr(v.Name)
+	fillSpace(p, v.OpPos)
 	p.tok(p.posFor(v.OpPos), v.Op)
-	if v.Value == nil {
-		return
+	if v.Value != nil {
+		p.exprList(v.Value)
 	}
-	for _, x := range v.Value {
-		p.expr(x)
-	}
+	p.writeLine()
 }
 
 func (p *printer) decl(decl ast.Decl) {
@@ -179,7 +171,7 @@ func (p *printer) printNode(node any) error {
 		return fmt.Errorf("unsupported node: %#v", node)
 	}
 
-	return p.err
+	return nil
 }
 
 func Fprint(w io.Writer, node any, opts ...Op) (n int, err error) {
