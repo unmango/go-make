@@ -40,7 +40,6 @@ func (p *printer) writeLine() {
 }
 
 func fillSpace(p *printer, pos token.Pos) {
-	fmt.Printf("\npos: %d, offset: %d", pos, p.pos.Offset)
 	p.writeSpace(int(pos) - (p.pos.Offset + 1))
 }
 
