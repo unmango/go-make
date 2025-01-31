@@ -23,12 +23,6 @@ func WithFile(f *token.File) Op {
 	}
 }
 
-func (p *printer) setPos(pos token.Pos) {
-	if pos.IsValid() {
-		p.pos = p.posFor(pos)
-	}
-}
-
 func (p *printer) posFor(pos token.Pos) token.Position {
 	return token.PositionFor(p.f, pos)
 }

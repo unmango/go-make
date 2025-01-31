@@ -13,8 +13,8 @@ import (
 )
 
 var _ = Describe("Printer", func() {
-	Describe("WriteRule", func() {
-		DescribeTable("Rules",
+	Describe("rules", func() {
+		DescribeTable("should print rule with",
 			Entry("target",
 				&ast.Rule{
 					Colon: token.Pos(7),
@@ -89,19 +89,10 @@ var _ = Describe("Printer", func() {
 		It("should write multiple rules", func() {
 			buf := &bytes.Buffer{}
 
-			_, err := printer.Fprint(buf,
-				&ast.Rule{Targets: []ast.Expr{
-					&ast.Text{Value: "target"},
-				}},
-			)
-
-			Expect(err).NotTo(HaveOccurred())
-
-			_, err = printer.Fprint(buf,
-				&ast.Rule{Targets: []ast.Expr{
-					&ast.Text{Value: "target2"},
-				}},
-			)
+			_, err := printer.Fprint(buf, []ast.Decl{
+				&ast.Rule{Targets: []ast.Expr{&ast.Text{Value: "target"}}},
+				&ast.Rule{Targets: []ast.Expr{&ast.Text{Value: "target2"}}},
+			})
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(buf.String()).To(Equal("target:\ntarget2:\n"))
@@ -127,7 +118,7 @@ var _ = Describe("Printer", func() {
 		})
 	})
 
-	Describe("WriteFile", func() {
+	Describe("files", func() {
 		It("should write a Makefile", func() {
 			buf := &bytes.Buffer{}
 
@@ -153,19 +144,32 @@ var _ = Describe("Printer", func() {
 		})
 	})
 
-	Describe("WriteExpr", func() {
+	Describe("expressions", func() {
 		It("should write text", func() {
 			buf := &bytes.Buffer{}
 
 			n, err := printer.Fprint(buf, &ast.Text{Value: "foo"})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(n).To(Equal(3))
 			Expect(buf.String()).To(Equal("foo"))
+			Expect(n).To(Equal(3))
+		})
+
+		It("should write multiple text nodes", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, []ast.Expr{
+				&ast.Text{Value: "foo", ValuePos: token.Pos(1)},
+				&ast.Text{Value: "bar", ValuePos: token.Pos(5)},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("foo bar"))
+			Expect(n).To(Equal(7))
 		})
 	})
 
-	Describe("WriteVar", func() {
+	Describe("variables", func() {
 		When("Value is empty", func() {
 			It("should write a variable", func() {
 				buf := &bytes.Buffer{}
@@ -248,6 +252,26 @@ var _ = Describe("Printer", func() {
 
 				Expect(err).To(MatchError(ContainSubstring("write err:")))
 			})
+		})
+	})
+
+	When("a token.File is provided", func() {
+		It("should work", func() {
+			f := token.NewFileSet().AddFile("test", 1, 5)
+			_, err := printer.Fprint(&bytes.Buffer{},
+				&ast.Text{Value: "foo", ValuePos: token.Pos(1)},
+				printer.WithFile(f),
+			)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	When("the given node is not supported", func() {
+		It("should return an error", func() {
+			_, err := printer.Fprint(&bytes.Buffer{}, "blah")
+
+			Expect(err).To(MatchError(`unsupported node: "blah"`))
 		})
 	})
 })
