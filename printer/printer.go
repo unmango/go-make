@@ -91,20 +91,20 @@ func (p *printer) exprList(l []ast.Expr) {
 }
 
 func (p *printer) recipe(r *ast.Recipe) {
-	pos := p.posFor(r.TokPos)
-	p.writeString(pos, r.Tok.String())
+	pos := p.posFor(r.PrefixPos)
+	p.writeString(pos, r.Prefix.String())
 	p.writeString(pos, r.Text)
 }
 
-func (p *printer) targetList(l *ast.TargetList) {
-	if l.List != nil {
-		p.exprList(l.List)
+func (p *printer) targetList(l []ast.Expr) {
+	if l != nil {
+		p.exprList(l)
 	}
 }
 
-func (p *printer) prereqList(l *ast.PreReqList) {
-	if l.List != nil {
-		p.exprList(l.List)
+func (p *printer) prereqList(l []ast.Expr) {
+	if l != nil {
+		p.exprList(l)
 	}
 }
 
@@ -117,11 +117,8 @@ func (p *printer) rule(r *ast.Rule) {
 	p.targetList(r.Targets)
 	fillSpace(p, r.Colon)
 	p.tok(p.posFor(r.Colon), token.COLON)
-	if r.PreReqs != nil {
-		fillSpace(p, r.PreReqs.Pos())
-		p.prereqList(r.PreReqs)
-	}
-	if !r.Semi.IsValid() {
+	p.prereqList(r.PreReqs)
+	if len(r.Recipes) > 0 && r.Recipes[0].Prefix != token.SEMI {
 		p.writeLine()
 	}
 	for _, r := range r.Recipes {
