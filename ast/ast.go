@@ -84,12 +84,12 @@ func (c *Comment) End() token.Pos {
 //
 // [Rule Syntax]: https://www.gnu.org/software/make/manual/html_node/Rule-Syntax.html
 type Rule struct {
-	Colon   token.Pos // position of ':' delimiting targets and prerequisites
-	Pipe    token.Pos // position of '|' delimiting normal and order-only prerequisites
-	Semi    token.Pos // position of ';' delimiting prerequisites and recipes
-	Targets *TargetList
-	PreReqs *PreReqList
-	Recipes []*Recipe
+	Targets      []Expr    // rule targets
+	Colon        token.Pos // position of ':' separating targets and prerequisites
+	PreReqs      []Expr    // rule pre-requisites
+	Pipe         token.Pos // position of '|' separating normal and order-only prerequisites
+	OrderPreReqs []Expr    // order-only pre-requisites
+	Recipes      []*Recipe // rule recipe lines
 }
 
 // declNode implements Decl
@@ -97,53 +97,12 @@ func (*Rule) declNode() {}
 
 // Pos implements Node
 func (r *Rule) Pos() token.Pos {
-	return r.Targets.Pos()
+	return r.Targets[0].Pos()
 }
 
 // End implements Node
 func (r *Rule) End() token.Pos {
 	return r.Recipes[len(r.Recipes)-1].End()
-}
-
-// A TargetList represents a list of Targets in a Rule.
-type TargetList struct {
-	List []Expr
-}
-
-// Add appends target to t.List
-func (t *TargetList) Add(target Expr) {
-	t.List = append(t.List, target)
-}
-
-// Pos implements Node
-func (t *TargetList) Pos() token.Pos {
-	return t.List[0].Pos()
-}
-
-// End implements Node
-func (t *TargetList) End() token.Pos {
-	return t.List[len(t.List)-1].End()
-}
-
-// A PreReqList represents all normal and order-only prerequisites in a Rule.
-type PreReqList struct {
-	Pipe token.Pos
-	List []Expr
-}
-
-// Add appends prereq to p.List
-func (p *PreReqList) Add(prereq Expr) {
-	p.List = append(p.List, prereq)
-}
-
-// Pos implements Node
-func (p *PreReqList) Pos() token.Pos {
-	return p.List[0].Pos()
-}
-
-// End implements Node
-func (p *PreReqList) End() token.Pos {
-	return p.List[len(p.List)-1].End()
 }
 
 // Text represents a string of text that has no special meaning to make.
@@ -172,19 +131,19 @@ func (l *Text) String() string {
 
 // A Recipe represents a line of text to be passed to the shell to build a Target.
 type Recipe struct {
-	Tok    token.Token // TAB, SEMI, or .RECIPEPREFIX
-	TokPos token.Pos   // position of Tok
-	Text   string      // recipe text excluding '\n'
+	Prefix    token.Token // TAB, SEMI, or .RECIPEPREFIX
+	PrefixPos token.Pos   // position of Tok
+	Text      string      // recipe text excluding '\n'
 }
 
 // Pos implements Node
 func (r *Recipe) Pos() token.Pos {
-	return r.TokPos
+	return r.PrefixPos
 }
 
 // End implements Node
 func (r *Recipe) End() token.Pos {
-	return token.Pos(int(r.TokPos) + len(r.Text))
+	return token.Pos(int(r.PrefixPos) + len(r.Text))
 }
 
 // An Variable represents a make variable.

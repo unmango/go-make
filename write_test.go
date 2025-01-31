@@ -24,73 +24,43 @@ var _ = Describe("Write", func() {
 		Expect(n).To(Equal(1))
 	})
 
-	Describe("WriteTargetList", func() {
-		It("should write multiple targets", func() {
-			buf := &bytes.Buffer{}
-			w := make.NewWriter(buf)
-
-			n, err := make.WriteTargetList(w, &ast.TargetList{
-				List: []ast.Expr{
-					&ast.Text{Value: "target"},
-					&ast.Text{Value: "target2"},
-				},
-			})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(buf.String()).To(Equal("target target2:"))
-			Expect(n).To(Equal(15))
-		})
-	})
-
 	Describe("WriteRule", func() {
 		DescribeTable("Rules",
 			Entry("target",
-				&ast.Rule{Targets: &ast.TargetList{List: []ast.Expr{
-					&ast.Text{Value: "target"},
-				}}},
+				&ast.Rule{Targets: []ast.Expr{&ast.Text{Value: "target"}}},
 				"target:\n",
 			),
 			Entry("multiple targets",
-				&ast.Rule{Targets: &ast.TargetList{List: []ast.Expr{
+				&ast.Rule{Targets: []ast.Expr{
 					&ast.Text{Value: "target"},
 					&ast.Text{Value: "target2"},
-				}}},
+				}},
 				"target target2:\n",
 			),
 			Entry("target with prereq",
 				&ast.Rule{
-					Targets: &ast.TargetList{List: []ast.Expr{
-						&ast.Text{Value: "target"},
-					}},
-					PreReqs: &ast.PreReqList{List: []ast.Expr{
-						&ast.Text{Value: "prereq"},
-					}},
+					Targets: []ast.Expr{&ast.Text{Value: "target"}},
+					PreReqs: []ast.Expr{&ast.Text{Value: "prereq"}},
 				},
 				"target: prereq\n",
 			),
 			Entry("target, prereq, and recipe",
 				&ast.Rule{
-					Targets: &ast.TargetList{List: []ast.Expr{
-						&ast.Text{Value: "target"},
-					}},
-					PreReqs: &ast.PreReqList{List: []ast.Expr{
-						&ast.Text{Value: "prereq"},
-					}},
+					Targets: []ast.Expr{&ast.Text{Value: "target"}},
+					PreReqs: []ast.Expr{&ast.Text{Value: "prereq"}},
 					Recipes: []*ast.Recipe{{
-						Tok:  token.TAB,
-						Text: "curl https://example.com",
+						Prefix: token.TAB,
+						Text:   "curl https://example.com",
 					}},
 				},
 				"target: prereq\n\tcurl https://example.com\n",
 			),
 			Entry("target with recipe",
 				&ast.Rule{
-					Targets: &ast.TargetList{List: []ast.Expr{
-						&ast.Text{Value: "target"},
-					}},
+					Targets: []ast.Expr{&ast.Text{Value: "target"}},
 					Recipes: []*ast.Recipe{{
-						Tok:  token.TAB,
-						Text: "curl https://example.com",
+						Prefix: token.TAB,
+						Text:   "curl https://example.com",
 					}},
 				},
 				"target:\n\tcurl https://example.com\n",
@@ -111,13 +81,13 @@ var _ = Describe("Write", func() {
 			buf := &bytes.Buffer{}
 			w := make.NewWriter(buf)
 
-			_, err := make.WriteRule(w, &ast.Rule{Targets: &ast.TargetList{List: []ast.Expr{
+			_, err := make.WriteRule(w, &ast.Rule{Targets: []ast.Expr{
 				&ast.Text{Value: "target"},
-			}}})
+			}})
 			Expect(err).NotTo(HaveOccurred())
-			_, err = make.WriteRule(w, &ast.Rule{Targets: &ast.TargetList{List: []ast.Expr{
+			_, err = make.WriteRule(w, &ast.Rule{Targets: []ast.Expr{
 				&ast.Text{Value: "target2"},
-			}}})
+			}})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(buf.String()).To(Equal("target:\ntarget2:\n"))
 		})
@@ -130,12 +100,12 @@ var _ = Describe("Write", func() {
 
 		DescribeTable("should error when rule has no targets",
 			Entry("empty rule", &ast.Rule{}),
-			Entry("with prereqs", &ast.Rule{PreReqs: &ast.PreReqList{List: []ast.Expr{
+			Entry("with prereqs", &ast.Rule{PreReqs: []ast.Expr{
 				&ast.Text{Value: "foo"},
-			}}}),
+			}}),
 			Entry("with recipes", &ast.Rule{Recipes: []*ast.Recipe{{
-				Tok:  token.TAB,
-				Text: "foo",
+				Prefix: token.TAB,
+				Text:   "foo",
 			}}}),
 			func(rule *ast.Rule) {
 				buf := &bytes.Buffer{}
@@ -158,15 +128,11 @@ var _ = Describe("Write", func() {
 				w := make.NewWriter(writer)
 
 				_, err := make.WriteRule(w, &ast.Rule{
-					Targets: &ast.TargetList{List: []ast.Expr{
-						&ast.Text{Value: "foo"},
-					}},
-					PreReqs: &ast.PreReqList{List: []ast.Expr{
-						&ast.Text{Value: "bar"},
-					}},
+					Targets: []ast.Expr{&ast.Text{Value: "foo"}},
+					PreReqs: []ast.Expr{&ast.Text{Value: "bar"}},
 					Recipes: []*ast.Recipe{{
-						Tok:  token.TAB,
-						Text: "baz",
+						Prefix: token.TAB,
+						Text:   "baz",
 					}},
 				})
 
@@ -182,9 +148,7 @@ var _ = Describe("Write", func() {
 
 			_, err := make.WriteFile(w, &ast.File{
 				Decls: []ast.Decl{&ast.Rule{
-					Targets: &ast.TargetList{List: []ast.Expr{
-						&ast.Text{Value: "target"},
-					}},
+					Targets: []ast.Expr{&ast.Text{Value: "target"}},
 				}},
 			})
 
@@ -202,9 +166,7 @@ var _ = Describe("Write", func() {
 
 			_, err := make.WriteFile(w, &ast.File{
 				Decls: []ast.Decl{&ast.Rule{
-					Targets: &ast.TargetList{List: []ast.Expr{
-						&ast.Text{Value: "target"},
-					}},
+					Targets: []ast.Expr{&ast.Text{Value: "target"}},
 				}},
 			})
 

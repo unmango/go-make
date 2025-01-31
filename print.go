@@ -11,10 +11,6 @@ func Fprint(writer io.Writer, node ast.Node) (err error) {
 	switch node := node.(type) {
 	case ast.Expr:
 		_, err = w.WriteExpr(node)
-	case *ast.TargetList:
-		_, err = WriteTargetList(w, node)
-	case *ast.PreReqList:
-		_, err = WritePreReqList(w, node)
 	case *ast.Recipe:
 		_, err = WriteRecipe(w, node)
 	case *ast.Rule:

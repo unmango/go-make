@@ -74,19 +74,19 @@ func WriteDecl(w io.Writer, decl ast.Decl) (n int, err error) {
 	return
 }
 
-func WritePreReqList(w *Writer, l *ast.PreReqList) (n int, err error) {
+func WritePreReqList(w *Writer, l []ast.Expr) (n int, err error) {
 	if l == nil {
 		return
 	}
 
-	for i, p := range l.List {
+	for i, p := range l {
 		if c, err := w.WriteExpr(p); err != nil {
 			return 0, err
 		} else {
 			n += c
 		}
 
-		if i+1 >= len(l.List) {
+		if i+1 >= len(l) {
 			continue
 		}
 
@@ -106,7 +106,7 @@ func WriteRecipe(w *Writer, r *ast.Recipe) (n int, err error) {
 		return
 	}
 
-	return fmt.Fprintf(w, "%s%s\n", r.Tok, r.Text)
+	return fmt.Fprintf(w, "%s%s\n", r.Prefix, r.Text)
 }
 
 func WriteRule(w *Writer, r *ast.Rule) (n int, err error) {
@@ -114,7 +114,7 @@ func WriteRule(w *Writer, r *ast.Rule) (n int, err error) {
 		return
 	}
 
-	if r.Targets == nil || len(r.Targets.List) == 0 {
+	if r.Targets == nil || len(r.Targets) == 0 {
 		return 0, fmt.Errorf("no targets")
 	}
 
@@ -124,7 +124,7 @@ func WriteRule(w *Writer, r *ast.Rule) (n int, err error) {
 		n += c
 	}
 
-	if r.PreReqs != nil && len(r.PreReqs.List) > 0 {
+	if r.PreReqs != nil && len(r.PreReqs) > 0 {
 		if c, err := io.WriteString(w, " "); err != nil {
 			return 0, err
 		} else {
@@ -155,19 +155,19 @@ func WriteRule(w *Writer, r *ast.Rule) (n int, err error) {
 	return
 }
 
-func WriteTargetList(w *Writer, l *ast.TargetList) (n int, err error) {
+func WriteTargetList(w *Writer, l []ast.Expr) (n int, err error) {
 	if l == nil {
 		return
 	}
 
-	for i, t := range l.List {
+	for i, t := range l {
 		if c, err := w.WriteExpr(t); err != nil {
 			return 0, err
 		} else {
 			n += c
 		}
 
-		if i+1 >= len(l.List) {
+		if i+1 >= len(l) {
 			continue
 		}
 
