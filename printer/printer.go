@@ -31,7 +31,7 @@ func (p *printer) setPos(pos token.Pos) {
 }
 
 func (p *printer) posFor(pos token.Pos) token.Position {
-	return token.PositionFor(p.f, pos) // TODO
+	return token.PositionFor(p.f, pos)
 }
 
 func (p *printer) error(msg string, a ...any) {
@@ -163,6 +163,10 @@ func (p *printer) file(file *ast.File) {
 }
 
 func (p *printer) printNode(node any) error {
+	if node == nil {
+		return nil
+	}
+
 	switch n := node.(type) {
 	case ast.Expr:
 		p.expr(n)
