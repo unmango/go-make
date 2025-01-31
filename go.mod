@@ -5,6 +5,7 @@ go 1.23.4
 require (
 	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
+	github.com/unmango/go v0.2.2
 )
 
 require (
