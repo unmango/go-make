@@ -1,4 +1,4 @@
-package make
+package parser
 
 import (
 	"io"
@@ -22,7 +22,7 @@ type Parser struct {
 	recipePrefix token.Token
 }
 
-func NewParser(r io.Reader, file *token.File) *Parser {
+func New(r io.Reader, file *token.File) *Parser {
 	if file == nil {
 		file = token.NewFileSet().AddFile("", 1, math.MaxInt-2)
 	}
