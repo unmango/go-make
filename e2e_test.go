@@ -13,6 +13,7 @@ import (
 	"github.com/unmango/go-make"
 	"github.com/unmango/go-make/printer"
 	"github.com/unmango/go-make/token"
+	"github.com/unmango/go-make/writer"
 )
 
 //go:embed testdata
@@ -58,7 +59,7 @@ var _ = Describe("E2E", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			buf := &bytes.Buffer{}
-			w := make.NewWriter(buf)
+			w := writer.New(buf)
 
 			Expect(printer.Fprint(w, f)).To(BeNumerically(">", 0))
 			Expect(buf.String()).To(Equal(input))
