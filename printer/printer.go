@@ -85,6 +85,7 @@ func (p *printer) recipe(r *ast.Recipe) {
 	pos := p.posFor(r.PrefixPos)
 	p.tok(pos, r.Prefix)
 	p.expr(r)
+	p.writeLine()
 }
 
 func (p *printer) targetList(l []ast.Expr) {
@@ -114,11 +115,14 @@ func (p *printer) rule(r *ast.Rule) {
 	fillSpace(p, r.Colon)
 	p.tok(p.posFor(r.Colon), token.COLON)
 	p.prereqList(r.PreReqs)
-	if len(r.Recipes) > 0 && r.Recipes[0].Prefix != token.SEMI {
+	if len(r.Recipes) > 0 {
+		if r.Recipes[0].Prefix != token.SEMI {
+			p.writeLine()
+		}
+		p.recipeList(r.Recipes)
+	} else {
 		p.writeLine()
 	}
-	p.recipeList(r.Recipes)
-	p.writeLine()
 }
 
 func (p *printer) variable(v *ast.Variable) {
