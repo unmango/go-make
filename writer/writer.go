@@ -3,9 +3,6 @@ package writer
 import (
 	"fmt"
 	"io"
-
-	"github.com/unmango/go-make/ast"
-	"github.com/unmango/go-make/token"
 )
 
 // A Writer is an [io.Writer] that facilitates
@@ -26,25 +23,4 @@ func New(w io.Writer) *Writer {
 
 func (w *Writer) WriteLine() (n int, err error) {
 	return fmt.Fprintln(w)
-}
-
-func (w *Writer) WriteToken(tok token.Token) (n int, err error) {
-	return fmt.Fprint(w, tok)
-}
-
-func (w *Writer) WriteSpace() (n int, err error) {
-	return w.WriteString(" ")
-}
-
-func (w *Writer) WriteString(s string) (n int, err error) {
-	return w.Write([]byte(s))
-}
-
-func (w *Writer) WriteExpr(e ast.Expr) (n int, err error) {
-	switch node := e.(type) {
-	case *ast.Text:
-		return w.WriteString(node.Value)
-	default:
-		return
-	}
 }

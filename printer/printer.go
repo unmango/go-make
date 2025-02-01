@@ -106,6 +106,10 @@ func (p *printer) recipeList(l []*ast.Recipe) {
 }
 
 func (p *printer) rule(r *ast.Rule) {
+	if r == nil {
+		return
+	}
+
 	p.targetList(r.Targets)
 	fillSpace(p, r.Colon)
 	p.tok(p.posFor(r.Colon), token.COLON)
@@ -118,6 +122,10 @@ func (p *printer) rule(r *ast.Rule) {
 }
 
 func (p *printer) variable(v *ast.Variable) {
+	if v == nil {
+		return
+	}
+
 	p.expr(v.Name)
 	fillSpace(p, v.OpPos)
 	p.tok(p.posFor(v.OpPos), v.Op)
@@ -143,7 +151,9 @@ func (p *printer) declList(l []ast.Decl) {
 }
 
 func (p *printer) file(file *ast.File) {
-	p.declList(file.Decls)
+	if file != nil {
+		p.declList(file.Decls)
+	}
 }
 
 func (p *printer) printNode(node any) error {

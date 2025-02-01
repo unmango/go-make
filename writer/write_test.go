@@ -22,35 +22,61 @@ var _ = Describe("Write", func() {
 			),
 			Entry("multiple targets",
 				&ast.Rule{Targets: []ast.Expr{
-					&ast.Text{Value: "target"},
-					&ast.Text{Value: "target2"},
+					&ast.Text{Value: "target", ValuePos: token.Pos(1)},
+					&ast.Text{Value: "target2", ValuePos: token.Pos(8)},
 				}},
 				"target target2:\n",
 			),
 			Entry("target with prereq",
 				&ast.Rule{
-					Targets: []ast.Expr{&ast.Text{Value: "target"}},
-					PreReqs: []ast.Expr{&ast.Text{Value: "prereq"}},
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+					PreReqs: []ast.Expr{&ast.Text{
+						Value:    "prereq",
+						ValuePos: token.Pos(9),
+					}},
 				},
 				"target: prereq\n",
 			),
 			Entry("target, prereq, and recipe",
 				&ast.Rule{
-					Targets: []ast.Expr{&ast.Text{Value: "target"}},
-					PreReqs: []ast.Expr{&ast.Text{Value: "prereq"}},
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+					PreReqs: []ast.Expr{&ast.Text{
+						Value:    "prereq",
+						ValuePos: token.Pos(9),
+					}},
 					Recipes: []*ast.Recipe{{
-						Prefix: token.TAB,
-						Text:   ast.Text{Value: "curl https://example.com"},
+						Prefix:    token.TAB,
+						PrefixPos: token.Pos(16),
+						Text: ast.Text{
+							Value:    "curl https://example.com",
+							ValuePos: token.Pos(17),
+						},
 					}},
 				},
 				"target: prereq\n\tcurl https://example.com\n",
 			),
 			Entry("target with recipe",
 				&ast.Rule{
-					Targets: []ast.Expr{&ast.Text{Value: "target"}},
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
 					Recipes: []*ast.Recipe{{
-						Prefix: token.TAB,
-						Text:   ast.Text{Value: "curl https://example.com"},
+						Prefix:    token.TAB,
+						PrefixPos: token.Pos(9),
+						Text: ast.Text{
+							Value:    "curl https://example.com",
+							ValuePos: token.Pos(10),
+						},
 					}},
 				},
 				"target:\n\tcurl https://example.com\n",
@@ -88,46 +114,20 @@ var _ = Describe("Write", func() {
 			Expect(writer.WriteRule(w, nil)).To(Equal(0))
 		})
 
-		DescribeTable("should error when rule has no targets",
-			Entry("empty rule", &ast.Rule{}),
-			Entry("with prereqs", &ast.Rule{PreReqs: []ast.Expr{
-				&ast.Text{Value: "foo"},
-			}}),
-			Entry("with recipes", &ast.Rule{Recipes: []*ast.Recipe{{
-				Prefix: token.TAB,
-				Text:   ast.Text{Value: "foo"},
-			}}}),
-			func(rule *ast.Rule) {
-				buf := &bytes.Buffer{}
-				w := writer.New(buf)
+		It("should return write errors", func() {
+			w := writer.New(testing.NewErrAfterWriter(1))
 
-				_, err := writer.WriteRule(w, rule)
+			_, err := writer.WriteRule(w, &ast.Rule{
+				Targets: []ast.Expr{&ast.Text{Value: "foo"}},
+				PreReqs: []ast.Expr{&ast.Text{Value: "bar"}},
+				Recipes: []*ast.Recipe{{
+					Prefix: token.TAB,
+					Text:   ast.Text{Value: "baz"},
+				}},
+			})
 
-				Expect(err).To(MatchError("no targets"))
-			},
-		)
-
-		DescribeTable("should return errors",
-			Entry("target", 1),
-			Entry("prereq", 2),
-			Entry("newline", 3),
-			Entry("recipe", 4),
-			Entry("newline", 5),
-			func(position int) {
-				w := writer.New(testing.NewErrAfterWriter(5))
-
-				_, err := writer.WriteRule(w, &ast.Rule{
-					Targets: []ast.Expr{&ast.Text{Value: "foo"}},
-					PreReqs: []ast.Expr{&ast.Text{Value: "bar"}},
-					Recipes: []*ast.Recipe{{
-						Prefix: token.TAB,
-						Text:   ast.Text{Value: "baz"},
-					}},
-				})
-
-				Expect(err).To(MatchError("write err: 5"))
-			},
-		)
+			Expect(err).To(MatchError("write err: 1"))
+		})
 	})
 
 	Describe("WriteFile", func() {
@@ -174,7 +174,7 @@ var _ = Describe("Write", func() {
 			w := writer.New(&bytes.Buffer{})
 
 			n, err := writer.Decl(w, &ast.Variable{
-				Name:  &ast.Text{Value: "TEST"},
+				Name:  &ast.Text{Value: "TEST", ValuePos: token.Pos(1)},
 				Op:    token.SIMPLE_ASSIGN,
 				OpPos: token.Pos(6),
 				Value: []ast.Expr{&ast.Text{
@@ -184,7 +184,7 @@ var _ = Describe("Write", func() {
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(n).To(Equal(13))
+			Expect(n).To(Equal(14))
 		})
 	})
 
@@ -207,8 +207,8 @@ var _ = Describe("Write", func() {
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(buf.String()).To(Equal("TEST:="))
-				Expect(n).To(Equal(6))
+				Expect(buf.String()).To(Equal("TEST:=\n"))
+				Expect(n).To(Equal(7))
 			})
 
 			It("should write a space-separated variable", func() {
@@ -216,14 +216,14 @@ var _ = Describe("Write", func() {
 				w := writer.New(buf)
 
 				n, err := writer.WriteVar(w, &ast.Variable{
-					Name:  &ast.Text{Value: "TEST"},
+					Name:  &ast.Text{Value: "TEST", ValuePos: token.Pos(1)},
 					Op:    token.SIMPLE_ASSIGN,
 					OpPos: token.Pos(6),
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(buf.String()).To(Equal("TEST :="))
-				Expect(n).To(Equal(7))
+				Expect(buf.String()).To(Equal("TEST :=\n"))
+				Expect(n).To(Equal(8))
 			})
 		})
 
@@ -236,14 +236,15 @@ var _ = Describe("Write", func() {
 					Name:  &ast.Text{Value: "TEST"},
 					Op:    token.SIMPLE_ASSIGN,
 					OpPos: token.Pos(5),
-					Value: []ast.Expr{
-						&ast.Text{Value: "value"},
-					},
+					Value: []ast.Expr{&ast.Text{
+						Value:    "value",
+						ValuePos: token.Pos(6),
+					}},
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(buf.String()).To(Equal("TEST:=value"))
-				Expect(n).To(Equal(11))
+				Expect(buf.String()).To(Equal("TEST:=value\n"))
+				Expect(n).To(Equal(12))
 			})
 
 			It("should write a space-separated variable", func() {
@@ -261,33 +262,27 @@ var _ = Describe("Write", func() {
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(buf.String()).To(Equal("TEST := value"))
-				Expect(n).To(Equal(13))
+				Expect(buf.String()).To(Equal("TEST := value\n"))
+				Expect(n).To(Equal(14))
 			})
 
-			DescribeTable("should return write errors",
-				Entry("Expr", 1),
-				Entry("Whitespace", 2),
-				Entry("Token", 3),
-				Entry("Whitespace", 4),
-				Entry("Value", 5),
-				func(after int) {
-					w := writer.New(
-						testing.NewErrAfterWriter(after),
-					)
+			It("should return write errors", func() {
+				w := writer.New(
+					testing.NewErrAfterWriter(1),
+				)
 
-					_, err := writer.WriteVar(w, &ast.Variable{
-						Name:  &ast.Text{Value: "TEST"},
-						Op:    token.SIMPLE_ASSIGN,
-						OpPos: token.Pos(6),
-						Value: []ast.Expr{
-							&ast.Text{Value: "value", ValuePos: token.Pos(9)},
-						},
-					})
+				_, err := writer.WriteVar(w, &ast.Variable{
+					Name:  &ast.Text{Value: "TEST"},
+					Op:    token.SIMPLE_ASSIGN,
+					OpPos: token.Pos(6),
+					Value: []ast.Expr{&ast.Text{
+						Value:    "value",
+						ValuePos: token.Pos(9),
+					}},
+				})
 
-					Expect(err).To(MatchError(ContainSubstring("write err:")))
-				},
-			)
+				Expect(err).To(MatchError(ContainSubstring("write err:")))
+			})
 		})
 	})
 })
