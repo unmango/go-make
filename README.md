@@ -84,18 +84,21 @@ Additional syntax is supported and may round-trip successfully, but no guarentee
   - [x] pre-requisites i.e. `target: prereq`
   - [x] order-only pre-requisites i.e. `target: | prereq`
   - [x] recipes i.e. `\trecipe text\n`
-  - [ ] custom `.RECIPEPREFIX`
+  - [ ] recipe with a custom `.RECIPEPREFIX`
   - [ ] semimcolon delimited recipes i.e. `target: ;recipe text\n`
 - variables
   - [x] empty declarations i.e. `VARIABLE :=`
   - [x] simple declarations i.e. `VARIALBE := foo.c bar.c`
   - [x] all assigment operators i.e. `VARIABLE != foo`, `VARIABLE ::= bar`, etc.
-  - [ ] variable references i.e. `${VARIABLE}`
+  - variable references i.e. `${VARIABLE}`
+    - [x] in targets i.e. `${VARIABLE}:`, `$(FOO) $(BAR):`
+    - [ ] in prereqs i.e. `target: ${FOO}`
+    - [ ] in recipes i.e. `target:\n\trecipe $(VAR)\n`
 - directives
   - [ ] top-level directives i.e. `ifeq`, `define`, etc.
   - [ ] logging directives i.e. `$(info message)`
   - [ ] expressions i.e. `$(shell script stuff)`
 
-#### NOT Supported
+#### Will Not Support
 
 Nothing, at this time
