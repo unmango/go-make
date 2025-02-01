@@ -158,6 +158,31 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should Parse a target with spaces in the recipe", func() {
+		buf := bytes.NewBufferString("target:\n\trecipe part2")
+		p := make.NewParser(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.TAB,
+				PrefixPos: token.Pos(9),
+				Text: ast.Text{
+					Value:    "recipe part2",
+					ValuePos: token.Pos(10),
+				},
+			}},
+		}))
+	})
+
 	It("should Parse a target with a prereq and a recipe", func() {
 		buf := bytes.NewBufferString("target: prereq\n\trecipe")
 		p := make.NewParser(buf, file)
