@@ -109,9 +109,7 @@ var _ = Describe("Ast", func() {
 
 	Describe("Text", func() {
 		It("should return the position of the identifier", func() {
-			c := &ast.Text{
-				ValuePos: token.Pos(69),
-			}
+			c := &ast.Text{ValuePos: token.Pos(69)}
 
 			Expect(c.Pos()).To(Equal(token.Pos(69)))
 		})
@@ -126,11 +124,64 @@ var _ = Describe("Ast", func() {
 		})
 
 		It("should stringify", func() {
-			c := &ast.Text{
-				Value: "foo",
-			}
+			c := &ast.Text{Value: "foo"}
 
 			Expect(c.String()).To(Equal("foo"))
+		})
+	})
+
+	Describe("VarRef", func() {
+		It("should return the position of the dollar sign", func() {
+			err := quick.Check(func(p int) bool {
+				c := &ast.VarRef{Dollar: token.Pos(p)}
+				return c.Pos() == token.Pos(p)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the identifier", func() {
+			c := &ast.VarRef{
+				Dollar: token.Pos(420),
+				Open:   token.LPAREN,
+				Name:   "bar",
+				Close:  token.RPAREN,
+			}
+
+			Expect(c.End()).To(Equal(token.Pos(425)))
+		})
+
+		It("should stringify with parens", func() {
+			c := &ast.VarRef{
+				Dollar: token.Pos(1),
+				Open:   token.LPAREN,
+				Name:   "foo",
+				Close:  token.RPAREN,
+			}
+
+			Expect(c.String()).To(Equal("$(foo)"))
+		})
+
+		It("should stringify with braces", func() {
+			c := &ast.VarRef{
+				Dollar: token.Pos(1),
+				Open:   token.LBRACE,
+				Name:   "foo",
+				Close:  token.RBRACE,
+			}
+
+			Expect(c.String()).To(Equal("${foo}"))
+		})
+
+		It("should stringify single characters", func() {
+			c := &ast.VarRef{
+				Dollar: token.Pos(1),
+				Open:   token.ILLEGAL,
+				Name:   "f",
+				Close:  token.ILLEGAL,
+			}
+
+			Expect(c.String()).To(Equal("$f"))
 		})
 	})
 

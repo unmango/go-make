@@ -32,6 +32,30 @@ var _ = Describe("Printer", func() {
 				}},
 				"target target2:\n",
 			),
+			Entry("variable reference target",
+				&ast.Rule{
+					Colon: token.Pos(10),
+					Targets: []ast.Expr{&ast.VarRef{
+						Dollar: token.Pos(1),
+						Open:   token.LPAREN,
+						Name:   "target",
+						Close:  token.RPAREN,
+					}},
+				},
+				"$(target):\n",
+			),
+			Entry("single character variable reference target",
+				&ast.Rule{
+					Colon: token.Pos(3),
+					Targets: []ast.Expr{&ast.VarRef{
+						Dollar: token.Pos(1),
+						Open:   token.ILLEGAL,
+						Name:   "t",
+						Close:  token.ILLEGAL,
+					}},
+				},
+				"$t:\n",
+			),
 			Entry("target with prereq",
 				&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{
@@ -60,6 +84,22 @@ var _ = Describe("Printer", func() {
 					}},
 				},
 				"target: | prereq\n",
+			),
+			Entry("target with prereq variable reference",
+				&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+					PreReqs: []ast.Expr{&ast.VarRef{
+						Dollar: token.Pos(9),
+						Open:   token.LPAREN,
+						Name:   "prereq",
+						Close:  token.RPAREN,
+					}},
+				},
+				"target: $(prereq)\n",
 			),
 			Entry("target, prereq, and recipe",
 				&ast.Rule{

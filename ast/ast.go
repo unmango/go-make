@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"fmt"
 	"go/ast"
 
 	"github.com/unmango/go-make/token"
@@ -29,7 +30,7 @@ type File struct {
 	Decls              []Decl // declarations; or nil
 }
 
-// Pos implements Node.
+// Pos implements Node
 func (f *File) Pos() token.Pos {
 	if len(f.Decls) > 0 {
 		return f.Decls[0].Pos()
@@ -38,7 +39,7 @@ func (f *File) Pos() token.Pos {
 	}
 }
 
-// End implements Node.
+// End implements Node
 func (f *File) End() token.Pos {
 	if n := len(f.Decls); n > 0 {
 		return f.Decls[n-1].End()
@@ -127,6 +128,41 @@ func (l *Text) End() token.Pos {
 // String returns the literal identifier
 func (l *Text) String() string {
 	return l.Value
+}
+
+// VarRef represents a variable reference.
+type VarRef struct {
+	Dollar token.Pos   // position of '$'
+	Open   token.Token // opening token, '(', '{', or ILLEGAL if len(Name) == 1
+	Name   string      // variable identifier
+	Close  token.Token // closing token, ')', '}', or ILLEGAL if len(Name) == 1
+}
+
+// exprNode implements Expr
+func (*VarRef) exprNode() {}
+
+// Pos implements Node
+func (v *VarRef) Pos() token.Pos {
+	return v.Dollar
+}
+
+// End implements Node
+func (v *VarRef) End() token.Pos {
+	if n := len(v.Name); n == 1 {
+		return v.Dollar + 1
+	} else {
+		// '$' + '{' + len(v.Name) + '}'
+		return token.Pos(int(v.Dollar) + 2 + len(v.Name))
+	}
+}
+
+// String implements fmt.Stringer
+func (v *VarRef) String() string {
+	if len(v.Name) == 1 {
+		return "$" + v.Name
+	} else {
+		return fmt.Sprint("$", v.Open, v.Name, v.Close)
+	}
 }
 
 // A Recipe represents a line of text to be passed to the shell to build a Target.

@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"io"
 	"math"
 	"strings"
@@ -38,14 +39,8 @@ func New(r io.Reader, file *token.File) *Parser {
 	return p
 }
 
-func (p *Parser) ParseFile() (*ast.File, error) {
-	f := p.parseFile()
-	if p.errors.Len() > 0 {
-		p.errors.Sort()
-		return nil, p.errors.Err()
-	} else {
-		return f, nil
-	}
+func (p Parser) isRecipePrefix() bool {
+	return p.tok == p.recipePrefix
 }
 
 func (p *Parser) error(pos token.Pos, msg string) {
@@ -77,31 +72,106 @@ func (p *Parser) expect(tok token.Token) token.Pos {
 	return pos
 }
 
+func (p *Parser) expectOneOf(tok ...token.Token) token.Pos {
+	pos := p.pos
+	if p.tok != tok[0] {
+		ts := make([]string, len(tok))
+		for i, t := range tok {
+			ts[i] = fmt.Sprint("'", t, "'")
+		}
+
+		p.errorExpected(pos, "one of "+strings.Join(ts, ", "))
+	}
+
+	p.next()
+	return pos
+}
+
 func (p *Parser) next() {
 	p.pos, p.tok, p.lit = p.s.Scan()
 }
 
-func (p *Parser) parseFile() *ast.File {
-	if p.errors.Len() > 0 {
+func (p *Parser) parseText() *ast.Text {
+	pos, name := p.pos, "_"
+	if p.tok == token.TEXT {
+		name = p.lit
+		p.next()
+	} else {
+		p.expect(token.TEXT)
+	}
+
+	return &ast.Text{
+		ValuePos: pos,
+		Value:    name,
+	}
+}
+
+func (p *Parser) parseRef() *ast.VarRef {
+	if p.tok != token.DOLLAR {
+		p.expect(token.DOLLAR)
 		return nil
 	}
 
-	var decls []ast.Decl
-	for p.tok != token.EOF {
-		decls = append(decls, p.parseDecl())
+	dollar := p.pos
+	p.next()
+
+	open, name := token.ILLEGAL, "_"
+	switch p.tok {
+	case token.LPAREN, token.LBRACE:
+		open = p.tok
+		p.next()
+		if p.tok == token.TEXT {
+			name = p.lit
+			p.next()
+		} else {
+			p.expect(token.TEXT)
+		}
+	case token.TEXT:
+		if len(p.lit) == 1 {
+			name = p.lit
+			p.next()
+		} else {
+			// TODO: This should occur in the scanner
+			name = p.lit[:1]
+			p.lit = p.lit[1:]
+			p.pos++
+		}
 	}
 
-	return &ast.File{
-		Comments:  []*ast.CommentGroup{},
-		Decls:     decls,
-		FileStart: token.Pos(p.file.Base()),
-		FileEnd:   token.Pos(p.file.Base() + p.file.Size()),
+	close := token.ILLEGAL
+	if open != token.ILLEGAL {
+		switch p.tok {
+		case token.RPAREN, token.RBRACE:
+			close = p.tok
+			p.next()
+		default:
+			p.expectOneOf(token.RPAREN, token.RBRACE)
+		}
+	}
+
+	return &ast.VarRef{
+		Dollar: dollar,
+		Open:   open,
+		Name:   name,
+		Close:  close,
+	}
+}
+
+func (p *Parser) parseExpression() ast.Expr {
+	switch p.tok {
+	case token.TEXT:
+		return p.parseText()
+	case token.DOLLAR:
+		return p.parseRef()
+	default:
+		p.expectOneOf(token.TEXT, token.DOLLAR)
+		return nil
 	}
 }
 
 func (p *Parser) parseDecl() ast.Decl {
 	var l []ast.Expr
-	for p.tok == token.TEXT {
+	for p.tok == token.TEXT || p.tok == token.DOLLAR {
 		l = append(l, p.parseExpression())
 	}
 
@@ -135,6 +205,36 @@ func (p *Parser) parseVar(name ast.Expr) ast.Decl {
 		Op:    op,
 		OpPos: opPos,
 		Value: rhs,
+	}
+}
+
+func (p *Parser) parseRecipe() *ast.Recipe {
+	if !p.isRecipePrefix() {
+		p.expect(p.recipePrefix)
+		return nil
+	}
+
+	prefixPos := p.pos
+	b := &strings.Builder{}
+	p.next()
+	for p.tok != token.NEWLINE && p.tok != token.EOF {
+		if p.pos > prefixPos+1 {
+			b.WriteRune(' ')
+		}
+		b.WriteString(p.lit)
+		p.next()
+	}
+	if p.tok == token.NEWLINE {
+		p.next()
+	}
+
+	return &ast.Recipe{
+		Prefix:    token.TAB,
+		PrefixPos: prefixPos,
+		Text: ast.Text{
+			Value:    b.String(),
+			ValuePos: prefixPos + 1,
+		},
 	}
 }
 
@@ -188,51 +288,30 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	}
 }
 
-func (p Parser) isRecipePrefix() bool {
-	return p.tok == p.recipePrefix
-}
-
-func (p *Parser) parseRecipe() *ast.Recipe {
-	if !p.isRecipePrefix() {
-		p.expect(p.recipePrefix)
+func (p *Parser) parseFile() *ast.File {
+	if p.errors.Len() > 0 {
 		return nil
 	}
 
-	prefixPos := p.pos
-	b := &strings.Builder{}
-	p.next()
-	for p.tok != token.NEWLINE && p.tok != token.EOF {
-		if p.pos > prefixPos+1 {
-			b.WriteRune(' ')
-		}
-		b.WriteString(p.lit)
-		p.next()
-	}
-	if p.tok == token.NEWLINE {
-		p.next()
+	var decls []ast.Decl
+	for p.tok != token.EOF {
+		decls = append(decls, p.parseDecl())
 	}
 
-	return &ast.Recipe{
-		Prefix:    token.TAB,
-		PrefixPos: prefixPos,
-		Text: ast.Text{
-			Value:    b.String(),
-			ValuePos: prefixPos + 1,
-		},
+	return &ast.File{
+		Comments:  []*ast.CommentGroup{},
+		Decls:     decls,
+		FileStart: token.Pos(p.file.Base()),
+		FileEnd:   token.Pos(p.file.Base() + p.file.Size()),
 	}
 }
 
-func (p *Parser) parseExpression() ast.Expr {
-	pos, name := p.pos, "_"
-	if p.tok == token.TEXT {
-		name = p.lit
-		p.next()
+func (p *Parser) ParseFile() (*ast.File, error) {
+	f := p.parseFile()
+	if p.errors.Len() > 0 {
+		p.errors.Sort()
+		return nil, p.errors.Err()
 	} else {
-		p.expect(token.TEXT)
-	}
-
-	return &ast.Text{
-		ValuePos: pos,
-		Value:    name,
+		return f, nil
 	}
 }

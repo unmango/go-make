@@ -65,12 +65,32 @@ func (p *printer) text(t *ast.Text) {
 	p.writeString(pos, t.Value)
 }
 
+func (p *printer) recipe(r *ast.Recipe) {
+	pos := p.posFor(r.PrefixPos)
+	p.tok(pos, r.Prefix)
+	p.expr(r)
+	p.writeLine()
+}
+
+func (p *printer) varRef(v *ast.VarRef) {
+	p.tok(p.posFor(v.Dollar), token.DOLLAR)
+	if v.Open != token.ILLEGAL {
+		p.tok(p.pos, v.Open)
+	}
+	p.writeString(p.pos, v.Name)
+	if v.Close != token.ILLEGAL {
+		p.tok(p.pos, v.Close)
+	}
+}
+
 func (p *printer) expr(expr ast.Expr) {
 	switch n := expr.(type) {
 	case *ast.Text:
 		p.text(n)
 	case *ast.Recipe:
 		p.text(&n.Text)
+	case *ast.VarRef:
+		p.varRef(n)
 	}
 }
 
@@ -79,13 +99,6 @@ func (p *printer) exprList(l []ast.Expr) {
 		fillSpace(p, e.Pos())
 		p.expr(e)
 	}
-}
-
-func (p *printer) recipe(r *ast.Recipe) {
-	pos := p.posFor(r.PrefixPos)
-	p.tok(pos, r.Prefix)
-	p.expr(r)
-	p.writeLine()
 }
 
 func (p *printer) targetList(l []ast.Expr) {
