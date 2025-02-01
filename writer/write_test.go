@@ -1,4 +1,4 @@
-package make_test
+package writer_test
 
 import (
 	"bytes"
@@ -6,23 +6,13 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/unmango/go-make"
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/internal/testing"
 	"github.com/unmango/go-make/token"
+	"github.com/unmango/go-make/writer"
 )
 
 var _ = Describe("Write", func() {
-	It("should write a line", func() {
-		buf := &bytes.Buffer{}
-		w := make.NewWriter(buf)
-
-		n, err := w.WriteLine()
-
-		Expect(err).NotTo(HaveOccurred())
-		Expect(buf.String()).To(Equal("\n"))
-		Expect(n).To(Equal(1))
-	})
 
 	Describe("WriteRule", func() {
 		DescribeTable("Rules",
@@ -67,9 +57,9 @@ var _ = Describe("Write", func() {
 			),
 			func(r *ast.Rule, expected string) {
 				buf := &bytes.Buffer{}
-				w := make.NewWriter(buf)
+				w := writer.New(buf)
 
-				n, err := make.WriteRule(w, r)
+				n, err := writer.WriteRule(w, r)
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(buf.String()).To(Equal(expected))
@@ -79,13 +69,13 @@ var _ = Describe("Write", func() {
 
 		It("should write multiple rules", func() {
 			buf := &bytes.Buffer{}
-			w := make.NewWriter(buf)
+			w := writer.New(buf)
 
-			_, err := make.WriteRule(w, &ast.Rule{Targets: []ast.Expr{
+			_, err := writer.WriteRule(w, &ast.Rule{Targets: []ast.Expr{
 				&ast.Text{Value: "target"},
 			}})
 			Expect(err).NotTo(HaveOccurred())
-			_, err = make.WriteRule(w, &ast.Rule{Targets: []ast.Expr{
+			_, err = writer.WriteRule(w, &ast.Rule{Targets: []ast.Expr{
 				&ast.Text{Value: "target2"},
 			}})
 			Expect(err).NotTo(HaveOccurred())
@@ -93,9 +83,9 @@ var _ = Describe("Write", func() {
 		})
 
 		It("should ignore nil", func() {
-			w := make.NewWriter(&bytes.Buffer{})
+			w := writer.New(&bytes.Buffer{})
 
-			Expect(make.WriteRule(w, nil)).To(Equal(0))
+			Expect(writer.WriteRule(w, nil)).To(Equal(0))
 		})
 
 		DescribeTable("should error when rule has no targets",
@@ -109,9 +99,9 @@ var _ = Describe("Write", func() {
 			}}}),
 			func(rule *ast.Rule) {
 				buf := &bytes.Buffer{}
-				w := make.NewWriter(buf)
+				w := writer.New(buf)
 
-				_, err := make.WriteRule(w, rule)
+				_, err := writer.WriteRule(w, rule)
 
 				Expect(err).To(MatchError("no targets"))
 			},
@@ -124,10 +114,9 @@ var _ = Describe("Write", func() {
 			Entry("recipe", 4),
 			Entry("newline", 5),
 			func(position int) {
-				writer := testing.NewErrAfterWriter(5)
-				w := make.NewWriter(writer)
+				w := writer.New(testing.NewErrAfterWriter(5))
 
-				_, err := make.WriteRule(w, &ast.Rule{
+				_, err := writer.WriteRule(w, &ast.Rule{
 					Targets: []ast.Expr{&ast.Text{Value: "foo"}},
 					PreReqs: []ast.Expr{&ast.Text{Value: "bar"}},
 					Recipes: []*ast.Recipe{{
@@ -144,9 +133,9 @@ var _ = Describe("Write", func() {
 	Describe("WriteFile", func() {
 		It("should write a Makefile", func() {
 			buf := &bytes.Buffer{}
-			w := make.NewWriter(buf)
+			w := writer.New(buf)
 
-			_, err := make.WriteFile(w, &ast.File{
+			_, err := writer.WriteFile(w, &ast.File{
 				Decls: []ast.Decl{&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{Value: "target"}},
 				}},
@@ -156,15 +145,15 @@ var _ = Describe("Write", func() {
 		})
 
 		It("should ignore nil", func() {
-			w := make.NewWriter(&bytes.Buffer{})
+			w := writer.New(&bytes.Buffer{})
 
-			Expect(make.WriteFile(w, nil)).To(Equal(0))
+			Expect(writer.WriteFile(w, nil)).To(Equal(0))
 		})
 
 		It("should return errors found when writing a Makefile", func() {
-			w := make.NewWriter(testing.ErrWriter("io error"))
+			w := writer.New(testing.ErrWriter("io error"))
 
-			_, err := make.WriteFile(w, &ast.File{
+			_, err := writer.WriteFile(w, &ast.File{
 				Decls: []ast.Decl{&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{Value: "target"}},
 				}},
@@ -174,43 +163,17 @@ var _ = Describe("Write", func() {
 		})
 	})
 
-	Describe("WriteExpr", func() {
-		It("should write text", func() {
-			buf := &bytes.Buffer{}
-			w := make.NewWriter(buf)
-
-			n, err := w.WriteExpr(&ast.Text{
-				Value: "foo",
-			})
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(n).To(Equal(3))
-			Expect(buf.String()).To(Equal("foo"))
-		})
-
-		It("should not write unsupported nodes", func() {
-			buf := &bytes.Buffer{}
-			w := make.NewWriter(buf)
-
-			n, err := w.WriteExpr(nil)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(n).To(Equal(0))
-			Expect(buf.Len()).To(Equal(0))
-		})
-	})
-
-	Describe("WriteDecl", func() {
+	Describe("Decl", func() {
 		It("should ignore nil", func() {
-			w := make.NewWriter(&bytes.Buffer{})
+			w := writer.New(&bytes.Buffer{})
 
-			Expect(make.WriteDecl(w, nil)).To(Equal(0))
+			Expect(writer.Decl(w, nil)).To(Equal(0))
 		})
 
 		It("should write a variable", func() {
-			w := make.NewWriter(&bytes.Buffer{})
+			w := writer.New(&bytes.Buffer{})
 
-			n, err := make.WriteDecl(w, &ast.Variable{
+			n, err := writer.Decl(w, &ast.Variable{
 				Name:  &ast.Text{Value: "TEST"},
 				Op:    token.SIMPLE_ASSIGN,
 				OpPos: token.Pos(6),
@@ -227,17 +190,17 @@ var _ = Describe("Write", func() {
 
 	Describe("WriteVar", func() {
 		It("should ignore nil variables", func() {
-			w := make.NewWriter(&bytes.Buffer{})
+			w := writer.New(&bytes.Buffer{})
 
-			Expect(make.WriteVar(w, nil)).To(Equal(0))
+			Expect(writer.WriteVar(w, nil)).To(Equal(0))
 		})
 
 		When("Value is empty", func() {
 			It("should write a variable", func() {
 				buf := &bytes.Buffer{}
-				w := make.NewWriter(buf)
+				w := writer.New(buf)
 
-				n, err := make.WriteVar(w, &ast.Variable{
+				n, err := writer.WriteVar(w, &ast.Variable{
 					Name:  &ast.Text{Value: "TEST"},
 					Op:    token.SIMPLE_ASSIGN,
 					OpPos: token.Pos(5),
@@ -250,9 +213,9 @@ var _ = Describe("Write", func() {
 
 			It("should write a space-separated variable", func() {
 				buf := &bytes.Buffer{}
-				w := make.NewWriter(buf)
+				w := writer.New(buf)
 
-				n, err := make.WriteVar(w, &ast.Variable{
+				n, err := writer.WriteVar(w, &ast.Variable{
 					Name:  &ast.Text{Value: "TEST"},
 					Op:    token.SIMPLE_ASSIGN,
 					OpPos: token.Pos(6),
@@ -267,9 +230,9 @@ var _ = Describe("Write", func() {
 		When("Value is defined", func() {
 			It("should write a variable", func() {
 				buf := &bytes.Buffer{}
-				w := make.NewWriter(buf)
+				w := writer.New(buf)
 
-				n, err := make.WriteVar(w, &ast.Variable{
+				n, err := writer.WriteVar(w, &ast.Variable{
 					Name:  &ast.Text{Value: "TEST"},
 					Op:    token.SIMPLE_ASSIGN,
 					OpPos: token.Pos(5),
@@ -285,9 +248,9 @@ var _ = Describe("Write", func() {
 
 			It("should write a space-separated variable", func() {
 				buf := &bytes.Buffer{}
-				w := make.NewWriter(buf)
+				w := writer.New(buf)
 
-				n, err := make.WriteVar(w, &ast.Variable{
+				n, err := writer.WriteVar(w, &ast.Variable{
 					Name:  &ast.Text{Value: "TEST"},
 					Op:    token.SIMPLE_ASSIGN,
 					OpPos: token.Pos(6),
@@ -309,11 +272,11 @@ var _ = Describe("Write", func() {
 				Entry("Whitespace", 4),
 				Entry("Value", 5),
 				func(after int) {
-					w := make.NewWriter(
+					w := writer.New(
 						testing.NewErrAfterWriter(after),
 					)
 
-					_, err := make.WriteVar(w, &ast.Variable{
+					_, err := writer.WriteVar(w, &ast.Variable{
 						Name:  &ast.Text{Value: "TEST"},
 						Op:    token.SIMPLE_ASSIGN,
 						OpPos: token.Pos(6),
