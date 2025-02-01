@@ -115,6 +115,13 @@ func (p *printer) rule(r *ast.Rule) {
 	fillSpace(p, r.Colon)
 	p.tok(p.posFor(r.Colon), token.COLON)
 	p.prereqList(r.PreReqs)
+	if r.Pipe.IsValid() {
+		fillSpace(p, r.Pipe)
+		p.tok(p.posFor(r.Pipe), token.PIPE)
+	}
+	if len(r.OrderPreReqs) > 0 {
+		p.exprList(r.OrderPreReqs)
+	}
 	if len(r.Recipes) > 0 {
 		if r.Recipes[0].Prefix != token.SEMI {
 			p.writeLine()
