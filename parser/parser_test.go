@@ -1,4 +1,4 @@
-package make_test
+package parser_test
 
 import (
 	"bytes"
@@ -8,8 +8,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/unmango/go-make"
 	"github.com/unmango/go-make/ast"
+	"github.com/unmango/go-make/parser"
 	"github.com/unmango/go-make/token"
 )
 
@@ -22,7 +22,7 @@ var _ = Describe("Parser", func() {
 
 	It("should Parse a target", func() {
 		buf := bytes.NewBufferString("target:")
-		p := make.NewParser(buf, file)
+		p := parser.New(buf, file)
 
 		f, err := p.ParseFile()
 
@@ -40,7 +40,7 @@ var _ = Describe("Parser", func() {
 
 	It("should Parse a rule with multiple targets", func() {
 		buf := bytes.NewBufferString("target target2:")
-		p := make.NewParser(buf, file)
+		p := parser.New(buf, file)
 
 		f, err := p.ParseFile()
 
@@ -58,7 +58,7 @@ var _ = Describe("Parser", func() {
 
 	It("should Parse a target with a prereq", func() {
 		buf := bytes.NewBufferString("target: prereq")
-		p := make.NewParser(buf, file)
+		p := parser.New(buf, file)
 
 		f, err := p.ParseFile()
 
@@ -79,7 +79,7 @@ var _ = Describe("Parser", func() {
 
 	It("should Parse a target with multiple prereqs", func() {
 		buf := bytes.NewBufferString("target: prereq prereq2")
-		p := make.NewParser(buf, file)
+		p := parser.New(buf, file)
 
 		f, err := p.ParseFile()
 
@@ -100,7 +100,7 @@ var _ = Describe("Parser", func() {
 
 	It("should Parse a target with a recipe", func() {
 		buf := bytes.NewBufferString("target:\n\trecipe")
-		p := make.NewParser(buf, file)
+		p := parser.New(buf, file)
 
 		f, err := p.ParseFile()
 
@@ -125,7 +125,7 @@ var _ = Describe("Parser", func() {
 
 	It("should Parse a target with multiple recipes", func() {
 		buf := bytes.NewBufferString("target:\n\trecipe\n\trecipe2")
-		p := make.NewParser(buf, file)
+		p := parser.New(buf, file)
 
 		f, err := p.ParseFile()
 
@@ -160,7 +160,7 @@ var _ = Describe("Parser", func() {
 
 	It("should Parse a target with spaces in the recipe", func() {
 		buf := bytes.NewBufferString("target:\n\trecipe part2")
-		p := make.NewParser(buf, file)
+		p := parser.New(buf, file)
 
 		f, err := p.ParseFile()
 
@@ -185,7 +185,7 @@ var _ = Describe("Parser", func() {
 
 	It("should Parse a target with a prereq and a recipe", func() {
 		buf := bytes.NewBufferString("target: prereq\n\trecipe")
-		p := make.NewParser(buf, file)
+		p := parser.New(buf, file)
 
 		f, err := p.ParseFile()
 
@@ -213,7 +213,7 @@ var _ = Describe("Parser", func() {
 
 	It("should support a nil *token.File value", func() {
 		buf := bytes.NewBufferString("target:")
-		s := make.NewParser(buf, nil)
+		s := parser.New(buf, nil)
 
 		f, err := s.ParseFile()
 
@@ -224,7 +224,7 @@ var _ = Describe("Parser", func() {
 	DescribeTable("should parse a variable definition",
 		func(input string, op token.Token, vpos int) {
 			buf := bytes.NewBufferString(input)
-			s := make.NewParser(buf, file)
+			s := parser.New(buf, file)
 
 			f, err := s.ParseFile()
 
@@ -253,7 +253,7 @@ var _ = Describe("Parser", func() {
 	DescribeTable("should parse a space-separated variable definition",
 		func(input string, op token.Token, vpos int) {
 			buf := bytes.NewBufferString(input)
-			s := make.NewParser(buf, file)
+			s := parser.New(buf, file)
 
 			f, err := s.ParseFile()
 
@@ -288,7 +288,7 @@ var _ = Describe("Parser", func() {
 	DescribeTable("should parse a variable declaration",
 		func(input string, op token.Token) {
 			buf := bytes.NewBufferString(input)
-			s := make.NewParser(buf, file)
+			s := parser.New(buf, file)
 
 			f, err := s.ParseFile()
 

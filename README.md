@@ -38,7 +38,7 @@ Using `make.Scanner`
 f := os.Open("Makefile")
 s := make.NewScanner(f, nil)
 
-for pos, tok, lit := s.Scan(); tok != token.EOF {
+for pos, tok, lit := s.Scan(); tok != token.EOF; {
   fmt.Println(pos) // The position of tok
   fmt.Println(tok) // The current token.Token i.e. token.SIMPLE_ASSIGN
   fmt.Println(lit) // Literal tokens as a string i.e. "identifier"
