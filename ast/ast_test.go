@@ -100,7 +100,7 @@ var _ = Describe("Ast", func() {
 		It("should return the position after the final recipe", func() {
 			c := &ast.Rule{Recipes: []*ast.Recipe{{
 				PrefixPos: token.Pos(420),
-				Text:      "some text",
+				Text:      ast.Text{Value: "some text"},
 			}}}
 
 			Expect(c.End()).To(Equal(token.Pos(429)))
@@ -147,7 +147,7 @@ var _ = Describe("Ast", func() {
 			c := &ast.Recipe{
 				PrefixPos: token.Pos(420),
 				Prefix:    token.TAB,
-				Text:      "foo",
+				Text:      ast.Text{Value: "foo"},
 			}
 
 			Expect(c.End()).To(Equal(token.Pos(423)))

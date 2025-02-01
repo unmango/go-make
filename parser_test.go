@@ -115,7 +115,10 @@ var _ = Describe("Parser", func() {
 			Recipes: []*ast.Recipe{{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(9),
-				Text:      "recipe",
+				Text: ast.Text{
+					Value:    "recipe",
+					ValuePos: token.Pos(10),
+				},
 			}},
 		}))
 	})
@@ -138,12 +141,18 @@ var _ = Describe("Parser", func() {
 				{
 					Prefix:    token.TAB,
 					PrefixPos: token.Pos(9),
-					Text:      "recipe",
+					Text: ast.Text{
+						Value:    "recipe",
+						ValuePos: token.Pos(10),
+					},
 				},
 				{
 					Prefix:    token.TAB,
 					PrefixPos: token.Pos(17),
-					Text:      "recipe2",
+					Text: ast.Text{
+						Value:    "recipe2",
+						ValuePos: token.Pos(18),
+					},
 				},
 			},
 		}))
@@ -169,7 +178,10 @@ var _ = Describe("Parser", func() {
 			Recipes: []*ast.Recipe{{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(16),
-				Text:      "recipe",
+				Text: ast.Text{
+					Value:    "recipe",
+					ValuePos: token.Pos(17),
+				},
 			}},
 		}))
 	})

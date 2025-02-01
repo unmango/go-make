@@ -69,6 +69,8 @@ func (p *printer) expr(expr ast.Expr) {
 	switch n := expr.(type) {
 	case *ast.Text:
 		p.text(n)
+	case *ast.Recipe:
+		p.text(&n.Text)
 	}
 }
 
@@ -81,8 +83,8 @@ func (p *printer) exprList(l []ast.Expr) {
 
 func (p *printer) recipe(r *ast.Recipe) {
 	pos := p.posFor(r.PrefixPos)
-	p.writeString(pos, r.Prefix.String())
-	p.writeString(pos, r.Text)
+	p.tok(pos, r.Prefix)
+	p.expr(r)
 }
 
 func (p *printer) targetList(l []ast.Expr) {

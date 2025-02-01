@@ -202,7 +202,10 @@ func (p *Parser) parseRecipe() *ast.Recipe {
 	return &ast.Recipe{
 		Prefix:    token.TAB,
 		PrefixPos: tokPos,
-		Text:      b.String(),
+		Text: ast.Text{
+			Value:    b.String(),
+			ValuePos: tokPos + 1,
+		},
 	}
 }
 

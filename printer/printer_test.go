@@ -60,7 +60,7 @@ var _ = Describe("Printer", func() {
 					Recipes: []*ast.Recipe{{
 						Prefix:    token.TAB,
 						PrefixPos: token.Pos(16),
-						Text:      "curl https://example.com",
+						Text:      ast.Text{Value: "curl https://example.com"},
 					}},
 				},
 				"target: prereq\n\tcurl https://example.com\n",
@@ -70,7 +70,7 @@ var _ = Describe("Printer", func() {
 					Targets: []ast.Expr{&ast.Text{Value: "target"}},
 					Recipes: []*ast.Recipe{{
 						Prefix: token.TAB,
-						Text:   "curl https://example.com",
+						Text:   ast.Text{Value: "curl https://example.com"},
 					}},
 				},
 				"target:\n\tcurl https://example.com\n",
@@ -110,7 +110,7 @@ var _ = Describe("Printer", func() {
 				PreReqs: []ast.Expr{&ast.Text{Value: "bar"}},
 				Recipes: []*ast.Recipe{{
 					Prefix: token.TAB,
-					Text:   "baz",
+					Text:   ast.Text{Value: "baz"},
 				}},
 			})
 
