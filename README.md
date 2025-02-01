@@ -56,5 +56,46 @@ Use `make.Fprint` to write ast nodes.
 ```go
 var file *ast.File
 
-err := make.Fprint(os.Stdout, file)
+n, err := make.Fprint(os.Stdout, file)
 ```
+
+The `make.Writer` can be used to incrementally write make syntax to an `io.Writer`.
+
+```go
+buf := &bytes.Buffer{}
+w := make.NewWriter(buf)
+
+n, err := w.WriteRule(&ast.Rule{})
+```
+
+### Supported Features
+
+Makefile syntax that is guaranteed to round-trip (parse and print without modification) is listed in [./testdata/roundtrip](./testdata/roundtrip/).
+Additional syntax is supported and may round-trip successfully, but no guarentees are provided until it is lisited under `./testdata/roundtrip`.
+
+- comments
+  - [ ] top-level comments i.e. `# comment text`
+  - [ ] rule comments i.e. `target: # comment text`
+  - [x] recipe comments i.e. `target:\n\trecipe # comment text\n`
+    - these are not make comments and are included in the recipe text
+- rules
+  - [x] targets i.e. `target:`, `target :`
+  - [x] multiple targets i.e. `target1 target2:`
+  - [x] pre-requisites i.e. `target: prereq`
+  - [x] order-only pre-requisites i.e. `target: | prereq`
+  - [x] recipes i.e. `\trecipe text\n`
+  - [ ] custom `.RECIPEPREFIX`
+  - [ ] semimcolon delimited recipes i.e. `target: ;recipe text\n`
+- variables
+  - [x] empty declarations i.e. `VARIABLE :=`
+  - [x] simple declarations i.e. `VARIALBE := foo.c bar.c`
+  - [x] all assigment operators i.e. `VARIABLE != foo`, `VARIABLE ::= bar`, etc.
+  - [ ] variable references i.e. `${VARIABLE}`
+- directives
+  - [ ] top-level directives i.e. `ifeq`, `define`, etc.
+  - [ ] logging directives i.e. `$(info message)`
+  - [ ] expressions i.e. `$(shell script stuff)`
+
+#### NOT Supported
+
+Nothing, at this time
