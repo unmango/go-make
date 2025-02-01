@@ -1,4 +1,4 @@
-package make_test
+package scanner_test
 
 import (
 	"bufio"
@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/unmango/go-make"
+	"github.com/unmango/go-make/scanner"
 )
 
 var _ = Describe("Scan", func() {
@@ -95,7 +95,7 @@ var _ = Describe("Scan", func() {
 			func(text string, expected []string) {
 				buf := bytes.NewBufferString(text)
 				s := bufio.NewScanner(buf)
-				s.Split(make.ScanTokens)
+				s.Split(scanner.ScanTokens)
 
 				tokens := []string{}
 				for s.Scan() {

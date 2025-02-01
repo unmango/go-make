@@ -1,17 +1,17 @@
 package make
 
 import (
-	"go/scanner"
 	"io"
 	"math"
 	"strings"
 
 	"github.com/unmango/go-make/ast"
+	"github.com/unmango/go-make/scanner"
 	"github.com/unmango/go-make/token"
 )
 
 type Parser struct {
-	s      *Scanner
+	s      *scanner.Scanner
 	file   *token.File
 	errors scanner.ErrorList
 
@@ -28,7 +28,7 @@ func NewParser(r io.Reader, file *token.File) *Parser {
 	}
 
 	p := &Parser{
-		s:    NewScanner(r, file),
+		s:    scanner.New(r, file),
 		file: file,
 
 		recipePrefix: token.TAB,

@@ -1,13 +1,16 @@
-package make
+package scanner
 
 import (
 	"bufio"
 	"bytes"
+	"go/scanner"
 	"io"
 	"math"
 
 	"github.com/unmango/go-make/token"
 )
+
+type ErrorList = scanner.ErrorList
 
 type Scanner struct {
 	file *token.File
@@ -21,7 +24,7 @@ type Scanner struct {
 	done bool
 }
 
-func NewScanner(r io.Reader, file *token.File) *Scanner {
+func New(r io.Reader, file *token.File) *Scanner {
 	scanner := bufio.NewScanner(r)
 	scanner.Split(ScanTokens)
 
