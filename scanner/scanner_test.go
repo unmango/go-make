@@ -1,4 +1,4 @@
-package make_test
+package scanner_test
 
 import (
 	"bytes"
@@ -10,8 +10,8 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/unmango/go-make"
 	"github.com/unmango/go-make/internal/testing"
+	"github.com/unmango/go-make/scanner"
 	"github.com/unmango/go-make/token"
 )
 
@@ -24,7 +24,7 @@ var _ = Describe("Scanner", func() {
 
 	Describe("Position", func() {
 		It("should be equivalent to calling file.PositionFor(p, false)", func() {
-			s := make.NewScanner(&bytes.Buffer{}, file)
+			s := scanner.NewScanner(&bytes.Buffer{}, file)
 
 			err := quick.Check(func(p int) bool {
 				pos := token.Pos(p)
@@ -51,7 +51,7 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "foo_"),
 		func(input string) {
 			buf := bytes.NewBufferString(input)
-			s := make.NewScanner(buf, file)
+			s := scanner.NewScanner(buf, file)
 
 			pos, tok, lit := s.Scan()
 			Expect(tok).To(Equal(token.TEXT))
@@ -76,7 +76,7 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "foo_\n"),
 		func(input string) {
 			buf := bytes.NewBufferString(input)
-			s := make.NewScanner(buf, file)
+			s := scanner.NewScanner(buf, file)
 
 			pos, tok, lit := s.Scan()
 			Expect(tok).To(Equal(token.TEXT))
@@ -119,7 +119,7 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "ident ,"),
 		func(input string) {
 			buf := bytes.NewBufferString(input)
-			s := make.NewScanner(buf, file)
+			s := scanner.NewScanner(buf, file)
 
 			pos, tok, lit := s.Scan()
 			Expect(tok).To(Equal(token.TEXT))
@@ -153,7 +153,7 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "\n\n", token.NEWLINE),
 		func(input string, expected token.Token) {
 			buf := bytes.NewBufferString(input)
-			s := make.NewScanner(buf, file)
+			s := scanner.NewScanner(buf, file)
 
 			pos, tok, _ := s.Scan()
 			Expect(tok).To(Equal(expected))
@@ -168,7 +168,7 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "#", token.COMMENT),
 		func(input string, expected token.Token) {
 			buf := bytes.NewBufferString(input)
-			s := make.NewScanner(buf, file)
+			s := scanner.NewScanner(buf, file)
 
 			pos, tok, _ := s.Scan()
 
@@ -197,7 +197,7 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "\n)"),
 		func(input string) {
 			buf := bytes.NewBufferString(input)
-			s := make.NewScanner(buf, file)
+			s := scanner.NewScanner(buf, file)
 
 			pos, tok, _ := s.Scan()
 			Expect(tok).To(Equal(token.NEWLINE))
@@ -257,7 +257,7 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "identifier foo bar", 12),
 		func(input string, expected int) {
 			buf := bytes.NewBufferString(input)
-			s := make.NewScanner(buf, file)
+			s := scanner.NewScanner(buf, file)
 
 			_, _, _ = s.Scan()
 			pos, tok, lit := s.Scan()
@@ -293,7 +293,7 @@ var _ = Describe("Scanner", func() {
 		Entry(nil, "identifier\nfoo", 11),
 		func(input string, nlPos int) {
 			buf := bytes.NewBufferString(input)
-			s := make.NewScanner(buf, file)
+			s := scanner.NewScanner(buf, file)
 
 			_, _, _ = s.Scan()
 			pos, tok, _ := s.Scan()
@@ -321,7 +321,7 @@ var _ = Describe("Scanner", func() {
 
 	It("should return IO errors", func() {
 		r := testing.ErrReader("io error")
-		s := make.NewScanner(r, file)
+		s := scanner.NewScanner(r, file)
 
 		_, _, _ = s.Scan()
 		Expect(s.Err()).To(MatchError("io error"))
@@ -329,7 +329,7 @@ var _ = Describe("Scanner", func() {
 
 	It("should support a nil *token.File value", func() {
 		buf := bytes.NewBufferString("target:")
-		s := make.NewScanner(buf, nil)
+		s := scanner.NewScanner(buf, nil)
 
 		pos, tok, lit := s.Scan()
 		Expect(tok).To(Equal(token.TEXT))

@@ -12,6 +12,7 @@ import (
 
 	"github.com/unmango/go-make"
 	"github.com/unmango/go-make/printer"
+	"github.com/unmango/go-make/scanner"
 	"github.com/unmango/go-make/token"
 	"github.com/unmango/go-make/writer"
 )
@@ -26,7 +27,7 @@ var _ = Describe("E2E", func() {
 		fi, err := f.Stat()
 		Expect(err).NotTo(HaveOccurred())
 		file := token.NewFileSet().AddFile(f.Name(), 1, int(fi.Size()))
-		s := make.NewScanner(f, file)
+		s := scanner.NewScanner(f, file)
 
 		// By tweaking the duration and interval we can approximate the number of tokens
 		// scanned and pick values that should cover the entire Makefile. This approach

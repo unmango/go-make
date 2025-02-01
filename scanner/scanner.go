@@ -1,13 +1,16 @@
-package make
+package scanner
 
 import (
 	"bufio"
 	"bytes"
+	"go/scanner"
 	"io"
 	"math"
 
 	"github.com/unmango/go-make/token"
 )
+
+type ErrorList = scanner.ErrorList
 
 type Scanner struct {
 	file *token.File
