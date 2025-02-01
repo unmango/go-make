@@ -131,9 +131,9 @@ func (l *Text) String() string {
 
 // A Recipe represents a line of text to be passed to the shell to build a Target.
 type Recipe struct {
+	Text                  // recipe text excluding '\n'
 	Prefix    token.Token // TAB, SEMI, or .RECIPEPREFIX
 	PrefixPos token.Pos   // position of Tok
-	Text      string      // recipe text excluding '\n'
 }
 
 // Pos implements Node
@@ -143,7 +143,7 @@ func (r *Recipe) Pos() token.Pos {
 
 // End implements Node
 func (r *Recipe) End() token.Pos {
-	return token.Pos(int(r.PrefixPos) + len(r.Text))
+	return token.Pos(int(r.PrefixPos) + len(r.Value))
 }
 
 // An Variable represents a make variable.

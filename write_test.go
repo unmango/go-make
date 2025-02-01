@@ -50,7 +50,7 @@ var _ = Describe("Write", func() {
 					PreReqs: []ast.Expr{&ast.Text{Value: "prereq"}},
 					Recipes: []*ast.Recipe{{
 						Prefix: token.TAB,
-						Text:   "curl https://example.com",
+						Text:   ast.Text{Value: "curl https://example.com"},
 					}},
 				},
 				"target: prereq\n\tcurl https://example.com\n",
@@ -60,7 +60,7 @@ var _ = Describe("Write", func() {
 					Targets: []ast.Expr{&ast.Text{Value: "target"}},
 					Recipes: []*ast.Recipe{{
 						Prefix: token.TAB,
-						Text:   "curl https://example.com",
+						Text:   ast.Text{Value: "curl https://example.com"},
 					}},
 				},
 				"target:\n\tcurl https://example.com\n",
@@ -105,7 +105,7 @@ var _ = Describe("Write", func() {
 			}}),
 			Entry("with recipes", &ast.Rule{Recipes: []*ast.Recipe{{
 				Prefix: token.TAB,
-				Text:   "foo",
+				Text:   ast.Text{Value: "foo"},
 			}}}),
 			func(rule *ast.Rule) {
 				buf := &bytes.Buffer{}
@@ -132,7 +132,7 @@ var _ = Describe("Write", func() {
 					PreReqs: []ast.Expr{&ast.Text{Value: "bar"}},
 					Recipes: []*ast.Recipe{{
 						Prefix: token.TAB,
-						Text:   "baz",
+						Text:   ast.Text{Value: "baz"},
 					}},
 				})
 

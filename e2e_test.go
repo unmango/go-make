@@ -11,6 +11,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/unmango/go-make"
+	"github.com/unmango/go-make/printer"
 	"github.com/unmango/go-make/token"
 )
 
@@ -59,7 +60,7 @@ var _ = Describe("E2E", func() {
 			buf := &bytes.Buffer{}
 			w := make.NewWriter(buf)
 
-			Expect(make.Fprint(w, f)).To(Succeed())
+			Expect(printer.Fprint(w, f)).To(BeNumerically(">", 0))
 			Expect(buf.String()).To(Equal(input))
 		},
 	)

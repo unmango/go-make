@@ -106,7 +106,7 @@ func WriteRecipe(w *Writer, r *ast.Recipe) (n int, err error) {
 		return
 	}
 
-	return fmt.Fprintf(w, "%s%s\n", r.Prefix, r.Text)
+	return fmt.Fprintf(w, "%s%s\n", r.Prefix, r.Text.Value)
 }
 
 func WriteRule(w *Writer, r *ast.Rule) (n int, err error) {
