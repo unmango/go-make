@@ -46,6 +46,21 @@ var _ = Describe("Printer", func() {
 				},
 				"target: prereq\n",
 			),
+			Entry("target with order-only prereq",
+				&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+					Pipe:  token.Pos(9),
+					OrderPreReqs: []ast.Expr{&ast.Text{
+						Value:    "prereq",
+						ValuePos: token.Pos(11),
+					}},
+				},
+				"target: | prereq\n",
+			),
 			Entry("target, prereq, and recipe",
 				&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{

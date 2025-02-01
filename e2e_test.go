@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -73,7 +74,7 @@ func RoundTripEntries(fsys fs.FS, root string) (entries []TableEntry) {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() {
+		if d.IsDir() || filepath.Ext(path) != ".mk" {
 			return nil
 		}
 
