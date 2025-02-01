@@ -39,6 +39,89 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	DescribeTable("should Parse a target as a variable reference",
+		Entry(nil, "${foo}:", "foo", token.LBRACE, token.RBRACE),
+		Entry(nil, "$(foo):", "foo", token.LPAREN, token.RPAREN),
+		func(input, name string, open, close token.Token) {
+			buf := bytes.NewBufferString(input)
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Decls).To(ConsistOf(&ast.Rule{
+				Colon: token.Pos(7),
+				Targets: []ast.Expr{&ast.VarRef{
+					Dollar: token.Pos(1),
+					Open:   open,
+					Name:   name,
+					Close:  close,
+				}},
+				PreReqs:      []ast.Expr{},
+				OrderPreReqs: []ast.Expr{},
+				Recipes:      []*ast.Recipe{},
+			}))
+		},
+	)
+
+	It("should Parse a target as a single character variable reference", func() {
+		buf := bytes.NewBufferString("$f:")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(3),
+			Targets: []ast.Expr{&ast.VarRef{
+				Dollar: token.Pos(1),
+				Open:   token.ILLEGAL,
+				Name:   "f",
+				Close:  token.ILLEGAL,
+			}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	It("should Parse a target with a single character variable reference and extra text", func() {
+		buf := bytes.NewBufferString("$foo:")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(5),
+			Targets: []ast.Expr{
+				&ast.VarRef{
+					Dollar: token.Pos(1),
+					Open:   token.ILLEGAL,
+					Name:   "f",
+					Close:  token.ILLEGAL,
+				},
+				&ast.Text{Value: "oo", ValuePos: token.Pos(3)},
+			},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	DescribeTable("should error when variable reference has no closing token",
+		Entry(nil, "${foo:"),
+		Entry(nil, "$(foo:"),
+		func(input string) {
+			buf := bytes.NewBufferString(input)
+			p := parser.New(buf, file)
+
+			_, err := p.ParseFile()
+
+			Expect(err).To(MatchError("test:1:6: expected one of ')', '}', found ':'"))
+		},
+	)
+
 	It("should Parse a rule with multiple targets", func() {
 		buf := bytes.NewBufferString("target target2:")
 		p := parser.New(buf, file)

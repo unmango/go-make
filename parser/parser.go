@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"fmt"
 	"io"
 	"math"
 	"strings"
@@ -71,11 +72,26 @@ func (p *Parser) expect(tok token.Token) token.Pos {
 	return pos
 }
 
+func (p *Parser) expectOneOf(tok ...token.Token) token.Pos {
+	pos := p.pos
+	if p.tok != tok[0] {
+		ts := make([]string, len(tok))
+		for i, t := range tok {
+			ts[i] = fmt.Sprint("'", t, "'")
+		}
+
+		p.errorExpected(pos, "one of "+strings.Join(ts, ", "))
+	}
+
+	p.next()
+	return pos
+}
+
 func (p *Parser) next() {
 	p.pos, p.tok, p.lit = p.s.Scan()
 }
 
-func (p *Parser) parseExpression() ast.Expr {
+func (p *Parser) parseText() *ast.Text {
 	pos, name := p.pos, "_"
 	if p.tok == token.TEXT {
 		name = p.lit
@@ -90,9 +106,72 @@ func (p *Parser) parseExpression() ast.Expr {
 	}
 }
 
+func (p *Parser) parseRef() *ast.VarRef {
+	if p.tok != token.DOLLAR {
+		p.expect(token.DOLLAR)
+		return nil
+	}
+
+	dollar := p.pos
+	p.next()
+
+	open, name := token.ILLEGAL, "_"
+	switch p.tok {
+	case token.LPAREN, token.LBRACE:
+		open = p.tok
+		p.next()
+		if p.tok == token.TEXT {
+			name = p.lit
+			p.next()
+		} else {
+			p.expect(token.TEXT)
+		}
+	case token.TEXT:
+		if len(p.lit) == 1 {
+			name = p.lit
+			p.next()
+		} else {
+			// TODO: This should occur in the scanner
+			name = p.lit[:1]
+			p.lit = p.lit[1:]
+			p.pos++
+		}
+	}
+
+	close := token.ILLEGAL
+	if open != token.ILLEGAL {
+		switch p.tok {
+		case token.RPAREN, token.RBRACE:
+			close = p.tok
+			p.next()
+		default:
+			p.expectOneOf(token.RPAREN, token.RBRACE)
+		}
+	}
+
+	return &ast.VarRef{
+		Dollar: dollar,
+		Open:   open,
+		Name:   name,
+		Close:  close,
+	}
+}
+
+func (p *Parser) parseExpression() ast.Expr {
+	switch p.tok {
+	case token.TEXT:
+		return p.parseText()
+	case token.DOLLAR:
+		return p.parseRef()
+	default:
+		p.expectOneOf(token.TEXT, token.DOLLAR)
+		return nil
+	}
+}
+
 func (p *Parser) parseDecl() ast.Decl {
 	var l []ast.Expr
-	for p.tok == token.TEXT {
+	for p.tok == token.TEXT || p.tok == token.DOLLAR {
 		l = append(l, p.parseExpression())
 	}
 

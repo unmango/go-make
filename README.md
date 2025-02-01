@@ -71,7 +71,7 @@ n, err := w.WriteRule(&ast.Rule{})
 ### Supported Features
 
 Makefile syntax that is guaranteed to round-trip (parse and print without modification) is listed in [./testdata/roundtrip](./testdata/roundtrip/).
-Additional syntax is supported and may round-trip successfully, but no guarentees are provided until it is lisited under `./testdata/roundtrip`.
+Additional syntax is supported and may round-trip successfully, but no guarentees are provided until it is listed under `./testdata/roundtrip`.
 
 - comments
   - [ ] top-level comments i.e. `# comment text`
