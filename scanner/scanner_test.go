@@ -165,14 +165,20 @@ var _ = Describe("Scanner", func() {
 	)
 
 	DescribeTable("Scan comment tokens",
-		Entry(nil, "#", token.COMMENT),
-		func(input string, expected token.Token) {
+		Entry(nil, "#", ""),
+		Entry(nil, "#some text", "some text"),
+		Entry(nil, "# some text", "some text"),
+		Entry(nil, "#\n", ""),
+		Entry(nil, "#some text\n", "some text"),
+		Entry(nil, "# some text\n", "some text"),
+		func(input, expected string) {
 			buf := bytes.NewBufferString(input)
 			s := scanner.New(buf, file)
 
-			pos, tok, _ := s.Scan()
+			pos, tok, lit := s.Scan()
 
-			Expect(tok).To(Equal(expected))
+			Expect(tok).To(Equal(token.COMMENT))
+			Expect(lit).To(Equal(expected))
 			Expect(pos).To(Equal(token.Pos(1)))
 		},
 	)

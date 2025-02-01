@@ -6,6 +6,7 @@ import (
 	"go/scanner"
 	"io"
 	"math"
+	"strings"
 
 	"github.com/unmango/go-make/token"
 )
@@ -38,6 +39,35 @@ func New(r io.Reader, file *token.File) *Scanner {
 	s.next()
 
 	return s
+}
+
+func (s *Scanner) next() {
+	s.offset = s.rdOffset
+	if bytes.ContainsRune(s.s.Bytes(), '\n') {
+		s.file.AddLine(s.offset)
+	}
+	s.done = !s.s.Scan()
+	s.rdOffset += len(s.s.Bytes())
+}
+
+func (s *Scanner) skipWhitespace() {
+	for bytes.ContainsAny(s.s.Bytes(), " \r") {
+		s.next()
+	}
+}
+
+func (s *Scanner) scanComment() string {
+	if bytes.ContainsRune(s.s.Bytes(), ' ') {
+		s.next() // skip space following '#'
+	}
+
+	b := strings.Builder{}
+	for !s.done && !bytes.ContainsRune(s.s.Bytes(), '\n') {
+		b.Write(s.s.Bytes())
+		s.next()
+	}
+
+	return b.String()
 }
 
 func (s Scanner) Err() error {
@@ -109,8 +139,7 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 		case "|":
 			tok = token.PIPE
 		case "#":
-			// TODO
-			// s.lit = s.scanComment()
+			lit = s.scanComment()
 			tok = token.COMMENT
 		default:
 			tok = token.UNSUPPORTED
@@ -123,19 +152,4 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 	}
 
 	return
-}
-
-func (s *Scanner) next() {
-	s.offset = s.rdOffset
-	if bytes.ContainsRune(s.s.Bytes(), '\n') {
-		s.file.AddLine(s.offset)
-	}
-	s.done = !s.s.Scan()
-	s.rdOffset += len(s.s.Bytes())
-}
-
-func (s *Scanner) skipWhitespace() {
-	for bytes.ContainsAny(s.s.Bytes(), " \r") {
-		s.next()
-	}
 }
