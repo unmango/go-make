@@ -185,6 +185,30 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should Parse a target with a prereq variable reference", func() {
+		buf := bytes.NewBufferString("target: ${FOO}")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs: []ast.Expr{&ast.VarRef{
+				Dollar: token.Pos(9),
+				Open:   token.LBRACE,
+				Name:   "FOO",
+				Close:  token.RBRACE,
+			}},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
 	It("should Parse a target with an order-only prereq", func() {
 		buf := bytes.NewBufferString("target: | prereq")
 		p := parser.New(buf, file)

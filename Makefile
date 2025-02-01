@@ -52,14 +52,17 @@ bin/devctl: .versions/devctl
 .envrc: hack/example.envrc
 	cp $< $@
 
-.make/build: $(shell $(DEVCTL) list --go --exclude-tests) | bin/devctl
+.make:
+	mkdir -p $@
+
+.make/build: $(shell $(DEVCTL) list --go --exclude-tests) | bin/devctl .make
 	go build ./...
 	@touch $@
 
-.make/test: $(shell $(DEVCTL) list --go) | bin/ginkgo bin/devctl
+.make/test: $(shell $(DEVCTL) list --go) | bin/ginkgo bin/devctl .make
 	$(GINKGO) run ${TEST_FLAGS} $(sort $(dir $?))
 	@touch $@
 
-.make/validate_codecov: codecov.yml
+.make/validate_codecov: codecov.yml | .make
 	curl -X POST --data-binary @codecov.yml https://codecov.io/validate
 	@touch $@

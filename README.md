@@ -92,7 +92,7 @@ Additional syntax is supported and may round-trip successfully, but no guarentee
   - [x] all assigment operators i.e. `VARIABLE != foo`, `VARIABLE ::= bar`, etc.
   - variable references i.e. `${VARIABLE}`
     - [x] in targets i.e. `${VARIABLE}:`, `$(FOO) $(BAR):`
-    - [ ] in prereqs i.e. `target: ${FOO}`
+    - [x] in prereqs i.e. `target: ${FOO}`
     - [ ] in recipes i.e. `target:\n\trecipe $(VAR)\n`
 - directives
   - [ ] top-level directives i.e. `ifeq`, `define`, etc.
