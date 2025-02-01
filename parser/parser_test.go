@@ -33,8 +33,9 @@ var _ = Describe("Parser", func() {
 				Value:    "target",
 				ValuePos: token.Pos(1),
 			}},
-			PreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
 		}))
 	})
 
@@ -51,8 +52,9 @@ var _ = Describe("Parser", func() {
 				&ast.Text{Value: "target", ValuePos: token.Pos(1)},
 				&ast.Text{Value: "target2", ValuePos: token.Pos(8)},
 			},
-			PreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
 		}))
 	})
 
@@ -73,7 +75,8 @@ var _ = Describe("Parser", func() {
 				Value:    "prereq",
 				ValuePos: token.Pos(9),
 			}},
-			Recipes: []*ast.Recipe{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
 		}))
 	})
 
@@ -94,6 +97,29 @@ var _ = Describe("Parser", func() {
 				&ast.Text{Value: "prereq", ValuePos: token.Pos(9)},
 				&ast.Text{Value: "prereq2", ValuePos: token.Pos(16)},
 			},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	It("should Parse a target with an order-only prereq", func() {
+		buf := bytes.NewBufferString("target: | prereq")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			Colon:   token.Pos(7),
+			Pipe:    token.Pos(9),
+			PreReqs: []ast.Expr{},
+			OrderPreReqs: []ast.Expr{
+				&ast.Text{Value: "prereq", ValuePos: token.Pos(11)},
+			},
 			Recipes: []*ast.Recipe{},
 		}))
 	})
@@ -111,7 +137,8 @@ var _ = Describe("Parser", func() {
 				Value:    "target",
 				ValuePos: token.Pos(1),
 			}},
-			PreReqs: []ast.Expr{},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
 			Recipes: []*ast.Recipe{{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(9),
@@ -136,7 +163,8 @@ var _ = Describe("Parser", func() {
 				Value:    "target",
 				ValuePos: token.Pos(1),
 			}},
-			PreReqs: []ast.Expr{},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
 			Recipes: []*ast.Recipe{
 				{
 					Prefix:    token.TAB,
@@ -171,7 +199,8 @@ var _ = Describe("Parser", func() {
 				Value:    "target",
 				ValuePos: token.Pos(1),
 			}},
-			PreReqs: []ast.Expr{},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
 			Recipes: []*ast.Recipe{{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(9),
@@ -200,6 +229,7 @@ var _ = Describe("Parser", func() {
 				Value:    "prereq",
 				ValuePos: token.Pos(9),
 			}},
+			OrderPreReqs: []ast.Expr{},
 			Recipes: []*ast.Recipe{{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(16),

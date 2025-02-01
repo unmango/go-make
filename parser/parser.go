@@ -151,11 +151,20 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	}
 
 	prereqs := []ast.Expr{}
-	for p.tok != token.NEWLINE && p.tok != token.EOF {
+	for p.tok != token.PIPE && p.tok != token.NEWLINE && p.tok != token.EOF {
 		prereqs = append(prereqs, p.parseExpression())
 	}
 	if p.errors.Len() > 0 {
 		return nil
+	}
+
+	pipe, oprereqs := token.NoPos, []ast.Expr{}
+	if p.tok == token.PIPE {
+		pipe = p.pos
+		p.next()
+		for p.tok != token.NEWLINE && p.tok != token.EOF {
+			oprereqs = append(oprereqs, p.parseExpression())
+		}
 	}
 	if p.tok == token.NEWLINE {
 		p.next()
@@ -170,11 +179,12 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	}
 
 	return &ast.Rule{
-		Targets: targets,
-		Colon:   colon,
-		Pipe:    token.NoPos,
-		PreReqs: prereqs,
-		Recipes: recipes,
+		Targets:      targets,
+		Colon:        colon,
+		PreReqs:      prereqs,
+		Pipe:         pipe,
+		OrderPreReqs: oprereqs,
+		Recipes:      recipes,
 	}
 }
 
