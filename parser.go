@@ -28,7 +28,7 @@ func NewParser(r io.Reader, file *token.File) *Parser {
 	}
 
 	p := &Parser{
-		s:    scanner.NewScanner(r, file),
+		s:    scanner.New(r, file),
 		file: file,
 
 		recipePrefix: token.TAB,

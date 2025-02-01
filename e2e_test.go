@@ -27,7 +27,7 @@ var _ = Describe("E2E", func() {
 		fi, err := f.Stat()
 		Expect(err).NotTo(HaveOccurred())
 		file := token.NewFileSet().AddFile(f.Name(), 1, int(fi.Size()))
-		s := scanner.NewScanner(f, file)
+		s := scanner.New(f, file)
 
 		// By tweaking the duration and interval we can approximate the number of tokens
 		// scanned and pick values that should cover the entire Makefile. This approach
