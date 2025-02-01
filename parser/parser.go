@@ -38,14 +38,8 @@ func New(r io.Reader, file *token.File) *Parser {
 	return p
 }
 
-func (p *Parser) ParseFile() (*ast.File, error) {
-	f := p.parseFile()
-	if p.errors.Len() > 0 {
-		p.errors.Sort()
-		return nil, p.errors.Err()
-	} else {
-		return f, nil
-	}
+func (p Parser) isRecipePrefix() bool {
+	return p.tok == p.recipePrefix
 }
 
 func (p *Parser) error(pos token.Pos, msg string) {
@@ -81,21 +75,18 @@ func (p *Parser) next() {
 	p.pos, p.tok, p.lit = p.s.Scan()
 }
 
-func (p *Parser) parseFile() *ast.File {
-	if p.errors.Len() > 0 {
-		return nil
+func (p *Parser) parseExpression() ast.Expr {
+	pos, name := p.pos, "_"
+	if p.tok == token.TEXT {
+		name = p.lit
+		p.next()
+	} else {
+		p.expect(token.TEXT)
 	}
 
-	var decls []ast.Decl
-	for p.tok != token.EOF {
-		decls = append(decls, p.parseDecl())
-	}
-
-	return &ast.File{
-		Comments:  []*ast.CommentGroup{},
-		Decls:     decls,
-		FileStart: token.Pos(p.file.Base()),
-		FileEnd:   token.Pos(p.file.Base() + p.file.Size()),
+	return &ast.Text{
+		ValuePos: pos,
+		Value:    name,
 	}
 }
 
@@ -135,6 +126,36 @@ func (p *Parser) parseVar(name ast.Expr) ast.Decl {
 		Op:    op,
 		OpPos: opPos,
 		Value: rhs,
+	}
+}
+
+func (p *Parser) parseRecipe() *ast.Recipe {
+	if !p.isRecipePrefix() {
+		p.expect(p.recipePrefix)
+		return nil
+	}
+
+	prefixPos := p.pos
+	b := &strings.Builder{}
+	p.next()
+	for p.tok != token.NEWLINE && p.tok != token.EOF {
+		if p.pos > prefixPos+1 {
+			b.WriteRune(' ')
+		}
+		b.WriteString(p.lit)
+		p.next()
+	}
+	if p.tok == token.NEWLINE {
+		p.next()
+	}
+
+	return &ast.Recipe{
+		Prefix:    token.TAB,
+		PrefixPos: prefixPos,
+		Text: ast.Text{
+			Value:    b.String(),
+			ValuePos: prefixPos + 1,
+		},
 	}
 }
 
@@ -188,51 +209,30 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	}
 }
 
-func (p Parser) isRecipePrefix() bool {
-	return p.tok == p.recipePrefix
-}
-
-func (p *Parser) parseRecipe() *ast.Recipe {
-	if !p.isRecipePrefix() {
-		p.expect(p.recipePrefix)
+func (p *Parser) parseFile() *ast.File {
+	if p.errors.Len() > 0 {
 		return nil
 	}
 
-	prefixPos := p.pos
-	b := &strings.Builder{}
-	p.next()
-	for p.tok != token.NEWLINE && p.tok != token.EOF {
-		if p.pos > prefixPos+1 {
-			b.WriteRune(' ')
-		}
-		b.WriteString(p.lit)
-		p.next()
-	}
-	if p.tok == token.NEWLINE {
-		p.next()
+	var decls []ast.Decl
+	for p.tok != token.EOF {
+		decls = append(decls, p.parseDecl())
 	}
 
-	return &ast.Recipe{
-		Prefix:    token.TAB,
-		PrefixPos: prefixPos,
-		Text: ast.Text{
-			Value:    b.String(),
-			ValuePos: prefixPos + 1,
-		},
+	return &ast.File{
+		Comments:  []*ast.CommentGroup{},
+		Decls:     decls,
+		FileStart: token.Pos(p.file.Base()),
+		FileEnd:   token.Pos(p.file.Base() + p.file.Size()),
 	}
 }
 
-func (p *Parser) parseExpression() ast.Expr {
-	pos, name := p.pos, "_"
-	if p.tok == token.TEXT {
-		name = p.lit
-		p.next()
+func (p *Parser) ParseFile() (*ast.File, error) {
+	f := p.parseFile()
+	if p.errors.Len() > 0 {
+		p.errors.Sort()
+		return nil, p.errors.Err()
 	} else {
-		p.expect(token.TEXT)
-	}
-
-	return &ast.Text{
-		ValuePos: pos,
-		Value:    name,
+		return f, nil
 	}
 }
