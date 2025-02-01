@@ -188,10 +188,13 @@ func (p *Parser) parseRecipe() *ast.Recipe {
 		return nil
 	}
 
-	tokPos := p.pos
+	prefixPos := p.pos
 	b := &strings.Builder{}
 	p.next()
 	for p.tok != token.NEWLINE && p.tok != token.EOF {
+		if p.pos > prefixPos+1 {
+			b.WriteRune(' ')
+		}
 		b.WriteString(p.lit)
 		p.next()
 	}
@@ -201,10 +204,10 @@ func (p *Parser) parseRecipe() *ast.Recipe {
 
 	return &ast.Recipe{
 		Prefix:    token.TAB,
-		PrefixPos: tokPos,
+		PrefixPos: prefixPos,
 		Text: ast.Text{
 			Value:    b.String(),
-			ValuePos: tokPos + 1,
+			ValuePos: prefixPos + 1,
 		},
 	}
 }
