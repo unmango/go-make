@@ -174,7 +174,7 @@ var _ = Describe("Printer", func() {
 	})
 
 	Describe("files", func() {
-		It("should write a Makefile", func() {
+		It("should write a rule", func() {
 			buf := &bytes.Buffer{}
 
 			_, err := printer.Fprint(buf, &ast.File{
@@ -184,6 +184,33 @@ var _ = Describe("Printer", func() {
 			})
 
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should write a comment", Pending, func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{
+				Comments: []*ast.CommentGroup{{List: []*ast.Comment{
+					{Pound: token.Pos(1), Text: "comment text"},
+				}}},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("# comment text"))
+		})
+
+		It("should write a comment group", Pending, func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{
+				Comments: []*ast.CommentGroup{{List: []*ast.Comment{
+					{Pound: token.Pos(1), Text: "comment text"},
+					{Pound: token.Pos(16), Text: "new line"},
+				}}},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("# comment text\n# new line"))
 		})
 
 		It("should return errors found when writing a Makefile", func() {
