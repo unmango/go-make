@@ -1,9 +1,8 @@
 package make
 
 import (
-	"go/printer"
-
 	"github.com/unmango/go-make/parser"
+	"github.com/unmango/go-make/printer"
 	"github.com/unmango/go-make/scanner"
 	"github.com/unmango/go-make/writer"
 )
