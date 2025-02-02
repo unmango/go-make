@@ -186,6 +186,27 @@ var _ = Describe("Printer", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("should write newline separated rules", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{Contents: []ast.Obj{
+				&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+				},
+				&ast.Rule{Targets: []ast.Expr{&ast.Text{
+					Value:    "target2",
+					ValuePos: token.Pos(10),
+				}}},
+			}})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("target:\n\ntarget2:\n"))
+		})
+
 		It("should write a comment", func() {
 			buf := &bytes.Buffer{}
 

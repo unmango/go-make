@@ -33,8 +33,16 @@ func (p *printer) writeLine() {
 	p.pos.Offset++
 }
 
-func fillSpace(p *printer, pos token.Pos) {
-	p.writeSpace(int(pos) - (p.pos.Offset + 1))
+func (p *printer) fill(c byte, pos token.Pos) {
+	p.writeChar(c, int(pos)-(p.pos.Offset+1))
+}
+
+func (p *printer) fillSpace(pos token.Pos) {
+	p.fill(' ', pos)
+}
+
+func (p *printer) fillLines(pos token.Pos) {
+	p.fill('\n', pos)
 }
 
 func (p *printer) writeChar(r byte, n int) {
@@ -100,7 +108,7 @@ func (p *printer) expr(expr ast.Expr) {
 
 func (p *printer) exprList(l []ast.Expr) {
 	for _, e := range l {
-		fillSpace(p, e.Pos())
+		p.fillSpace(e.Pos())
 		p.expr(e)
 	}
 }
@@ -129,11 +137,11 @@ func (p *printer) rule(r *ast.Rule) {
 	}
 
 	p.targetList(r.Targets)
-	fillSpace(p, r.Colon)
+	p.fillSpace(r.Colon)
 	p.tok(p.posFor(r.Colon), token.COLON)
 	p.prereqList(r.PreReqs)
 	if r.Pipe.IsValid() {
-		fillSpace(p, r.Pipe)
+		p.fillSpace(r.Pipe)
 		p.tok(p.posFor(r.Pipe), token.PIPE)
 	}
 	if len(r.OrderPreReqs) > 0 {
@@ -155,7 +163,7 @@ func (p *printer) variable(v *ast.Variable) {
 	}
 
 	p.expr(v.Name)
-	fillSpace(p, v.OpPos)
+	p.fillSpace(v.OpPos)
 	p.tok(p.posFor(v.OpPos), v.Op)
 	if v.Value != nil {
 		p.exprList(v.Value)
@@ -165,7 +173,7 @@ func (p *printer) variable(v *ast.Variable) {
 
 func (p *printer) comment(c *ast.Comment) {
 	p.writeString(p.posFor(c.Pound), "#")
-	fillSpace(p, c.Pound+2)
+	p.fillSpace(c.Pound + 2)
 	p.writeString(p.pos, c.Text)
 }
 
@@ -193,6 +201,7 @@ func (p *printer) obj(o ast.Obj) {
 
 func (p *printer) objList(l []ast.Obj) {
 	for _, d := range l {
+		p.fillLines(d.Pos())
 		p.obj(d)
 	}
 }
