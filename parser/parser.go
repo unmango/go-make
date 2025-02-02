@@ -169,6 +169,28 @@ func (p *Parser) parseExpression() ast.Expr {
 	}
 }
 
+func (p *Parser) parseComment() *ast.Comment {
+	pos, lit := p.pos, p.lit
+	p.next()
+
+	return &ast.Comment{
+		Pound: pos,
+		Text:  lit,
+	}
+}
+
+func (p *Parser) parseCommentGroup() *ast.CommentGroup {
+	g := &ast.CommentGroup{}
+	for p.tok == token.COMMENT {
+		g.List = append(g.List, p.parseComment())
+		if p.tok == token.NEWLINE {
+			p.next() // potentially more comments in group
+		}
+	}
+
+	return g
+}
+
 func (p *Parser) parseDecl() ast.Decl {
 	var l []ast.Expr
 	for p.tok == token.TEXT || p.tok == token.DOLLAR {
@@ -186,8 +208,8 @@ func (p *Parser) parseDecl() ast.Decl {
 		p.error(p.pos, "variable may have only one name")
 		fallthrough
 	default:
-		p.next() // always progress
-		return nil
+		p.next()   // always progress
+		return nil // TODO: BadDecl?
 	}
 }
 
@@ -293,13 +315,20 @@ func (p *Parser) parseFile() *ast.File {
 		return nil
 	}
 
-	var decls []ast.Decl
+	var (
+		comments []*ast.CommentGroup
+		decls    []ast.Decl
+	)
 	for p.tok != token.EOF {
-		decls = append(decls, p.parseDecl())
+		if p.tok == token.COMMENT {
+			comments = append(comments, p.parseCommentGroup())
+		} else {
+			decls = append(decls, p.parseDecl())
+		}
 	}
 
 	return &ast.File{
-		Comments:  []*ast.CommentGroup{},
+		Comments:  comments,
 		Decls:     decls,
 		FileStart: token.Pos(p.file.Base()),
 		FileEnd:   token.Pos(p.file.Base() + p.file.Size()),

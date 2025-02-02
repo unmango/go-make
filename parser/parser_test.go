@@ -20,6 +20,50 @@ var _ = Describe("Parser", func() {
 		file = gotoken.NewFileSet().AddFile("test", 1, math.MaxInt-2)
 	})
 
+	It("should Parse a comment", func() {
+		buf := bytes.NewBufferString("# comment text")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Comments).To(ConsistOf(&ast.CommentGroup{
+			List: []*ast.Comment{{Pound: token.Pos(1), Text: "comment text"}},
+		}))
+	})
+
+	It("should Parse a comment group", func() {
+		buf := bytes.NewBufferString("# comment text\n# more text on this line")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Comments).To(ConsistOf(&ast.CommentGroup{
+			List: []*ast.Comment{
+				{Pound: token.Pos(1), Text: "comment text"},
+				{Pound: token.Pos(16), Text: "more text on this line"},
+			},
+		}))
+	})
+
+	It("should Parse multiple comment groups", func() {
+		buf := bytes.NewBufferString("# comment text\n\n# new comment group")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Comments).To(ConsistOf(
+			&ast.CommentGroup{List: []*ast.Comment{
+				{Pound: token.Pos(1), Text: "comment text"},
+			}},
+			&ast.CommentGroup{List: []*ast.Comment{
+				{Pound: token.Pos(17), Text: "new comment group"},
+			}},
+		))
+	})
+
 	It("should Parse a target", func() {
 		buf := bytes.NewBufferString("target:")
 		p := parser.New(buf, file)

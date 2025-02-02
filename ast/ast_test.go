@@ -140,7 +140,7 @@ var _ = Describe("Ast", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should return the position after the identifier", func() {
+		It("should return the position after the closing token", func() {
 			c := &ast.VarRef{
 				Dollar: token.Pos(420),
 				Open:   token.LPAREN,
@@ -149,6 +149,17 @@ var _ = Describe("Ast", func() {
 			}
 
 			Expect(c.End()).To(Equal(token.Pos(425)))
+		})
+
+		It("should return the position after the character", func() {
+			c := &ast.VarRef{
+				Dollar: token.Pos(420),
+				Open:   token.ILLEGAL,
+				Name:   "b",
+				Close:  token.ILLEGAL,
+			}
+
+			Expect(c.End()).To(Equal(token.Pos(421)))
 		})
 
 		It("should stringify with parens", func() {

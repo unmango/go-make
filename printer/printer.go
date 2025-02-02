@@ -3,6 +3,8 @@ package printer
 import (
 	"fmt"
 	"io"
+	"maps"
+	"slices"
 
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/token"
@@ -37,13 +39,17 @@ func fillSpace(p *printer, pos token.Pos) {
 	p.writeSpace(int(pos) - (p.pos.Offset + 1))
 }
 
-func (p *printer) writeSpace(n int) {
+func (p *printer) writeChar(r byte, n int) {
 	for range n {
-		p.out = append(p.out, ' ')
+		p.out = append(p.out, r)
 	}
 
 	p.pos.Offset += n
 	p.pos.Column += n
+}
+
+func (p *printer) writeSpace(n int) {
+	p.writeChar(' ', n)
 }
 
 func (p *printer) writeString(pos token.Position, s string) {
@@ -159,6 +165,23 @@ func (p *printer) variable(v *ast.Variable) {
 	p.writeLine()
 }
 
+func (p *printer) comment(c *ast.Comment) {
+	p.writeString(p.posFor(c.Pound), "#")
+	fillSpace(p, c.Pound+2)
+	p.writeString(p.pos, c.Text)
+}
+
+func (p *printer) commentGroup(g *ast.CommentGroup) {
+	if g == nil {
+		return
+	}
+
+	for _, c := range g.List {
+		p.comment(c)
+		p.writeLine()
+	}
+}
+
 func (p *printer) decl(decl ast.Decl) {
 	switch n := decl.(type) {
 	case *ast.Rule:
@@ -175,8 +198,21 @@ func (p *printer) declList(l []ast.Decl) {
 }
 
 func (p *printer) file(file *ast.File) {
-	if file != nil {
-		p.declList(file.Decls)
+	if file == nil {
+		return
+	}
+
+	nodes := map[token.Pos]ast.Node{}
+	for _, c := range file.Comments {
+		nodes[c.Pos()] = c
+	}
+	for _, d := range file.Decls {
+		nodes[d.Pos()] = d
+	}
+
+	positions := slices.Sorted(maps.Keys(nodes))
+	for _, pos := range positions {
+		p.printNode(nodes[pos])
 	}
 }
 
@@ -194,6 +230,8 @@ func (p *printer) printNode(node any) error {
 		p.exprList(n)
 	case []ast.Decl:
 		p.declList(n)
+	case *ast.CommentGroup:
+		p.commentGroup(n)
 	case *ast.File:
 		p.file(n)
 	default:
