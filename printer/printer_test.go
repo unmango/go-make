@@ -186,6 +186,27 @@ var _ = Describe("Printer", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		It("should write newline separated rules", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{Contents: []ast.Obj{
+				&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+				},
+				&ast.Rule{Targets: []ast.Expr{&ast.Text{
+					Value:    "target2",
+					ValuePos: token.Pos(10),
+				}}},
+			}})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("target:\n\ntarget2:\n"))
+		})
+
 		It("should write a comment", func() {
 			buf := &bytes.Buffer{}
 
@@ -211,6 +232,48 @@ var _ = Describe("Printer", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(buf.String()).To(Equal("# comment text\n# new line\n"))
+		})
+
+		It("should write newline separated comment groups", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{
+				Contents: []ast.Obj{
+					&ast.CommentGroup{List: []*ast.Comment{{
+						Pound: token.Pos(1),
+						Text:  "comment text",
+					}}},
+					&ast.CommentGroup{List: []*ast.Comment{{
+						Pound: token.Pos(17),
+						Text:  "other comment text",
+					}}},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("# comment text\n\n# other comment text\n"))
+		})
+
+		It("should write newline separated variables", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{
+				Contents: []ast.Obj{
+					&ast.Variable{
+						Name:  &ast.Text{Value: "FOO", ValuePos: token.Pos(1)},
+						Op:    token.SIMPLE_ASSIGN,
+						OpPos: token.Pos(5),
+					},
+					&ast.Variable{
+						Name:  &ast.Text{Value: "BAR", ValuePos: token.Pos(9)},
+						Op:    token.SIMPLE_ASSIGN,
+						OpPos: token.Pos(13),
+					},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("FOO :=\n\nBAR :=\n"))
 		})
 
 		It("should return errors found when writing a Makefile", func() {

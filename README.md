@@ -74,7 +74,7 @@ Makefile syntax that is guaranteed to round-trip (parse and print without modifi
 Additional syntax is supported and may round-trip successfully, but no guarentees are provided until it is listed under `./testdata/roundtrip`.
 
 - [ ] newline escaping i.e. `\trecipe text\\ncontinued on next line`
-- [ ] newline separated elements i.e. `target:\n\ntarget2:`
+- [x] newline separated elements i.e. `target:\n\ntarget2:`
 - comments
   - [x] top-level comments i.e. `# comment text`
   - [x] comment groups i.e. `# comment text\n# more comment text`
