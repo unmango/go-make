@@ -144,7 +144,7 @@ var _ = Describe("Printer", func() {
 		It("should write multiple rules", func() {
 			buf := &bytes.Buffer{}
 
-			_, err := printer.Fprint(buf, []ast.Decl{
+			_, err := printer.Fprint(buf, []ast.Obj{
 				&ast.Rule{Targets: []ast.Expr{&ast.Text{Value: "target"}}},
 				&ast.Rule{Targets: []ast.Expr{&ast.Text{Value: "target2"}}},
 			})
@@ -178,7 +178,7 @@ var _ = Describe("Printer", func() {
 			buf := &bytes.Buffer{}
 
 			_, err := printer.Fprint(buf, &ast.File{
-				Decls: []ast.Decl{&ast.Rule{
+				Contents: []ast.Obj{&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{Value: "target"}},
 				}},
 			})
@@ -190,7 +190,7 @@ var _ = Describe("Printer", func() {
 			buf := &bytes.Buffer{}
 
 			_, err := printer.Fprint(buf, &ast.File{
-				Comments: []*ast.CommentGroup{{List: []*ast.Comment{
+				Contents: []ast.Obj{&ast.CommentGroup{List: []*ast.Comment{
 					{Pound: token.Pos(1), Text: "comment text"},
 				}}},
 			})
@@ -203,7 +203,7 @@ var _ = Describe("Printer", func() {
 			buf := &bytes.Buffer{}
 
 			_, err := printer.Fprint(buf, &ast.File{
-				Comments: []*ast.CommentGroup{{List: []*ast.Comment{
+				Contents: []ast.Obj{&ast.CommentGroup{List: []*ast.Comment{
 					{Pound: token.Pos(1), Text: "comment text"},
 					{Pound: token.Pos(16), Text: "new line"},
 				}}},
@@ -217,7 +217,7 @@ var _ = Describe("Printer", func() {
 			w := testing.ErrWriter("io error")
 
 			_, err := printer.Fprint(w, &ast.File{
-				Decls: []ast.Decl{&ast.Rule{
+				Contents: []ast.Obj{&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{Value: "target"}},
 				}},
 			})

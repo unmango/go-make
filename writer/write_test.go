@@ -136,7 +136,7 @@ var _ = Describe("Write", func() {
 			w := writer.New(buf)
 
 			_, err := writer.WriteFile(w, &ast.File{
-				Decls: []ast.Decl{&ast.Rule{
+				Contents: []ast.Obj{&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{Value: "target"}},
 				}},
 			})
@@ -154,7 +154,7 @@ var _ = Describe("Write", func() {
 			w := writer.New(testing.ErrWriter("io error"))
 
 			_, err := writer.WriteFile(w, &ast.File{
-				Decls: []ast.Decl{&ast.Rule{
+				Contents: []ast.Obj{&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{Value: "target"}},
 				}},
 			})
@@ -163,17 +163,17 @@ var _ = Describe("Write", func() {
 		})
 	})
 
-	Describe("Decl", func() {
+	Describe("Obj", func() {
 		It("should ignore nil", func() {
 			w := writer.New(&bytes.Buffer{})
 
-			Expect(writer.Decl(w, nil)).To(Equal(0))
+			Expect(writer.Obj(w, nil)).To(Equal(0))
 		})
 
 		It("should write a variable", func() {
 			w := writer.New(&bytes.Buffer{})
 
-			n, err := writer.Decl(w, &ast.Variable{
+			n, err := writer.Obj(w, &ast.Variable{
 				Name:  &ast.Text{Value: "TEST", ValuePos: token.Pos(1)},
 				Op:    token.SIMPLE_ASSIGN,
 				OpPos: token.Pos(6),

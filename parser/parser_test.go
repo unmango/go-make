@@ -27,7 +27,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Comments).To(ConsistOf(&ast.CommentGroup{
+		Expect(f.Contents).To(ConsistOf(&ast.CommentGroup{
 			List: []*ast.Comment{{Pound: token.Pos(1), Text: "comment text"}},
 		}))
 	})
@@ -39,7 +39,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Comments).To(ConsistOf(&ast.CommentGroup{
+		Expect(f.Contents).To(ConsistOf(&ast.CommentGroup{
 			List: []*ast.Comment{
 				{Pound: token.Pos(1), Text: "comment text"},
 				{Pound: token.Pos(16), Text: "more text on this line"},
@@ -54,7 +54,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Comments).To(ConsistOf(
+		Expect(f.Contents).To(ConsistOf(
 			&ast.CommentGroup{List: []*ast.Comment{
 				{Pound: token.Pos(1), Text: "comment text"},
 			}},
@@ -71,7 +71,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: []ast.Expr{&ast.Text{
 				Value:    "target",
@@ -93,7 +93,7 @@ var _ = Describe("Parser", func() {
 			f, err := p.ParseFile()
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(f.Decls).To(ConsistOf(&ast.Rule{
+			Expect(f.Contents).To(ConsistOf(&ast.Rule{
 				Colon: token.Pos(7),
 				Targets: []ast.Expr{&ast.VarRef{
 					Dollar: token.Pos(1),
@@ -115,7 +115,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(3),
 			Targets: []ast.Expr{&ast.VarRef{
 				Dollar: token.Pos(1),
@@ -136,7 +136,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(5),
 			Targets: []ast.Expr{
 				&ast.VarRef{
@@ -173,7 +173,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(15),
 			Targets: []ast.Expr{
 				&ast.Text{Value: "target", ValuePos: token.Pos(1)},
@@ -192,7 +192,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: []ast.Expr{&ast.Text{
 				Value:    "target",
@@ -214,7 +214,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: []ast.Expr{&ast.Text{
 				Value:    "target",
@@ -236,7 +236,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: []ast.Expr{&ast.Text{
 				Value:    "target",
@@ -260,7 +260,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Targets: []ast.Expr{&ast.Text{
 				Value:    "target",
 				ValuePos: token.Pos(1),
@@ -282,7 +282,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: []ast.Expr{&ast.Text{
 				Value:    "target",
@@ -308,7 +308,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: []ast.Expr{&ast.Text{
 				Value:    "target",
@@ -344,7 +344,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: []ast.Expr{&ast.Text{
 				Value:    "target",
@@ -370,7 +370,7 @@ var _ = Describe("Parser", func() {
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).To(ConsistOf(&ast.Rule{
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(7),
 			Targets: []ast.Expr{&ast.Text{
 				Value:    "target",
@@ -399,7 +399,7 @@ var _ = Describe("Parser", func() {
 		f, err := s.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
-		Expect(f.Decls).NotTo(BeEmpty())
+		Expect(f.Contents).NotTo(BeEmpty())
 	})
 
 	DescribeTable("should parse a variable definition",
@@ -410,7 +410,7 @@ var _ = Describe("Parser", func() {
 			f, err := s.ParseFile()
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(f.Decls).To(ConsistOf(&ast.Variable{
+			Expect(f.Contents).To(ConsistOf(&ast.Variable{
 				Name: &ast.Text{
 					Value:    "VAR",
 					ValuePos: token.Pos(1),
@@ -439,7 +439,7 @@ var _ = Describe("Parser", func() {
 			f, err := s.ParseFile()
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(f.Decls).To(ConsistOf(&ast.Variable{
+			Expect(f.Contents).To(ConsistOf(&ast.Variable{
 				Name: &ast.Text{
 					Value:    "VAR",
 					ValuePos: token.Pos(1),
@@ -474,7 +474,7 @@ var _ = Describe("Parser", func() {
 			f, err := s.ParseFile()
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(f.Decls).To(ConsistOf(&ast.Variable{
+			Expect(f.Contents).To(ConsistOf(&ast.Variable{
 				Name: &ast.Text{
 					Value:    "VAR",
 					ValuePos: token.Pos(1),
