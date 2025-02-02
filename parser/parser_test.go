@@ -491,4 +491,13 @@ var _ = Describe("Parser", func() {
 		Entry(nil, "VAR ?=", token.IFNDEF_ASSIGN),
 		Entry(nil, "VAR =", token.RECURSIVE_ASSIGN),
 	)
+
+	It("should error with extra text to the left of the assignment", func() {
+		buf := bytes.NewBufferString("VAR invalid :=")
+		s := parser.New(buf, file)
+
+		_, err := s.ParseFile()
+
+		Expect(err).To(MatchError("test:1:13: variable may have only one name"))
+	})
 })

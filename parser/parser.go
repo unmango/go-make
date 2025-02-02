@@ -245,14 +245,8 @@ func (p *Parser) parseVar(name ast.Expr) ast.Obj {
 }
 
 func (p *Parser) parseRecipe() *ast.Recipe {
-	if !p.isRecipePrefix() {
-		p.expect(p.recipePrefix)
-		return nil
-	}
-
-	prefixPos := p.pos
+	prefixPos := p.expect(p.recipePrefix)
 	b := &strings.Builder{}
-	p.next()
 	for p.tok != token.NEWLINE && p.tok != token.EOF {
 		if p.pos > prefixPos+1 {
 			b.WriteRune(' ')
@@ -275,23 +269,10 @@ func (p *Parser) parseRecipe() *ast.Recipe {
 }
 
 func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
-	var colon token.Pos
-	if p.tok == token.COLON {
-		colon = p.pos
-		p.next()
-	} else {
-		p.expect(token.COLON)
-	}
-	if p.errors.Len() > 0 {
-		return nil
-	}
-
+	colon := p.expect(token.COLON)
 	prereqs := []ast.Expr{}
 	for p.tok != token.PIPE && p.tok != token.NEWLINE && p.tok != token.EOF {
 		prereqs = append(prereqs, p.parseExpression())
-	}
-	if p.errors.Len() > 0 {
-		return nil
 	}
 
 	pipe, oprereqs := token.NoPos, []ast.Expr{}
@@ -310,9 +291,6 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	for p.isRecipePrefix() && p.tok != token.EOF {
 		recipes = append(recipes, p.parseRecipe())
 	}
-	if p.errors.Len() > 0 {
-		return nil
-	}
 
 	return &ast.Rule{
 		Targets:      targets,
@@ -325,10 +303,6 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 }
 
 func (p *Parser) parseFile() *ast.File {
-	if p.errors.Len() > 0 {
-		return nil
-	}
-
 	var content []ast.Obj
 	for p.tok != token.EOF {
 		p.skipWhitespace()
