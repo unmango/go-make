@@ -17,6 +17,7 @@ endif
 build: .make/build
 test: .make/test
 tidy: go.sum
+dev: .envrc bin/ginkgo bin/devctl
 
 test_all:
 	$(GINKGO) run -r ./
