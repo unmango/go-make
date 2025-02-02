@@ -254,6 +254,28 @@ var _ = Describe("Printer", func() {
 			Expect(buf.String()).To(Equal("# comment text\n\n# other comment text\n"))
 		})
 
+		It("should write newline separated variables", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{
+				Contents: []ast.Obj{
+					&ast.Variable{
+						Name:  &ast.Text{Value: "FOO", ValuePos: token.Pos(1)},
+						Op:    token.SIMPLE_ASSIGN,
+						OpPos: token.Pos(5),
+					},
+					&ast.Variable{
+						Name:  &ast.Text{Value: "BAR", ValuePos: token.Pos(9)},
+						Op:    token.SIMPLE_ASSIGN,
+						OpPos: token.Pos(13),
+					},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("FOO :=\n\nBAR :=\n"))
+		})
+
 		It("should return errors found when writing a Makefile", func() {
 			w := testing.ErrWriter("io error")
 
