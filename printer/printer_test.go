@@ -186,7 +186,7 @@ var _ = Describe("Printer", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should write a comment", Pending, func() {
+		It("should write a comment", func() {
 			buf := &bytes.Buffer{}
 
 			_, err := printer.Fprint(buf, &ast.File{
@@ -196,10 +196,10 @@ var _ = Describe("Printer", func() {
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(buf.String()).To(Equal("# comment text"))
+			Expect(buf.String()).To(Equal("# comment text\n"))
 		})
 
-		It("should write a comment group", Pending, func() {
+		It("should write a comment group", func() {
 			buf := &bytes.Buffer{}
 
 			_, err := printer.Fprint(buf, &ast.File{
@@ -210,7 +210,7 @@ var _ = Describe("Printer", func() {
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(buf.String()).To(Equal("# comment text\n# new line"))
+			Expect(buf.String()).To(Equal("# comment text\n# new line\n"))
 		})
 
 		It("should return errors found when writing a Makefile", func() {
