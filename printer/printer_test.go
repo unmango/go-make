@@ -234,6 +234,26 @@ var _ = Describe("Printer", func() {
 			Expect(buf.String()).To(Equal("# comment text\n# new line\n"))
 		})
 
+		It("should write newline separated comment groups", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{
+				Contents: []ast.Obj{
+					&ast.CommentGroup{List: []*ast.Comment{{
+						Pound: token.Pos(1),
+						Text:  "comment text",
+					}}},
+					&ast.CommentGroup{List: []*ast.Comment{{
+						Pound: token.Pos(17),
+						Text:  "other comment text",
+					}}},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("# comment text\n\n# other comment text\n"))
+		})
+
 		It("should return errors found when writing a Makefile", func() {
 			w := testing.ErrWriter("io error")
 
