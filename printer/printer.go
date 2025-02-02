@@ -3,8 +3,6 @@ package printer
 import (
 	"fmt"
 	"io"
-	"maps"
-	"slices"
 
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/token"
@@ -182,8 +180,10 @@ func (p *printer) commentGroup(g *ast.CommentGroup) {
 	}
 }
 
-func (p *printer) decl(decl ast.Decl) {
-	switch n := decl.(type) {
+func (p *printer) obj(o ast.Obj) {
+	switch n := o.(type) {
+	case *ast.CommentGroup:
+		p.commentGroup(n)
 	case *ast.Rule:
 		p.rule(n)
 	case *ast.Variable:
@@ -191,28 +191,15 @@ func (p *printer) decl(decl ast.Decl) {
 	}
 }
 
-func (p *printer) declList(l []ast.Decl) {
+func (p *printer) objList(l []ast.Obj) {
 	for _, d := range l {
-		p.decl(d)
+		p.obj(d)
 	}
 }
 
-func (p *printer) file(file *ast.File) {
-	if file == nil {
-		return
-	}
-
-	nodes := map[token.Pos]ast.Node{}
-	for _, c := range file.Comments {
-		nodes[c.Pos()] = c
-	}
-	for _, d := range file.Decls {
-		nodes[d.Pos()] = d
-	}
-
-	positions := slices.Sorted(maps.Keys(nodes))
-	for _, pos := range positions {
-		p.printNode(nodes[pos])
+func (p *printer) file(f *ast.File) {
+	if f != nil {
+		p.objList(f.Contents)
 	}
 }
 
@@ -224,14 +211,12 @@ func (p *printer) printNode(node any) error {
 	switch n := node.(type) {
 	case ast.Expr:
 		p.expr(n)
-	case ast.Decl:
-		p.decl(n)
+	case ast.Obj:
+		p.obj(n)
 	case []ast.Expr:
 		p.exprList(n)
-	case []ast.Decl:
-		p.declList(n)
-	case *ast.CommentGroup:
-		p.commentGroup(n)
+	case []ast.Obj:
+		p.objList(n)
 	case *ast.File:
 		p.file(n)
 	default:

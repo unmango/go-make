@@ -91,6 +91,16 @@ func (p *Parser) next() {
 	p.pos, p.tok, p.lit = p.s.Scan()
 }
 
+func (p *Parser) isWhitespace() bool {
+	return p.tok == token.NEWLINE || p.tok == token.TAB
+}
+
+func (p *Parser) skipWhitespace() {
+	for p.tok != token.EOF && p.isWhitespace() {
+		p.next()
+	}
+}
+
 func (p *Parser) parseText() *ast.Text {
 	pos, name := p.pos, "_"
 	if p.tok == token.TEXT {
@@ -191,7 +201,11 @@ func (p *Parser) parseCommentGroup() *ast.CommentGroup {
 	return g
 }
 
-func (p *Parser) parseDecl() ast.Decl {
+func (p *Parser) parseObj() ast.Obj {
+	if p.tok == token.COMMENT {
+		return p.parseCommentGroup()
+	}
+
 	var l []ast.Expr
 	for p.tok == token.TEXT || p.tok == token.DOLLAR {
 		l = append(l, p.parseExpression())
@@ -209,11 +223,11 @@ func (p *Parser) parseDecl() ast.Decl {
 		fallthrough
 	default:
 		p.next()   // always progress
-		return nil // TODO: BadDecl?
+		return nil // TODO: BadObj?
 	}
 }
 
-func (p *Parser) parseVar(name ast.Expr) ast.Decl {
+func (p *Parser) parseVar(name ast.Expr) ast.Obj {
 	op, opPos := p.tok, p.pos
 	p.next()
 
@@ -315,21 +329,14 @@ func (p *Parser) parseFile() *ast.File {
 		return nil
 	}
 
-	var (
-		comments []*ast.CommentGroup
-		decls    []ast.Decl
-	)
+	var content []ast.Obj
 	for p.tok != token.EOF {
-		if p.tok == token.COMMENT {
-			comments = append(comments, p.parseCommentGroup())
-		} else {
-			decls = append(decls, p.parseDecl())
-		}
+		p.skipWhitespace()
+		content = append(content, p.parseObj())
 	}
 
 	return &ast.File{
-		Comments:  comments,
-		Decls:     decls,
+		Contents:  content,
 		FileStart: token.Pos(p.file.Base()),
 		FileEnd:   token.Pos(p.file.Base() + p.file.Size()),
 	}

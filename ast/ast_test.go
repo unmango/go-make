@@ -30,7 +30,7 @@ var _ = Describe("Ast", func() {
 			It("should return the first delcaration", func() {
 				err := quick.Check(func(n int) bool {
 					v := &ast.Variable{Name: &ast.Text{ValuePos: token.Pos(n)}}
-					f := &ast.File{Decls: []ast.Decl{v}}
+					f := &ast.File{Contents: []ast.Obj{v}}
 
 					return f.Pos() == v.Pos()
 				}, nil)
@@ -41,7 +41,7 @@ var _ = Describe("Ast", func() {
 			It("should return the end of the file", func() {
 				err := quick.Check(func(n int) bool {
 					v := &ast.Variable{Name: &ast.Text{ValuePos: token.Pos(n)}}
-					f := &ast.File{Decls: []ast.Decl{v}}
+					f := &ast.File{Contents: []ast.Obj{v}}
 
 					return f.End() == v.End()
 				}, nil)

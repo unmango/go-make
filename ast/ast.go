@@ -15,10 +15,10 @@ type Expr interface {
 	exprNode()
 }
 
-// All declaration nodes implement the Decl interface.
-type Decl interface {
+// All object nodes implement the Obj interface.
+type Obj interface {
 	Node
-	declNode()
+	objNode()
 }
 
 // A File represents text content interpreted as the make syntax.
@@ -26,14 +26,14 @@ type Decl interface {
 // understood by make, i.e. include-me.mk
 type File struct {
 	FileStart, FileEnd token.Pos
-	Comments           []*CommentGroup
-	Decls              []Decl // declarations; or nil
+
+	Contents []Obj // all file content
 }
 
 // Pos implements Node
 func (f *File) Pos() token.Pos {
-	if len(f.Decls) > 0 {
-		return f.Decls[0].Pos()
+	if len(f.Contents) > 0 {
+		return f.Contents[0].Pos()
 	} else {
 		return f.FileStart
 	}
@@ -41,8 +41,8 @@ func (f *File) Pos() token.Pos {
 
 // End implements Node
 func (f *File) End() token.Pos {
-	if n := len(f.Decls); n > 0 {
-		return f.Decls[n-1].End()
+	if n := len(f.Contents); n > 0 {
+		return f.Contents[n-1].End()
 	} else {
 		return f.FileEnd
 	}
@@ -52,6 +52,9 @@ func (f *File) End() token.Pos {
 type CommentGroup struct {
 	List []*Comment
 }
+
+// objNode implements Obj
+func (*CommentGroup) objNode() {}
 
 // Pos implements Node
 func (c *CommentGroup) Pos() token.Pos {
@@ -93,8 +96,8 @@ type Rule struct {
 	Recipes      []*Recipe // rule recipe lines
 }
 
-// declNode implements Decl
-func (*Rule) declNode() {}
+// objNode implements Obj
+func (*Rule) objNode() {}
 
 // Pos implements Node
 func (r *Rule) Pos() token.Pos {
@@ -190,8 +193,8 @@ type Variable struct {
 	Value []Expr      // right-hand side of the assignment
 }
 
-// declNode implements Decl
-func (*Variable) declNode() {}
+// objNode implements Obj
+func (*Variable) objNode() {}
 
 // Pos implements Node
 func (s *Variable) Pos() token.Pos {

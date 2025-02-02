@@ -11,7 +11,7 @@ func WriteFile(w io.Writer, f *ast.File) (n int, err error) {
 	return printer.Fprint(w, f)
 }
 
-func Decl(w io.Writer, d ast.Decl) (n int, err error) {
+func Obj(w io.Writer, d ast.Obj) (n int, err error) {
 	return printer.Fprint(w, d)
 }
 
