@@ -1,5 +1,10 @@
 # Go Make
 
+![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/unmango/go-make/ci.yml)
+![GitHub branch check runs](https://img.shields.io/github/check-runs/unmango/go-make/main)
+![Codecov](https://img.shields.io/codecov/c/github/unmango/go-make)
+![GitHub Release](https://img.shields.io/github/v/release/unmango/go-make)
+
 Makefile parsing and utilities in Go
 
 ## Usage
