@@ -2,8 +2,10 @@
 
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/unmango/go-make/ci.yml)
 ![GitHub branch check runs](https://img.shields.io/github/check-runs/unmango/go-make/main)
+![Libraries.io dependency status for GitHub repo](https://img.shields.io/librariesio/github/unmango/go-make)
 ![Codecov](https://img.shields.io/codecov/c/github/unmango/go-make)
 ![GitHub Release](https://img.shields.io/github/v/release/unmango/go-make)
+![GitHub Release Date](https://img.shields.io/github/release-date/unmango/go-make)
 
 Makefile parsing and utilities in Go
 
@@ -73,20 +75,22 @@ w := make.NewWriter(buf)
 n, err := w.WriteRule(&ast.Rule{})
 ```
 
-### Supported Features
+## Features
+
+### Supported Syntax
 
 Makefile syntax that is guaranteed to round-trip (parse and print without modification) is listed in [./testdata/roundtrip](./testdata/roundtrip/).
 Additional syntax is supported and may round-trip successfully, but no guarentees are provided until it is listed under `./testdata/roundtrip`.
 
 - [ ] newline escaping i.e. `\trecipe text\\ncontinued on next line`
 - [x] newline separated elements i.e. `target:\n\ntarget2:`
-- comments
+- [ ] comments
   - [x] top-level comments i.e. `# comment text`
   - [x] comment groups i.e. `# comment text\n# more comment text`
   - [ ] rule comments i.e. `target: # comment text`
   - [x] recipe comments i.e. `target:\n\trecipe # comment text\n`
     - these are not make comments and are included in the recipe text
-- rules
+- [ ] rules
   - [x] targets i.e. `target:`, `target :`
   - [x] multiple targets i.e. `target1 target2:`
   - [x] pre-requisites i.e. `target: prereq`
@@ -94,19 +98,51 @@ Additional syntax is supported and may round-trip successfully, but no guarentee
   - [x] recipes i.e. `\trecipe text\n`
   - [ ] recipe with a custom `.RECIPEPREFIX`
   - [ ] semimcolon delimited recipes i.e. `target: ;recipe text\n`
-- variables
-  - [x] empty declarations i.e. `VARIABLE :=`
-  - [x] simple declarations i.e. `VARIALBE := foo.c bar.c`
-  - [x] all assigment operators i.e. `VARIABLE != foo`, `VARIABLE ::= bar`, etc.
-  - variable references i.e. `${VARIABLE}`
-    - [x] in targets i.e. `${VARIABLE}:`, `$(FOO) $(BAR):`
+- [ ] variables
+  - [x] empty declarations i.e. `VAR :=`
+  - [x] simple declarations i.e. `VAR := foo.c bar.c`
+  - [x] all assigment operators i.e. `VAR != foo`, `VAR ::= bar`, etc.
+  - variable references i.e. `${VAR}`
+    - [x] in targets i.e. `${VAR}:`, `$(FOO) $(BAR):`
     - [x] in prereqs i.e. `target: ${FOO}`
     - [ ] in recipes i.e. `target:\n\trecipe $(VAR)\n`
-- directives
+- [ ] directives
   - [ ] top-level directives i.e. `ifeq`, `define`, etc.
   - [ ] logging directives i.e. `$(info message)`
   - [ ] expressions i.e. `$(shell script stuff)`
 
-#### Will Not Support
+### Will Not Support
 
 Nothing, at this time
+
+## Workflow
+
+### Pre-Requisites
+
+Go toolchain for the version listed in [go.mod](./go.mod)
+
+### Building
+
+go-make is itself built using `make`.
+
+| Targets      | Description |
+|:------------:|:------------|
+| default goal | Runs the `build` target |
+| `build`      | Runs `go build` to verify the code compiles |
+| `test`       | Test changed packages |
+| `test_all`   | Test all packages |
+| `clean`      | Remove `.make` directory and coverage report |
+| `cover`      | Collect coverage for all tests and print report |
+| `tidy`       | Runs `go mod tidy` |
+| `dev`        | Setup the [developer environment](#developer-environment) |
+
+### Developer Environment
+
+Apart from the Go toolchain, the only main dependency is the `ginkgo` cli to run tests.
+This repo also uses [devctl](https://github.com/unmango/devctl) but its use is optional.
+Targets will obtain dependencies automatically as needed.
+
+Binaries are stored in a `.gitignore`d `bin/` directory at the root of the repository.
+An example `.envrc` file for [direnv](https://github.com/direnv/direnv) is provided in [hack/example.envrc](./hack/example.envrc) to add `./bin` to your `PATH` automatically.
+To use it, run `make .envrc` or `make dev`.
+This will copy `hack/example.envrc` to `.envrc` at the root of the repository.
