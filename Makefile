@@ -16,6 +16,7 @@ endif
 
 build: .make/build
 test: .make/test
+format: .make/go-fmt .make/dprint-fmt
 tidy: go.sum
 dev: .envrc bin/ginkgo bin/devctl
 
@@ -50,6 +51,9 @@ bin/devctl: .versions/devctl
 	go install github.com/unmango/devctl/cmd@v$(shell cat $<)
 	mv ${LOCALBIN}/cmd $@
 
+bin/dprint: .versions/dprint .make/dprint-install.sh
+	DPRINT_INSTALL=${WORKING_DIR} .make/dprint-install.sh
+
 .envrc: hack/example.envrc
 	cp $< $@
 
@@ -66,4 +70,16 @@ bin/devctl: .versions/devctl
 
 .make/validate_codecov: codecov.yml | .make
 	curl -X POST --data-binary @codecov.yml https://codecov.io/validate
+	@touch $@
+
+.make/go-fmt: $(shell $(DEVCTL) list --go)
+	go fmt
+	@touch $@
+
+.make/dprint-install.sh:
+	curl -fsSL https://dprint.dev/install.sh -o $@
+	chmod +x $@
+
+.make/dprint-fmt: README.md
+	dprint fmt
 	@touch $@
