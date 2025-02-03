@@ -9,16 +9,28 @@ import (
 
 type Node = ast.Node
 
+// All legal top-level make constructs implement the Obj interface.
+type Obj interface {
+	Node
+	objNode()
+}
+
+// All directive nodes implements the Dir interface.
+type Dir interface {
+	Obj
+	dirNode()
+}
+
 // All expression nodes implement the Expr interface.
 type Expr interface {
 	Node
 	exprNode()
 }
 
-// All object nodes implement the Obj interface.
-type Obj interface {
+// All if* conditional directive nodes implement the IfDir interface.
+type IfDir interface {
 	Node
-	objNode()
+	ifDirNode()
 }
 
 // A File represents text content interpreted as the make syntax.
@@ -53,7 +65,6 @@ type CommentGroup struct {
 	List []*Comment
 }
 
-// objNode implements Obj
 func (*CommentGroup) objNode() {}
 
 // Pos implements Node
@@ -65,8 +76,6 @@ func (c *CommentGroup) Pos() token.Pos {
 func (c *CommentGroup) End() token.Pos {
 	return c.List[len(c.List)-1].End()
 }
-
-// TODO: Handle multi-line comments with '\' escaped newlines
 
 // A comment represents a single comment starting with '#'
 type Comment struct {
@@ -96,7 +105,6 @@ type Rule struct {
 	Recipes      []*Recipe // rule recipe lines
 }
 
-// objNode implements Obj
 func (*Rule) objNode() {}
 
 // Pos implements Node
@@ -115,7 +123,6 @@ type Text struct {
 	ValuePos token.Pos
 }
 
-// exprNode implements Expr
 func (*Text) exprNode() {}
 
 // Pos implements Node
@@ -141,7 +148,6 @@ type VarRef struct {
 	Close  token.Token // closing token, ')', '}', or ILLEGAL if len(Name) == 1
 }
 
-// exprNode implements Expr
 func (*VarRef) exprNode() {}
 
 // Pos implements Node
@@ -193,7 +199,6 @@ type Variable struct {
 	Value []Expr      // right-hand side of the assignment
 }
 
-// objNode implements Obj
 func (*Variable) objNode() {}
 
 // Pos implements Node
@@ -208,4 +213,94 @@ func (s *Variable) End() token.Pos {
 	} else {
 		return token.Pos(int(s.Pos()) + len(s.Op.String()))
 	}
+}
+
+// IfBlock represents a conditional directive and its parts.
+type IfBlock struct {
+	Directive IfDir        // conditional directive
+	Text      []Expr       // text-if-true
+	Else      []*ElseBlock // else directive blocks
+	Endif     token.Pos    // position of ENDIF
+}
+
+func (*IfBlock) objNode() {}
+func (*IfBlock) dirNode() {}
+
+// Pos implements Node
+func (b *IfBlock) Pos() token.Pos {
+	return b.Directive.Pos()
+}
+
+// End implements Node
+func (b *IfBlock) End() token.Pos {
+	return b.Endif + 5 // pos + len("endif")
+}
+
+// ElseBlock represents and `else` clause in a conditional directive.
+type ElseBlock struct {
+	Else      token.Pos // position of ELSE
+	Condition IfDir     // condition, if it exists; nil otherwise
+	Text      []Expr    // text-if-false, or text-if-true when a condition exists
+}
+
+// Pos implements Node
+func (b *ElseBlock) Pos() token.Pos {
+	return b.Else
+}
+
+// End implements Node
+func (b *ElseBlock) End() token.Pos {
+	if n := len(b.Text); n > 0 {
+		return b.Text[n-1].End()
+	} else if b.Condition != nil {
+		return b.Condition.End()
+	} else {
+		return b.Else + 4 // pos + len("else")
+	}
+}
+
+// IfeqDir represents a conditional directive block using `ifeq` or `ifneq`.
+type IfeqDir struct {
+	Tok    token.Token // IFEQ or IFNEQ
+	TokPos token.Pos   // position of Tok
+	Open   token.Pos   // position of '(', if it exists
+	Arg1   Expr        // first argument in the condition
+	Comma  token.Pos   // position of ','
+	Arg2   Expr        // second argument in the condition
+	Close  token.Pos   // position of ')', if it exists
+}
+
+func (*IfeqDir) ifDirNode() {}
+
+// Pos implements Node
+func (d *IfeqDir) Pos() token.Pos {
+	return d.TokPos
+}
+
+// End implements node
+func (d *IfeqDir) End() token.Pos {
+	if d.Close.IsValid() {
+		return d.Close + 1 // pos + len(')')
+	} else {
+		return d.Arg2.End()
+	}
+}
+
+// IfeqDir represents a conditional directive block using `ifdef` or `ifndef`.
+type IfdefDir struct {
+	Tok    token.Token // IFDEF or IFNDEF
+	TokPos token.Pos   // position of Tok
+	Arg    Expr        // variable-name
+}
+
+func (*IfdefDir) ifDirNode() {}
+
+// Pos implements Node
+func (d *IfdefDir) Pos() token.Pos {
+	return d.TokPos
+}
+
+// End implements node
+func (d *IfdefDir) End() token.Pos {
+	return d.Arg.End()
 }
