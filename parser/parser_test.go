@@ -681,6 +681,20 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should error when a plain else block preceds an else block with a condition", func() {
+		buf := bytes.NewBufferString(`ifeq (baz, bin)
+else
+else ifeq (baz, bin)
+endif
+`)
+
+		p := parser.New(buf, file)
+
+		_, err := p.ParseFile()
+
+		Expect(err).To(MatchError("test:3:1: expected 'endif', found 'else'"))
+	})
+
 	It("should Parse a conditional directive", Pending, func() {
 		buf := bytes.NewBufferString(`ifeq (baz, bin)
 FOO := BAR
