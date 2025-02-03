@@ -762,7 +762,7 @@ endif
 		Expect(err).To(MatchError("test:3:1: expected 'endif', found 'else'"))
 	})
 
-	It("should Parse a conditional directive", Pending, func() {
+	It("should Parse a conditional directive with lots of stuff in it", func() {
 		buf := bytes.NewBufferString(`ifeq (baz, bin)
 FOO := BAR
 else ifdef test
@@ -822,22 +822,22 @@ endif
 							ValuePos: token.Pos(44),
 						},
 						Op:    token.IFNDEF_ASSIGN,
-						OpPos: token.Pos(49),
+						OpPos: token.Pos(48),
 					}},
 				},
 				{
-					Else: token.Pos(52),
+					Else: token.Pos(51),
 					Text: []ast.Obj{&ast.Variable{
 						Name: &ast.Text{
 							Value:    "BAR",
-							ValuePos: token.Pos(57),
+							ValuePos: token.Pos(56),
 						},
 						Op:    token.IMMEDIATE_ASSIGN,
-						OpPos: token.Pos(61),
+						OpPos: token.Pos(60),
 					}},
 				},
 			},
-			Endif: token.Pos(66),
+			Endif: token.Pos(65),
 		}))
 	})
 

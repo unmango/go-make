@@ -264,9 +264,14 @@ func (p *Parser) parseIfBlock() *ast.IfBlock {
 	text := p.parseObjList()
 
 	var eblocks []*ast.ElseBlock
-	if p.tok == token.ELSE {
-		eblocks = append(eblocks, p.parseElseBlock())
+	for p.tok == token.ELSE {
+		b := p.parseElseBlock()
+		eblocks = append(eblocks, b)
 		p.skipWhitespace()
+
+		if b.Condition == nil {
+			break
+		}
 	}
 
 	endif := p.expect(token.ENDIF)
