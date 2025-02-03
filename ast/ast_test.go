@@ -251,8 +251,8 @@ var _ = Describe("Ast", func() {
 				func(tok token.Token, l int) {
 					err := quick.Check(func(n int) bool {
 						v := &ast.Variable{
-							Name: &ast.Text{ValuePos: token.Pos(n)},
-							Op:   tok,
+							Op:    tok,
+							OpPos: token.Pos(n),
 						}
 
 						return v.End() == token.Pos(n+l)
@@ -358,11 +358,12 @@ var _ = Describe("Ast", func() {
 
 		It("should return the position after the text", func() {
 			err := quick.Check(func(n int) bool {
-				d := &ast.ElseBlock{Text: []ast.Expr{
-					&ast.Text{ValuePos: token.Pos(n)},
-				}}
+				d := &ast.ElseBlock{Text: []ast.Obj{&ast.Variable{
+					Op:    token.SIMPLE_ASSIGN,
+					OpPos: token.Pos(n),
+				}}}
 
-				return d.End() == token.Pos(n)
+				return d.End() == token.Pos(n+2)
 			}, nil)
 
 			Expect(err).NotTo(HaveOccurred())

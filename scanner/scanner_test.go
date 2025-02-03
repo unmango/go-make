@@ -325,6 +325,25 @@ var _ = Describe("Scanner", func() {
 		},
 	)
 
+	DescribeTable("directives",
+		Entry(nil, "ifeq"),
+		func(input string) {
+			buf := bytes.NewBufferString(input)
+			s := scanner.New(buf, file)
+
+			pos, tok, lit := s.Scan()
+			Expect(tok).To(Equal(token.Lookup(input)))
+			Expect(lit).To(Equal(input))
+			Expect(pos).To(Equal(token.Pos(1)))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   0,
+				Line:     1,
+				Column:   1,
+			}))
+		},
+	)
+
 	It("should return IO errors", func() {
 		r := testing.ErrReader("io error")
 		s := scanner.New(r, file)

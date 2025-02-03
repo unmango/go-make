@@ -110,6 +110,7 @@ Additional syntax is supported and may round-trip successfully, but no guarentee
   - [ ] top-level directives i.e. `ifeq`, `define`, etc.
   - [ ] logging directives i.e. `$(info message)`
   - [ ] expressions i.e. `$(shell script stuff)`
+- [ ] many other things
 
 ### Will Not Support
 
