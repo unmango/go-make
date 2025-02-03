@@ -201,11 +201,67 @@ func (p *Parser) parseCommentGroup() *ast.CommentGroup {
 	return g
 }
 
-func (p *Parser) parseObj() ast.Obj {
-	if p.tok == token.COMMENT {
-		return p.parseCommentGroup()
+func (p *Parser) parseIfdefDir() *ast.IfdefDir {
+	pos, tok := p.pos, p.tok
+	p.next()
+	arg := p.parseExpression()
+
+	return &ast.IfdefDir{
+		Tok:    tok,
+		TokPos: pos,
+		Arg:    arg,
+	}
+}
+
+func (p *Parser) parseIfeqDir() *ast.IfeqDir {
+	pos, tok := p.pos, p.tok
+	p.next()
+	lparen := p.expect(token.LPAREN)
+	arg1 := p.parseExpression()
+	comma := p.expect(token.COMMA)
+	arg2 := p.parseExpression()
+	rparen := p.expect(token.RPAREN)
+
+	return &ast.IfeqDir{
+		Tok:    tok,
+		TokPos: pos,
+		Open:   lparen,
+		Arg1:   arg1,
+		Comma:  comma,
+		Arg2:   arg2,
+		Close:  rparen,
+	}
+}
+
+func (p *Parser) parseIfBlock() *ast.IfBlock {
+	var ifdir ast.IfDir
+	switch p.tok {
+	case token.IFDEF, token.IFNDEF:
+		ifdir = p.parseIfdefDir()
+	case token.IFEQ, token.IFNEQ:
+		ifdir = p.parseIfeqDir()
 	}
 
+	p.skipWhitespace()
+	endif := p.expect(token.ENDIF)
+
+	return &ast.IfBlock{
+		Directive: ifdir,
+		Endif:     endif,
+	}
+}
+
+func (p *Parser) parseObj() ast.Obj {
+	switch p.tok {
+	case token.COMMENT:
+		return p.parseCommentGroup()
+	case token.IFDEF, token.IFNDEF, token.IFEQ, token.IFNEQ:
+		return p.parseIfBlock()
+	}
+
+	// TODO: refactor to improve the error message
+	// we expect one expression, then we expect one
+	// of (Expr | COLON | *_ASSIGN)
 	var l []ast.Expr
 	for p.tok == token.TEXT || p.tok == token.DOLLAR {
 		l = append(l, p.parseExpression())
