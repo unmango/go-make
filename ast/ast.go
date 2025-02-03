@@ -27,6 +27,12 @@ type Expr interface {
 	exprNode()
 }
 
+// All if* conditional directive nodes implement the IfDir interface.
+type IfDir interface {
+	Node
+	ifDirNode()
+}
+
 // A File represents text content interpreted as the make syntax.
 // Most commonly this is a Makefile, but could also be any file
 // understood by make, i.e. include-me.mk
@@ -209,22 +215,9 @@ func (s *Variable) End() token.Pos {
 	}
 }
 
-type IfDir struct {
-	Tok    token.Token // IFDEF, IFNDEF, IFEQ, IFNEQ
-	TokPos token.Pos   // position of Tok
-}
-
-func (d *IfDir) Pos() token.Pos {
-	return d.TokPos
-}
-
-func (d *IfDir) End() token.Pos {
-	return d.TokPos // TODO
-}
-
 // IfBlock represents a conditional directive and its parts.
 type IfBlock struct {
-	Directive *IfDir       // conditional directive
+	Directive IfDir        // conditional directive
 	Text      []Expr       // text-if-true
 	Else      []*ElseBlock // else and else if directives
 	Endif     token.Pos    // position of ENDIF
@@ -246,7 +239,7 @@ func (b *IfBlock) End() token.Pos {
 // ElseBlock represents and `else` clause in a conditional directive.
 type ElseBlock struct {
 	Else      token.Pos // position of ELSE
-	Condition *IfDir    // condition, if it exists
+	Condition IfDir     // condition, if it exists
 	Text      []Expr    // text-if-false, or text-if-true when a condition exists
 }
 
@@ -268,18 +261,15 @@ func (b *ElseBlock) End() token.Pos {
 
 // IfeqDir represents a conditional directive block using `ifeq` or `ifneq`.
 type IfeqDir struct {
-	Tok    token.Token  // IFEQ or IFNEQ
-	TokPos token.Pos    // position of Tok
-	Open   token.Pos    // position of '(', if it exists
-	Arg1   Expr         // first argument in the condition
-	Comma  token.Pos    // position of ','
-	Arg2   Expr         // second argument in the condition
-	Close  token.Pos    // position of ')', if it exists
-	Else   []*ElseBlock // all ELSE conditional blocks
-	Endif  token.Pos    // position of ENDIF
+	Tok    token.Token // IFEQ or IFNEQ
+	TokPos token.Pos   // position of Tok
+	Open   token.Pos   // position of '(', if it exists
+	Arg1   Expr        // first argument in the condition
+	Comma  token.Pos   // position of ','
+	Arg2   Expr        // second argument in the condition
+	Close  token.Pos   // position of ')', if it exists
 }
 
-func (*IfeqDir) dirNode()   {}
 func (*IfeqDir) ifDirNode() {}
 
 // Pos implements Node
@@ -289,22 +279,22 @@ func (d *IfeqDir) Pos() token.Pos {
 
 // End implements node
 func (d *IfeqDir) End() token.Pos {
-	return d.Endif + 5 // pos + "endif"
+	if d.Close.IsValid() {
+		return d.Close + 1 // pos + len(')')
+	} else {
+		return d.Arg2.End()
+	}
 }
 
 // IfeqDir represents a conditional directive block using `ifdef` or `ifndef`.
 type IfdefDir struct {
-	Tok    token.Token  // IFDEF or IFNDEF
-	TokPos token.Pos    // position of Tok
-	Open   token.Pos    // position of '(', if it exists
-	Arg    Expr         // first argument in the condition
-	Close  token.Pos    // position of ')', if it exists
-	Text   []Obj        // all text-if-true
-	Else   []*ElseBlock // all ELSE conditional blocks
-	Endif  token.Pos    // position of ENDIF
+	Tok    token.Token // IFDEF or IFNDEF
+	TokPos token.Pos   // position of Tok
+	Open   token.Pos   // position of '(', if it exists
+	Arg    Expr        // first argument in the condition
+	Close  token.Pos   // position of ')', if it exists
 }
 
-func (*IfdefDir) dirNode()   {}
 func (*IfdefDir) ifDirNode() {}
 
 // Pos implements Node
@@ -314,24 +304,9 @@ func (d *IfdefDir) Pos() token.Pos {
 
 // End implements node
 func (d *IfdefDir) End() token.Pos {
-	return d.Endif + 5 // pos + "endif"
-}
-
-// ElseDir represents an `else` clause in a conditional block.
-type ElseIf struct {
-	Else      token.Pos // position of ELSE
-	Condition IfDir
-}
-
-func (*ElseIf) dirNode()   {}
-func (*ElseIf) ifDirNode() {}
-
-// Pos implements Node
-func (e *ElseIf) Pos() token.Pos {
-	return e.Else
-}
-
-// End implements node
-func (e *ElseIf) End() token.Pos {
-	return e.Condition.End()
+	if d.Close.IsValid() {
+		return d.Close + 1
+	} else {
+		return d.Arg.End()
+	}
 }
