@@ -235,12 +235,22 @@ func (p *Parser) parseIfeqDir() *ast.IfeqDir {
 
 func (p *Parser) parseElseBlock() *ast.ElseBlock {
 	pos := p.expect(token.ELSE)
+
+	var condition ast.IfDir
+	switch p.tok {
+	case token.IFDEF, token.IFNDEF:
+		condition = p.parseIfdefDir()
+	case token.IFEQ, token.IFNEQ:
+		condition = p.parseIfeqDir()
+	}
+
 	p.skipWhitespace()
 	text := p.parseObjList()
 
 	return &ast.ElseBlock{
-		Else: pos,
-		Text: text,
+		Else:      pos,
+		Condition: condition,
+		Text:      text,
 	}
 }
 

@@ -626,6 +626,61 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should Parse a conditional directive with an else block that has a condition", func() {
+		buf := bytes.NewBufferString("ifeq (baz, bin)\nelse ifeq (baz, bin)\ntarget:\nendif")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.IfBlock{
+			Directive: &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Open:   token.Pos(6),
+				Arg1: &ast.Text{
+					Value:    "baz",
+					ValuePos: token.Pos(7),
+				},
+				Comma: token.Pos(10),
+				Arg2: &ast.Text{
+					Value:    "bin",
+					ValuePos: token.Pos(12),
+				},
+				Close: token.Pos(15),
+			},
+			Else: []*ast.ElseBlock{{
+				Else: token.Pos(17),
+				Condition: &ast.IfeqDir{
+					Tok:    token.IFEQ,
+					TokPos: token.Pos(22),
+					Open:   token.Pos(27),
+					Arg1: &ast.Text{
+						Value:    "baz",
+						ValuePos: token.Pos(28),
+					},
+					Comma: token.Pos(31),
+					Arg2: &ast.Text{
+						Value:    "bin",
+						ValuePos: token.Pos(33),
+					},
+					Close: token.Pos(36),
+				},
+				Text: []ast.Obj{&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(38),
+					}},
+					Colon:        token.Pos(44),
+					PreReqs:      []ast.Expr{},
+					OrderPreReqs: []ast.Expr{},
+					Recipes:      []*ast.Recipe{},
+				}},
+			}},
+			Endif: token.Pos(46),
+		}))
+	})
+
 	It("should Parse a conditional directive", Pending, func() {
 		buf := bytes.NewBufferString(`ifeq (baz, bin)
 FOO := BAR
