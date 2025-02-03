@@ -212,21 +212,17 @@ var (
 
 func init() {
 	directives = make(map[string]Token, directive_end-(directive_beg+1))
+	functions = make(map[string]Token, function_end-(function_beg+1))
+	keywords = make(map[string]Token, len(directives)+len(functions))
+
 	for i := directive_beg + 1; i < directive_end; i++ {
 		directives[tokens[i]] = i
+		keywords[tokens[i]] = i
 	}
 
-	functions = make(map[string]Token, function_end-(function_beg+1))
 	for i := function_beg + 1; i < function_end; i++ {
 		functions[tokens[i]] = i
-	}
-
-	keywords = make(map[string]Token, len(directives)+len(functions))
-	for k, v := range directives {
-		keywords[k] = v
-	}
-	for k, v := range functions {
-		keywords[k] = v
+		keywords[tokens[i]] = i
 	}
 }
 
@@ -285,6 +281,20 @@ func IsToken(text string) bool {
 	case "(", ")", "{", "}", "$", ":", ";", ",", "\n", "\t", "|", "#", " ":
 		fallthrough
 	case "=", ":=", "::=", ":::=", "?=", "!=":
+		return false
+	}
+
+	return true
+}
+
+// IsLit reports whether text contains a literal token.
+func IsLit(text string) bool {
+	if IsKeyword(text) {
+		return true
+	}
+	switch text {
+	case "(", ")", "{", "}", "$", ":", ";", ",", "\n", "\t", "|", "#", " ", "",
+		"=", ":=", "::=", ":::=", "?=", "!=":
 		return false
 	}
 
