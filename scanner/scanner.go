@@ -92,7 +92,7 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 	var atNewline bool
 
 	switch txt := s.s.Text(); {
-	case token.IsToken(txt):
+	case token.IsLit(txt):
 		lit = txt
 		s.next()
 		if len(txt) > 1 {
