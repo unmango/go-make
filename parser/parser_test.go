@@ -492,6 +492,85 @@ var _ = Describe("Parser", func() {
 		Entry(nil, "VAR =", token.RECURSIVE_ASSIGN),
 	)
 
+	It("should Parse a conditional directive", func() {
+		buf := bytes.NewBufferString(`ifeq (baz, bin)
+FOO := BAR
+else ifdef test
+BAR ?=
+else
+BAR :::=
+endif
+`)
+
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.IfBlock{
+			Directive: &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Open:   token.Pos(6),
+				Arg1: &ast.Text{
+					Value:    "baz",
+					ValuePos: token.Pos(7),
+				},
+				Comma: token.Pos(10),
+				Arg2: &ast.Text{
+					Value:    "bin",
+					ValuePos: token.Pos(12),
+				},
+				Close: token.Pos(15),
+			},
+			Text: []ast.Obj{&ast.Variable{
+				Name: &ast.Text{
+					Value:    "FOO",
+					ValuePos: token.Pos(17),
+				},
+				Op:    token.SIMPLE_ASSIGN,
+				OpPos: token.Pos(21),
+				Value: []ast.Expr{&ast.Text{
+					Value:    "BAR",
+					ValuePos: token.Pos(24),
+				}},
+			}},
+			Else: []*ast.ElseBlock{
+				{
+					Else: token.Pos(28),
+					Condition: &ast.IfdefDir{
+						Tok:    token.IFDEF,
+						TokPos: token.Pos(33),
+						Arg: &ast.Text{
+							Value:    "test",
+							ValuePos: token.Pos(39),
+						},
+					},
+					Text: []ast.Obj{&ast.Variable{
+						Name: &ast.Text{
+							Value:    "BAR",
+							ValuePos: token.Pos(44),
+						},
+						Op:    token.IFNDEF_ASSIGN,
+						OpPos: token.Pos(49),
+					}},
+				},
+				{
+					Else: token.Pos(52),
+					Text: []ast.Obj{&ast.Variable{
+						Name: &ast.Text{
+							Value:    "BAR",
+							ValuePos: token.Pos(57),
+						},
+						Op:    token.IMMEDIATE_ASSIGN,
+						OpPos: token.Pos(61),
+					}},
+				},
+			},
+			Endif: token.Pos(66),
+		}))
+	})
+
 	It("should error with extra text to the left of the assignment", func() {
 		buf := bytes.NewBufferString("VAR invalid :=")
 		s := parser.New(buf, file)
