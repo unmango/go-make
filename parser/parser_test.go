@@ -557,7 +557,7 @@ var _ = Describe("Parser", func() {
 			Directive: &ast.IfdefDir{
 				Tok:    token.IFDEF,
 				TokPos: token.Pos(1),
-				Arg: &ast.Text{
+				VarName: &ast.Text{
 					Value:    "FOO",
 					ValuePos: token.Pos(7),
 				},
@@ -577,7 +577,7 @@ var _ = Describe("Parser", func() {
 			Directive: &ast.IfdefDir{
 				Tok:    token.IFNDEF,
 				TokPos: token.Pos(1),
-				Arg: &ast.Text{
+				VarName: &ast.Text{
 					Value:    "FOO",
 					ValuePos: token.Pos(8),
 				},
@@ -811,7 +811,7 @@ endif
 					Condition: &ast.IfdefDir{
 						Tok:    token.IFDEF,
 						TokPos: token.Pos(33),
-						Arg: &ast.Text{
+						VarName: &ast.Text{
 							Value:    "test",
 							ValuePos: token.Pos(39),
 						},

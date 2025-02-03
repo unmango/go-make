@@ -207,9 +207,9 @@ func (p *Parser) parseIfdefDir() *ast.IfdefDir {
 	arg := p.parseExpression()
 
 	return &ast.IfdefDir{
-		Tok:    tok,
-		TokPos: pos,
-		Arg:    arg,
+		Tok:     tok,
+		TokPos:  pos,
+		VarName: arg,
 	}
 }
 
