@@ -233,6 +233,14 @@ func (p *Parser) parseIfeqDir() *ast.IfeqDir {
 	}
 }
 
+func (p *Parser) parseElseBlock() *ast.ElseBlock {
+	pos := p.expect(token.ELSE)
+
+	return &ast.ElseBlock{
+		Else: pos,
+	}
+}
+
 func (p *Parser) parseIfBlock() *ast.IfBlock {
 	var ifdir ast.IfDir
 	switch p.tok {
@@ -241,12 +249,26 @@ func (p *Parser) parseIfBlock() *ast.IfBlock {
 	case token.IFEQ, token.IFNEQ:
 		ifdir = p.parseIfeqDir()
 	}
-
 	p.skipWhitespace()
+
+	var text []ast.Obj
+	for p.tok != token.EOF && p.tok != token.ENDIF && p.tok != token.ELSE {
+		text = append(text, p.parseObj())
+		p.skipWhitespace()
+	}
+
+	var eblocks []*ast.ElseBlock
+	if p.tok == token.ELSE {
+		eblocks = append(eblocks, p.parseElseBlock())
+		p.skipWhitespace()
+	}
+
 	endif := p.expect(token.ENDIF)
 
 	return &ast.IfBlock{
 		Directive: ifdir,
+		Text:      text,
+		Else:      eblocks,
 		Endif:     endif,
 	}
 }
