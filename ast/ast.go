@@ -211,14 +211,14 @@ func (s *Variable) End() token.Pos {
 	if len(s.Value) > 0 {
 		return s.Value[len(s.Value)-1].End()
 	} else {
-		return token.Pos(int(s.Pos()) + len(s.Op.String()))
+		return token.Pos(int(s.OpPos) + len(s.Op.String()))
 	}
 }
 
 // IfBlock represents a conditional directive and its parts.
 type IfBlock struct {
 	Directive IfDir        // conditional directive
-	Text      []Expr       // text-if-true
+	Text      []Obj        // text-if-true
 	Else      []*ElseBlock // else directive blocks
 	Endif     token.Pos    // position of ENDIF
 }
@@ -240,7 +240,7 @@ func (b *IfBlock) End() token.Pos {
 type ElseBlock struct {
 	Else      token.Pos // position of ELSE
 	Condition IfDir     // condition, if it exists; nil otherwise
-	Text      []Expr    // text-if-false, or text-if-true when a condition exists
+	Text      []Obj     // text-if-true when a condition exists; text-if-false otherwise
 }
 
 // Pos implements Node
