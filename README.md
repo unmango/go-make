@@ -108,6 +108,13 @@ Additional syntax is supported and may round-trip successfully, but no guarentee
     - [ ] in recipes i.e. `target:\n\trecipe $(VAR)\n`
 - [ ] directives
   - [ ] top-level directives i.e. `ifeq`, `define`, etc.
+    - [ ] conditional directives i.e. `ifeq`, `ifneq`, `ifdef`, `ifndef`
+      - [ ] equality directives i.e. `ifeq`, `ifneq`
+        - [x] parentheses syntax i.e. `ifeq (foo, bar)`
+        - [ ] double quotes i.e. `ifeq "foo" "bar"`
+        - [ ] single quotes i.e. `ifeq 'foo' 'bar'`
+        - [ ] mixed syntax i.e. `ifeq "foo" 'bar'`
+      - [x] definition directives i.e. `ifdef`, `ifndef`
   - [ ] logging directives i.e. `$(info message)`
   - [ ] expressions i.e. `$(shell script stuff)`
 - [ ] many other things
@@ -126,16 +133,16 @@ Go toolchain for the version listed in [go.mod](./go.mod)
 
 go-make is itself built using `make`.
 
-| Targets      | Description |
-|:------------:|:------------|
-| default goal | Runs the `build` target |
-| `build`      | Runs `go build` to verify the code compiles |
-| `test`       | Test changed packages |
-| `test_all`   | Test all packages |
-| `clean`      | Remove `.make` directory and coverage report |
-| `cover`      | Collect coverage for all tests and print report |
-| `tidy`       | Runs `go mod tidy` |
-| `dev`        | Setup the [developer environment](#developer-environment) |
+|      Targets | Description                                               |
+| -----------: | :-------------------------------------------------------- |
+| default goal | Runs the `build` target                                   |
+|      `build` | Runs `go build` to verify the code compiles               |
+|       `test` | Test changed packages                                     |
+|   `test_all` | Test all packages                                         |
+|      `clean` | Remove `.make` directory and coverage report              |
+|      `cover` | Collect coverage for all tests and print report           |
+|       `tidy` | Runs `go mod tidy`                                        |
+|        `dev` | Setup the [developer environment](#developer-environment) |
 
 ### Developer Environment
 
