@@ -263,4 +263,133 @@ var _ = Describe("Ast", func() {
 			)
 		})
 	})
+
+	Describe("IfeqDir", func() {
+		It("should return the position of the directive token", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.IfeqDir{
+					Tok:    token.IFEQ,
+					TokPos: token.Pos(n),
+				}
+
+				return d.Pos() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the closing parethesis", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.IfeqDir{Close: token.Pos(n)}
+
+				return d.End() == token.Pos(n+1)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the second arg", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.IfeqDir{Arg2: &ast.Text{ValuePos: token.Pos(n)}}
+
+				return d.End() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("IfdefDir", func() {
+		It("should return the position of the directive token", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.IfdefDir{
+					Tok:    token.IFDEF,
+					TokPos: token.Pos(n),
+				}
+
+				return d.Pos() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the arg", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.IfdefDir{Arg: &ast.Text{ValuePos: token.Pos(n)}}
+
+				return d.End() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("ElseBlock", func() {
+		It("should return the position of the directive token", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.ElseBlock{Else: token.Pos(n)}
+
+				return d.Pos() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the directive token", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.ElseBlock{Else: token.Pos(n)}
+
+				return d.End() == token.Pos(n+4)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the condition", func() {
+			err := quick.Check(func(n int) bool {
+				ifeq := &ast.IfeqDir{Close: token.Pos(n)}
+				d := &ast.ElseBlock{Condition: ifeq}
+
+				return d.End() == ifeq.End()
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the text", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.ElseBlock{Text: []ast.Expr{
+					&ast.Text{ValuePos: token.Pos(n)},
+				}}
+
+				return d.End() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("IfBlock", func() {
+		It("should return the position of the directive token", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.IfBlock{
+					Directive: &ast.IfeqDir{TokPos: token.Pos(n)},
+				}
+
+				return d.Pos() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the endif directive", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.IfBlock{Endif: token.Pos(n)}
+
+				return d.End() == token.Pos(n+5)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
 })

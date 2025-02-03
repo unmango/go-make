@@ -219,7 +219,7 @@ func (s *Variable) End() token.Pos {
 type IfBlock struct {
 	Directive IfDir        // conditional directive
 	Text      []Expr       // text-if-true
-	Else      []*ElseBlock // else and else if directives
+	Else      []*ElseBlock // else directive blocks
 	Endif     token.Pos    // position of ENDIF
 }
 
@@ -239,7 +239,7 @@ func (b *IfBlock) End() token.Pos {
 // ElseBlock represents and `else` clause in a conditional directive.
 type ElseBlock struct {
 	Else      token.Pos // position of ELSE
-	Condition IfDir     // condition, if it exists
+	Condition IfDir     // condition, if it exists; nil otherwise
 	Text      []Expr    // text-if-false, or text-if-true when a condition exists
 }
 
@@ -290,9 +290,7 @@ func (d *IfeqDir) End() token.Pos {
 type IfdefDir struct {
 	Tok    token.Token // IFDEF or IFNDEF
 	TokPos token.Pos   // position of Tok
-	Open   token.Pos   // position of '(', if it exists
-	Arg    Expr        // first argument in the condition
-	Close  token.Pos   // position of ')', if it exists
+	Arg    Expr        // variable-name
 }
 
 func (*IfdefDir) ifDirNode() {}
@@ -304,9 +302,5 @@ func (d *IfdefDir) Pos() token.Pos {
 
 // End implements node
 func (d *IfdefDir) End() token.Pos {
-	if d.Close.IsValid() {
-		return d.Close + 1
-	} else {
-		return d.Arg.End()
-	}
+	return d.Arg.End()
 }
