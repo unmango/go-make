@@ -235,9 +235,12 @@ func (p *Parser) parseIfeqDir() *ast.IfeqDir {
 
 func (p *Parser) parseElseBlock() *ast.ElseBlock {
 	pos := p.expect(token.ELSE)
+	p.skipWhitespace()
+	text := p.parseObjList()
 
 	return &ast.ElseBlock{
 		Else: pos,
+		Text: text,
 	}
 }
 
@@ -250,12 +253,7 @@ func (p *Parser) parseIfBlock() *ast.IfBlock {
 		ifdir = p.parseIfeqDir()
 	}
 	p.skipWhitespace()
-
-	var text []ast.Obj
-	for p.tok != token.EOF && p.tok != token.ENDIF && p.tok != token.ELSE {
-		text = append(text, p.parseObj())
-		p.skipWhitespace()
-	}
+	text := p.parseObjList()
 
 	var eblocks []*ast.ElseBlock
 	if p.tok == token.ELSE {
@@ -303,6 +301,15 @@ func (p *Parser) parseObj() ast.Obj {
 		p.next()   // always progress
 		return nil // TODO: BadObj?
 	}
+}
+
+func (p *Parser) parseObjList() (l []ast.Obj) {
+	for p.tok != token.EOF && p.tok != token.ENDIF && p.tok != token.ELSE {
+		l = append(l, p.parseObj())
+		p.skipWhitespace()
+	}
+
+	return
 }
 
 func (p *Parser) parseVar(name ast.Expr) ast.Obj {
