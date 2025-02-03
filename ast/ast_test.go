@@ -315,7 +315,7 @@ var _ = Describe("Ast", func() {
 
 		It("should return the position after the arg", func() {
 			err := quick.Check(func(n int) bool {
-				d := &ast.IfdefDir{Arg: &ast.Text{ValuePos: token.Pos(n)}}
+				d := &ast.IfdefDir{VarName: &ast.Text{ValuePos: token.Pos(n)}}
 
 				return d.End() == token.Pos(n)
 			}, nil)

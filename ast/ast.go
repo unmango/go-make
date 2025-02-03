@@ -288,9 +288,9 @@ func (d *IfeqDir) End() token.Pos {
 
 // IfeqDir represents a conditional directive block using `ifdef` or `ifndef`.
 type IfdefDir struct {
-	Tok    token.Token // IFDEF or IFNDEF
-	TokPos token.Pos   // position of Tok
-	Arg    Expr        // variable-name
+	Tok     token.Token // IFDEF or IFNDEF
+	TokPos  token.Pos   // position of Tok
+	VarName Expr        // variable-name
 }
 
 func (*IfdefDir) ifDirNode() {}
@@ -302,5 +302,5 @@ func (d *IfdefDir) Pos() token.Pos {
 
 // End implements node
 func (d *IfdefDir) End() token.Pos {
-	return d.Arg.End()
+	return d.VarName.End()
 }
