@@ -500,7 +500,7 @@ var _ = Describe("Printer", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(buf.String()).To(Equal("ifdef foo"))
-			Expect(n).To(Equal(15))
+			Expect(n).To(Equal(9))
 		})
 
 		It("should print an if block", func() {
@@ -517,7 +517,7 @@ var _ = Describe("Printer", func() {
 				},
 				Text: []ast.Obj{&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{
-						Value:    "foo",
+						Value:    "bar",
 						ValuePos: token.Pos(11),
 					}},
 					Colon: token.Pos(14),
@@ -526,8 +526,8 @@ var _ = Describe("Printer", func() {
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(buf.String()).To(Equal("ifdef foo\nendif\n"))
-			Expect(n).To(Equal(15))
+			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nendif"))
+			Expect(n).To(Equal(20))
 		})
 
 		It("should print an if block with an else", func() {
@@ -563,8 +563,8 @@ var _ = Describe("Printer", func() {
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nelse\nbaz:\nendif\n"))
-			Expect(n).To(Equal(15))
+			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nelse\nbaz:\nendif"))
+			Expect(n).To(Equal(30))
 		})
 
 		It("should print an if block with an else if", func() {
@@ -608,8 +608,8 @@ var _ = Describe("Printer", func() {
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nelse ifdef baz\nbin:\nendif\n"))
-			Expect(n).To(Equal(15))
+			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nelse ifdef baz\nbin:\nendif"))
+			Expect(n).To(Equal(40))
 		})
 	})
 
