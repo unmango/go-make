@@ -291,7 +291,7 @@ type IfeqDir struct {
 	TokPos token.Pos   // position of Tok
 	Open   token.Pos   // position of '(', if it exists
 	Arg1   Expr        // first argument in the condition
-	Comma  token.Pos   // position of ','
+	Comma  token.Pos   // position of ',', if it exists
 	Arg2   Expr        // second argument in the condition
 	Close  token.Pos   // position of ')', if it exists
 }
