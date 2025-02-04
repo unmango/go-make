@@ -595,6 +595,21 @@ var _ = Describe("Parser", func() {
 		},
 	)
 
+	DescribeTable("should error on unexpected tokens",
+		Entry(nil, "ifeq )baz\" \"bin\"\nendif"),
+		Entry(nil, "ifeq {baz' \"bin\"\nendif"),
+		Entry(nil, "ifeq }baz' \"bin'\nendif"),
+		Entry(nil, "ifeq |baz' 'bin\"\nendif"),
+		func(input string) {
+			buf := bytes.NewBufferString(input)
+			p := parser.New(buf, file)
+
+			_, err := p.ParseFile()
+
+			Expect(err).To(MatchError(ContainSubstring("expected one of '(', ''', '\"'")))
+		},
+	)
+
 	It("should Parse an ifdef conditional directive", func() {
 		buf := bytes.NewBufferString("ifdef FOO\nendif")
 		p := parser.New(buf, file)
