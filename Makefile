@@ -51,8 +51,8 @@ bin/devctl: .versions/devctl
 	go install github.com/unmango/devctl/cmd@v$(shell cat $<)
 	mv ${LOCALBIN}/cmd $@
 
-bin/dprint: .versions/dprint .make/dprint-install.sh
-	DPRINT_INSTALL=${WORKING_DIR} .make/dprint-install.sh
+bin/dprint: .versions/dprint .make/dprint/install.sh
+	DPRINT_INSTALL=${WORKING_DIR} .make/dprint/install.sh $(shell $(DEVCTL) v dprint)
 
 .envrc: hack/example.envrc
 	cp $< $@
@@ -76,10 +76,13 @@ bin/dprint: .versions/dprint .make/dprint-install.sh
 	go fmt
 	@touch $@
 
-.make/dprint-install.sh:
+# Hilariously, when the script is named `dprint-install.sh`, this line kills the install script itself
+# https://github.com/dprint/dprint/blob/00e8f5e9895147b20fe70a0e4e5437bd54d928e8/website/src/assets/install.sh#L60
+.make/dprint/install.sh:
+	mkdir -p $(dir $@)
 	curl -fsSL https://dprint.dev/install.sh -o $@
 	chmod +x $@
 
-.make/dprint-fmt: README.md
+.make/dprint-fmt: README.md | bin/dprint
 	dprint fmt
 	@touch $@
