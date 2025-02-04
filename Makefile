@@ -52,7 +52,7 @@ bin/devctl: .versions/devctl
 	mv ${LOCALBIN}/cmd $@
 
 bin/dprint: .versions/dprint .make/dprint/install.sh
-	DPRINT_INSTALL=${WORKING_DIR} .make/dprint/install.sh
+	DPRINT_INSTALL=${WORKING_DIR} .make/dprint/install.sh $(shell $(DEVCTL) v dprint)
 
 .envrc: hack/example.envrc
 	cp $< $@
