@@ -140,6 +140,32 @@ func (l *Text) String() string {
 	return l.Value
 }
 
+// QuotedExpr represents an expression enclosed in quotes.
+type QuotedExpr struct {
+	Quote token.Token // ' or "
+	Open  token.Pos   // position of the opening quote
+	Value Expr        // position of the inner expression
+	Close token.Pos   // position of the closing quote
+}
+
+func (*QuotedExpr) exprNode() {}
+
+// Pos implements Node
+func (l *QuotedExpr) Pos() token.Pos {
+	return l.Open
+}
+
+// End implements Node
+func (l *QuotedExpr) End() token.Pos {
+	return l.Close
+}
+
+// String returns the quoted expression
+func (l *QuotedExpr) String() string {
+	quote := l.Quote.String()
+	return fmt.Sprint(quote, l.Value, quote)
+}
+
 // VarRef represents a variable reference.
 type VarRef struct {
 	Dollar token.Pos   // position of '$'
