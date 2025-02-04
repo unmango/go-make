@@ -77,47 +77,48 @@ n, err := w.WriteRule(&ast.Rule{})
 
 ## Features
 
-### Supported Syntax
+### Syntax Support
 
 Makefile syntax that is guaranteed to round-trip (parse and print without modification) is listed in [./testdata/roundtrip](./testdata/roundtrip/).
 Additional syntax is supported and may round-trip successfully, but no guarentees are provided until it is listed under `./testdata/roundtrip`.
 
-- [ ] newline escaping i.e. `\trecipe text\\ncontinued on next line`
-- [x] newline separated elements i.e. `target:\n\ntarget2:`
-- [ ] comments
-  - [x] top-level comments i.e. `# comment text`
-  - [x] comment groups i.e. `# comment text\n# more comment text`
-  - [ ] rule comments i.e. `target: # comment text`
-  - [x] recipe comments i.e. `target:\n\trecipe # comment text\n`
-    - these are not make comments and are included in the recipe text
-- [ ] rules
-  - [x] targets i.e. `target:`, `target :`
-  - [x] multiple targets i.e. `target1 target2:`
-  - [x] pre-requisites i.e. `target: prereq`
-  - [x] order-only pre-requisites i.e. `target: | prereq`
-  - [x] recipes i.e. `\trecipe text\n`
-  - [ ] recipe with a custom `.RECIPEPREFIX`
-  - [ ] semimcolon delimited recipes i.e. `target: ;recipe text\n`
-- [ ] variables
-  - [x] empty declarations i.e. `VAR :=`
-  - [x] simple declarations i.e. `VAR := foo.c bar.c`
-  - [x] all assigment operators i.e. `VAR != foo`, `VAR ::= bar`, etc.
-  - variable references i.e. `${VAR}`
-    - [x] in targets i.e. `${VAR}:`, `$(FOO) $(BAR):`
-    - [x] in prereqs i.e. `target: ${FOO}`
-    - [ ] in recipes i.e. `target:\n\trecipe $(VAR)\n`
-- [ ] directives
-  - [ ] top-level directives i.e. `ifeq`, `define`, etc.
-    - [ ] conditional directives i.e. `ifeq`, `ifneq`, `ifdef`, `ifndef`
-      - [ ] equality directives i.e. `ifeq`, `ifneq`
-        - [x] parentheses syntax i.e. `ifeq (foo, bar)`
-        - [ ] double quotes i.e. `ifeq "foo" "bar"`
-        - [ ] single quotes i.e. `ifeq 'foo' 'bar'`
-        - [ ] mixed syntax i.e. `ifeq "foo" 'bar'`
-      - [x] definition directives i.e. `ifdef`, `ifndef`
-  - [ ] logging directives i.e. `$(info message)`
-  - [ ] expressions i.e. `$(shell script stuff)`
-- [ ] many other things
+| Syntax                               | Example                                  |       Parser       |      Printer       | Remarks                                                              |
+| ------------------------------------ | ---------------------------------------- | :----------------: | :----------------: | -------------------------------------------------------------------- |
+| newline escaping                     | `\trecipe text\\ncontinued on next line` |                    |                    |                                                                      |
+| newline separated elements           | `target:\n\ntarget2:`                    |                    |                    |                                                                      |
+| **comments**                         |                                          |                    |                    |                                                                      |
+| top-level comments                   | `# comment text`                         | :white_check_mark: | :white_check_mark: |                                                                      |
+| comment groups                       | `# comment text\n# more comment text`    | :white_check_mark: | :white_check_mark: |                                                                      |
+| rule comments                        | `target: # comment text`                 |                    |                    |                                                                      |
+| recipe comments                      | `target:\n\trecipe # comment text\n`     | :white_check_mark: | :white_check_mark: | these are not make comments and are included in the recipe text      |
+| **rules**                            |                                          |                    |                    |                                                                      |
+| targets                              | `target:`, `target :`                    | :white_check_mark: | :white_check_mark: |                                                                      |
+| multiple targets                     | `target1 target2:`                       | :white_check_mark: | :white_check_mark: |                                                                      |
+| pre-requisites                       | `target: prereq`                         | :white_check_mark: | :white_check_mark: |                                                                      |
+| order-only pre-requisites            | `target: \| prereq`                      | :white_check_mark: | :white_check_mark: |                                                                      |
+| recipes                              | `\trecipe text\n`                        | :white_check_mark: | :white_check_mark: |                                                                      |
+| recipe with a custom `.RECIPEPREFIX` | `\|recipe text\n`                        |                    |                    |                                                                      |
+| semimcolon delimited recipes         | `target: ;recipe text\n`                 |                    |                    |                                                                      |
+| **variables**                        |                                          |                    |                    |                                                                      |
+| empty declarations                   | `VAR :=`                                 | :white_check_mark: | :white_check_mark: |                                                                      |
+| simple declarations                  | `VAR := foo.c bar.c`                     | :white_check_mark: | :white_check_mark: |                                                                      |
+| all assigment operators              | `VAR != foo`, `VAR ::= bar`, etc.        | :white_check_mark: | :white_check_mark: |                                                                      |
+| **variable references**              |                                          |                    |                    |                                                                      |
+| in targets                           | `${VAR}:`, `$(FOO) $(BAR):`              | :white_check_mark: | :white_check_mark: |                                                                      |
+| in prereqs                           | `target: ${FOO}`                         | :white_check_mark: | :white_check_mark: |                                                                      |
+| in recipes                           | `target:\n\trecipe $(VAR)\n`             |                    |                    |                                                                      |
+| **directives**                       |                                          |                    |                    |                                                                      |
+| top-level directives                 | `ifeq`, `define`, etc.                   |                    |                    |                                                                      |
+| conditional directives               | `ifeq`, `ifneq`, `ifdef`, `ifndef`       | :white_check_mark: |                    |                                                                      |
+| equality directives                  | `ifeq`, `ifneq`                          | :white_check_mark: |                    |                                                                      |
+| parentheses syntax                   | `ifeq (foo, bar)`                        | :white_check_mark: |                    |                                                                      |
+| double quotes                        | `ifeq "foo" "bar"`                       | :white_check_mark: |                    |                                                                      |
+| single quotes                        | `ifeq 'foo' 'bar'`                       | :white_check_mark: |                    |                                                                      |
+| mixed syntax                         | `ifeq "foo" 'bar'`                       | :white_check_mark: |                    |                                                                      |
+| definition directives                | `ifdef`, `ifndef`                        | :white_check_mark: |                    |                                                                      |
+| logging directives                   | `$(info message)`                        |                    |                    |                                                                      |
+| expressions                          | `$(shell script stuff)`                  |                    |                    |                                                                      |
+| many other things                    |                                          |                    |                    | please open an issue if there is anything missing you'd like to see! |
 
 ### Will Not Support
 

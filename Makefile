@@ -53,6 +53,7 @@ bin/devctl: .versions/devctl
 
 bin/dprint: .versions/dprint .make/dprint/install.sh
 	DPRINT_INSTALL=${WORKING_DIR} .make/dprint/install.sh $(shell $(DEVCTL) v dprint)
+	@touch $@
 
 .envrc: hack/example.envrc
 	cp $< $@
