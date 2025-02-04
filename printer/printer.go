@@ -77,6 +77,12 @@ func (p *printer) text(t *ast.Text) {
 	p.writeString(pos, t.Value)
 }
 
+func (p *printer) quotedExpr(e *ast.QuotedExpr) {
+	p.tok(p.posFor(e.Open), e.Quote)
+	p.expr(e.Value)
+	p.tok(p.posFor(e.Close), e.Quote)
+}
+
 func (p *printer) recipe(r *ast.Recipe) {
 	pos := p.posFor(r.PrefixPos)
 	p.tok(pos, r.Prefix)
@@ -99,6 +105,8 @@ func (p *printer) expr(expr ast.Expr) {
 	switch n := expr.(type) {
 	case *ast.Text:
 		p.text(n)
+	case *ast.QuotedExpr:
+		p.quotedExpr(n)
 	case *ast.Recipe:
 		p.text(&n.Text)
 	case *ast.VarRef:
@@ -157,20 +165,6 @@ func (p *printer) rule(r *ast.Rule) {
 	}
 }
 
-func (p *printer) variable(v *ast.Variable) {
-	if v == nil {
-		return
-	}
-
-	p.expr(v.Name)
-	p.fillSpace(v.OpPos)
-	p.tok(p.posFor(v.OpPos), v.Op)
-	if v.Value != nil {
-		p.exprList(v.Value)
-	}
-	p.writeLine()
-}
-
 func (p *printer) comment(c *ast.Comment) {
 	p.writeString(p.posFor(c.Pound), "#")
 	p.fillSpace(c.Pound + 2)
@@ -188,8 +182,87 @@ func (p *printer) commentGroup(g *ast.CommentGroup) {
 	}
 }
 
+func (p *printer) ifeqDir(d *ast.IfeqDir) {
+	p.tok(p.posFor(d.TokPos), d.Tok)
+	if d.Open.IsValid() {
+		p.fillSpace(d.Open)
+		p.tok(p.posFor(d.Open), token.LPAREN)
+		p.fillSpace(d.Arg1.Pos())
+		p.expr(d.Arg1)
+		p.fillSpace(d.Comma)
+		p.tok(p.posFor(d.Comma), token.COMMA)
+		p.fillSpace(d.Arg2.Pos())
+		p.expr(d.Arg2)
+		p.fillSpace(d.Close)
+		p.tok(p.posFor(d.Close), token.RPAREN)
+	} else {
+		p.fillSpace(d.Arg1.Pos())
+		p.expr(d.Arg1)
+		p.fillSpace(d.Arg2.Pos())
+		p.expr(d.Arg2)
+	}
+}
+
+func (p *printer) ifdefDir(d *ast.IfdefDir) {
+	p.tok(p.posFor(d.TokPos), d.Tok)
+	p.fillSpace(d.VarName.Pos())
+	p.expr(d.VarName)
+}
+
+func (p *printer) ifDir(d ast.IfDir) {
+	switch n := d.(type) {
+	case *ast.IfeqDir:
+		p.ifeqDir(n)
+	case *ast.IfdefDir:
+		p.ifdefDir(n)
+	}
+}
+
+func (p *printer) elseBlock(b *ast.ElseBlock) {
+	p.tok(p.posFor(b.Else), token.ELSE)
+	if b.Condition != nil {
+		p.fillSpace(b.Condition.Pos())
+		p.ifDir(b.Condition)
+	}
+	p.writeLine()
+	p.objList(b.Text)
+}
+
+func (p *printer) ifBlock(b *ast.IfBlock) {
+	p.ifDir(b.Directive)
+	p.objList(b.Text)
+	for _, e := range b.Else {
+		p.elseBlock(e)
+	}
+	p.tok(p.posFor(b.Endif), token.ENDIF)
+	p.writeLine()
+}
+
+func (p *printer) directive(d ast.Dir) {
+	switch n := d.(type) {
+	case *ast.IfBlock:
+		p.ifBlock(n)
+	}
+}
+
+func (p *printer) variable(v *ast.Variable) {
+	if v == nil {
+		return
+	}
+
+	p.expr(v.Name)
+	p.fillSpace(v.OpPos)
+	p.tok(p.posFor(v.OpPos), v.Op)
+	if v.Value != nil {
+		p.exprList(v.Value)
+	}
+	p.writeLine()
+}
+
 func (p *printer) obj(o ast.Obj) {
 	switch n := o.(type) {
+	case ast.Dir:
+		p.directive(n)
 	case *ast.CommentGroup:
 		p.commentGroup(n)
 	case *ast.Rule:
@@ -222,6 +295,8 @@ func (p *printer) printNode(node any) error {
 		p.expr(n)
 	case ast.Obj:
 		p.obj(n)
+	case ast.IfDir:
+		p.ifDir(n)
 	case []ast.Expr:
 		p.exprList(n)
 	case []ast.Obj:

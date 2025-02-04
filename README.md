@@ -109,13 +109,13 @@ Additional syntax is supported and may round-trip successfully, but no guarentee
 | in recipes                           | `target:\n\trecipe $(VAR)\n`             |                    |                    |                                                                      |
 | **directives**                       |                                          |                    |                    |                                                                      |
 | top-level directives                 | `ifeq`, `define`, etc.                   |                    |                    |                                                                      |
-| conditional directives               | `ifeq`, `ifneq`, `ifdef`, `ifndef`       | :white_check_mark: |                    |                                                                      |
-| equality directives                  | `ifeq`, `ifneq`                          | :white_check_mark: |                    |                                                                      |
-| parentheses syntax                   | `ifeq (foo, bar)`                        | :white_check_mark: |                    |                                                                      |
-| double quotes                        | `ifeq "foo" "bar"`                       | :white_check_mark: |                    |                                                                      |
-| single quotes                        | `ifeq 'foo' 'bar'`                       | :white_check_mark: |                    |                                                                      |
-| mixed syntax                         | `ifeq "foo" 'bar'`                       | :white_check_mark: |                    |                                                                      |
-| definition directives                | `ifdef`, `ifndef`                        | :white_check_mark: |                    |                                                                      |
+| conditional directives               | `ifeq`, `ifneq`, `ifdef`, `ifndef`       | :white_check_mark: | :white_check_mark: |                                                                      |
+| equality directives                  | `ifeq`, `ifneq`                          | :white_check_mark: | :white_check_mark: |                                                                      |
+| parentheses syntax                   | `ifeq (foo, bar)`                        | :white_check_mark: | :white_check_mark: |                                                                      |
+| double quotes                        | `ifeq "foo" "bar"`                       | :white_check_mark: | :white_check_mark: |                                                                      |
+| single quotes                        | `ifeq 'foo' 'bar'`                       | :white_check_mark: | :white_check_mark: |                                                                      |
+| mixed syntax                         | `ifeq "foo" 'bar'`                       | :white_check_mark: | :white_check_mark: |                                                                      |
+| definition directives                | `ifdef`, `ifndef`                        | :white_check_mark: | :white_check_mark: |                                                                      |
 | logging directives                   | `$(info message)`                        |                    |                    |                                                                      |
 | expressions                          | `$(shell script stuff)`                  |                    |                    |                                                                      |
 | many other things                    |                                          |                    |                    | please open an issue if there is anything missing you'd like to see! |

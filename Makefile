@@ -51,7 +51,7 @@ bin/devctl: .versions/devctl
 	go install github.com/unmango/devctl/cmd@v$(shell cat $<)
 	mv ${LOCALBIN}/cmd $@
 
-bin/dprint: .versions/dprint .make/dprint/install.sh
+bin/dprint: .versions/dprint | .make/dprint/install.sh
 	DPRINT_INSTALL=${WORKING_DIR} .make/dprint/install.sh $(shell $(DEVCTL) v dprint)
 	@touch $@
 
@@ -65,8 +65,8 @@ bin/dprint: .versions/dprint .make/dprint/install.sh
 	go build ./...
 	@touch $@
 
-.make/test: $(shell $(DEVCTL) list --go) | bin/ginkgo bin/devctl .make
-	$(GINKGO) run ${TEST_FLAGS} $(sort $(dir $?))
+.make/test: $(shell $(DEVCTL) list --go) $(wildcard testdata/*) | bin/ginkgo bin/devctl .make
+	$(GINKGO) run ${TEST_FLAGS} $(sort $(dir $(filter-out testdata/%,$?)))
 	@touch $@
 
 .make/validate_codecov: codecov.yml | .make

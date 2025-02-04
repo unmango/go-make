@@ -1,0 +1,3 @@
+ifdef test
+target:
+endif

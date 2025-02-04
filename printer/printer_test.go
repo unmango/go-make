@@ -312,6 +312,36 @@ var _ = Describe("Printer", func() {
 			Expect(buf.String()).To(Equal("foo bar"))
 			Expect(n).To(Equal(7))
 		})
+
+		It("should write apostrophe quoted text", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.QuotedExpr{
+				Quote: token.APOS,
+				Open:  token.Pos(1),
+				Value: &ast.Text{Value: "foo", ValuePos: token.Pos(2)},
+				Close: token.Pos(5),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("'foo'"))
+			Expect(n).To(Equal(5))
+		})
+
+		It("should write quoted text", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.QuotedExpr{
+				Quote: token.QUOTE,
+				Open:  token.Pos(1),
+				Value: &ast.Text{Value: "bar", ValuePos: token.Pos(2)},
+				Close: token.Pos(5),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal(`"bar"`))
+			Expect(n).To(Equal(5))
+		})
 	})
 
 	Describe("variables", func() {
@@ -397,6 +427,189 @@ var _ = Describe("Printer", func() {
 
 				Expect(err).To(MatchError(ContainSubstring("write err:")))
 			})
+		})
+	})
+
+	Describe("directives", func() {
+		It("should print an ifeq directive", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Open:   token.Pos(6),
+				Arg1: &ast.Text{
+					Value:    "foo",
+					ValuePos: token.Pos(7),
+				},
+				Comma: token.Pos(10),
+				Arg2: &ast.Text{
+					Value:    "bar",
+					ValuePos: token.Pos(12),
+				},
+				Close: token.Pos(15),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifeq (foo, bar)"))
+			Expect(n).To(Equal(15))
+		})
+
+		It("should print an ifeq directive with quotes", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Arg1: &ast.QuotedExpr{
+					Quote: token.APOS,
+					Open:  token.Pos(6),
+					Value: &ast.Text{
+						Value:    "foo",
+						ValuePos: token.Pos(7),
+					},
+					Close: token.Pos(10),
+				},
+				Arg2: &ast.QuotedExpr{
+					Quote: token.QUOTE,
+					Open:  token.Pos(12),
+					Value: &ast.Text{
+						Value:    "bar",
+						ValuePos: token.Pos(13),
+					},
+					Close: token.Pos(16),
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifeq 'foo' \"bar\""))
+			Expect(n).To(Equal(16))
+		})
+
+		It("should print an ifdef directive", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfdefDir{
+				Tok:    token.IFDEF,
+				TokPos: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "foo",
+					ValuePos: token.Pos(7),
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifdef foo"))
+			Expect(n).To(Equal(9))
+		})
+
+		It("should print an if block", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfBlock{
+				Directive: &ast.IfdefDir{
+					Tok:    token.IFDEF,
+					TokPos: token.Pos(1),
+					VarName: &ast.Text{
+						Value:    "foo",
+						ValuePos: token.Pos(7),
+					},
+				},
+				Text: []ast.Obj{&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "bar",
+						ValuePos: token.Pos(11),
+					}},
+					Colon: token.Pos(14),
+				}},
+				Endif: token.Pos(16),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nendif\n"))
+			Expect(n).To(Equal(21))
+		})
+
+		It("should print an if block with an else", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfBlock{
+				Directive: &ast.IfdefDir{
+					Tok:    token.IFDEF,
+					TokPos: token.Pos(1),
+					VarName: &ast.Text{
+						Value:    "foo",
+						ValuePos: token.Pos(7),
+					},
+				},
+				Text: []ast.Obj{&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "bar",
+						ValuePos: token.Pos(11),
+					}},
+					Colon: token.Pos(14),
+				}},
+				Else: []*ast.ElseBlock{{
+					Else: token.Pos(16),
+					Text: []ast.Obj{&ast.Rule{
+						Targets: []ast.Expr{&ast.Text{
+							Value:    "baz",
+							ValuePos: token.Pos(21),
+						}},
+						Colon: token.Pos(24),
+					}},
+				}},
+				Endif: token.Pos(26),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nelse\nbaz:\nendif\n"))
+			Expect(n).To(Equal(31))
+		})
+
+		It("should print an if block with an else if", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfBlock{
+				Directive: &ast.IfdefDir{
+					Tok:    token.IFDEF,
+					TokPos: token.Pos(1),
+					VarName: &ast.Text{
+						Value:    "foo",
+						ValuePos: token.Pos(7),
+					},
+				},
+				Text: []ast.Obj{&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "bar",
+						ValuePos: token.Pos(11),
+					}},
+					Colon: token.Pos(14),
+				}},
+				Else: []*ast.ElseBlock{{
+					Else: token.Pos(16),
+					Condition: &ast.IfdefDir{
+						Tok:    token.IFDEF,
+						TokPos: token.Pos(21),
+						VarName: &ast.Text{
+							Value:    "baz",
+							ValuePos: token.Pos(27),
+						},
+					},
+					Text: []ast.Obj{&ast.Rule{
+						Targets: []ast.Expr{&ast.Text{
+							Value:    "bin",
+							ValuePos: token.Pos(21),
+						}},
+						Colon: token.Pos(24),
+					}},
+				}},
+				Endif: token.Pos(26),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nelse ifdef baz\nbin:\nendif\n"))
+			Expect(n).To(Equal(41))
 		})
 	})
 
