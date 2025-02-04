@@ -117,6 +117,10 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 			tok = token.SHELL_ASSIGN
 		case ",":
 			tok = token.COMMA
+		case "'":
+			tok = token.APOS
+		case `"`:
+			tok = token.QUOTE
 		case "\n":
 			atNewline = true
 			tok = token.NEWLINE

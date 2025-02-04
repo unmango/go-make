@@ -34,6 +34,8 @@ const (
 	COLON   // :
 	SEMI    // ;
 	COMMA   // ,
+	APOS    // '
+	QUOTE   // "
 	PIPE    // |
 	NEWLINE // \n
 	TAB     // \t
@@ -123,6 +125,8 @@ var tokens = [...]string{
 	COLON:   ":",
 	SEMI:    ";",
 	COMMA:   ",",
+	APOS:    "'",
+	QUOTE:   `"`,
 	PIPE:    "|",
 	NEWLINE: "\n",
 	TAB:     "\t",
@@ -272,28 +276,13 @@ func IsBuiltinFunction(name string) bool {
 	return ok
 }
 
-// IsToken reports whether text contains a token interpreted by make.
-func IsToken(text string) bool {
-	if text == "" || IsKeyword(text) {
-		return false
-	}
-	switch text {
-	case "(", ")", "{", "}", "$", ":", ";", ",", "\n", "\t", "|", "#", " ":
-		fallthrough
-	case "=", ":=", "::=", ":::=", "?=", "!=":
-		return false
-	}
-
-	return true
-}
-
 // IsLit reports whether text contains a literal token.
 func IsLit(text string) bool {
 	if IsKeyword(text) {
 		return true
 	}
 	switch text {
-	case "(", ")", "{", "}", "$", ":", ";", ",", "\n", "\t", "|", "#", " ", "",
+	case "(", ")", "{", "}", "$", ":", ";", ",", "'", `"`, "\n", "\t", "|", "#", " ", "",
 		"=", ":=", "::=", ":::=", "?=", "!=":
 		return false
 	}

@@ -92,6 +92,12 @@ var _ = Describe("Scan", func() {
 			Entry("subst function",
 				"$(subst from,to,text)", []string{"$", "(", "subst", " ", "from", ",", "to", ",", "text", ")"},
 			),
+			Entry("ifeq directive",
+				"ifeq (foo, bar)", []string{"ifeq", " ", "(", "foo", ",", " ", "bar", ")"},
+			),
+			Entry("ifeq directive with quotes",
+				`ifeq 'foo' "bar"`, []string{"ifeq", " ", "'", "foo", "'", " ", `"`, "bar", `"`},
+			),
 			func(text string, expected []string) {
 				buf := bytes.NewBufferString(text)
 				s := bufio.NewScanner(buf)

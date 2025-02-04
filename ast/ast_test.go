@@ -1,6 +1,7 @@
 package ast_test
 
 import (
+	"fmt"
 	"testing/quick"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -129,6 +130,33 @@ var _ = Describe("Ast", func() {
 			Expect(c.String()).To(Equal("foo"))
 		})
 	})
+
+	DescribeTableSubtree("QuotedExpr",
+		Entry(nil, token.QUOTE),
+		Entry(nil, token.APOS),
+		func(quote token.Token) {
+			It("should return the position of the opening quote", func() {
+				c := &ast.QuotedExpr{Quote: quote, Open: token.Pos(69)}
+
+				Expect(c.Pos()).To(Equal(token.Pos(69)))
+			})
+
+			It("should return the position of the closing quote", func() {
+				c := &ast.QuotedExpr{Quote: quote, Close: token.Pos(423)}
+
+				Expect(c.End()).To(Equal(token.Pos(423)))
+			})
+
+			It("should stringify", func() {
+				c := &ast.QuotedExpr{
+					Quote: quote,
+					Value: &ast.Text{Value: "foo"},
+				}
+
+				Expect(c.String()).To(Equal(fmt.Sprint(quote, "foo", quote)))
+			})
+		},
+	)
 
 	Describe("VarRef", func() {
 		It("should return the position of the dollar sign", func() {
