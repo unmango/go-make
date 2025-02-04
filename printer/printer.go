@@ -235,6 +235,7 @@ func (p *printer) ifBlock(b *ast.IfBlock) {
 		p.elseBlock(e)
 	}
 	p.tok(p.posFor(b.Endif), token.ENDIF)
+	p.writeLine()
 }
 
 func (p *printer) directive(d ast.Dir) {

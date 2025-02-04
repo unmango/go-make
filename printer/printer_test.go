@@ -526,8 +526,8 @@ var _ = Describe("Printer", func() {
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nendif"))
-			Expect(n).To(Equal(20))
+			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nendif\n"))
+			Expect(n).To(Equal(21))
 		})
 
 		It("should print an if block with an else", func() {
@@ -563,8 +563,8 @@ var _ = Describe("Printer", func() {
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nelse\nbaz:\nendif"))
-			Expect(n).To(Equal(30))
+			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nelse\nbaz:\nendif\n"))
+			Expect(n).To(Equal(31))
 		})
 
 		It("should print an if block with an else if", func() {
@@ -608,8 +608,8 @@ var _ = Describe("Printer", func() {
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nelse ifdef baz\nbin:\nendif"))
-			Expect(n).To(Equal(40))
+			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nelse ifdef baz\nbin:\nendif\n"))
+			Expect(n).To(Equal(41))
 		})
 	})
 
