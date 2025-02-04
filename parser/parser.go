@@ -213,14 +213,57 @@ func (p *Parser) parseIfdefDir() *ast.IfdefDir {
 	}
 }
 
+func (p *Parser) parseQuotedExpr() *ast.QuotedExpr {
+	var (
+		quote token.Token
+		open  token.Pos
+	)
+
+	switch p.tok {
+	case token.APOS:
+		quote = token.APOS
+		open = p.expect(token.APOS)
+	case token.QUOTE:
+		quote = token.QUOTE
+		open = p.expect(token.QUOTE)
+	default:
+		p.expectOneOf(token.APOS, token.QUOTE)
+	}
+
+	value := p.parseText()
+	close := p.expect(quote)
+
+	return &ast.QuotedExpr{
+		Quote: quote,
+		Open:  open,
+		Value: value,
+		Close: close,
+	}
+}
+
 func (p *Parser) parseIfeqDir() *ast.IfeqDir {
 	pos, tok := p.pos, p.tok
-	p.next()
-	lparen := p.expect(token.LPAREN)
-	arg1 := p.parseExpression()
-	comma := p.expect(token.COMMA)
-	arg2 := p.parseExpression()
-	rparen := p.expect(token.RPAREN)
+	p.next() // consume ifeq or ifneq
+
+	var (
+		lparen, rparen token.Pos
+		arg1, arg2     ast.Expr
+		comma          token.Pos
+	)
+
+	switch p.tok {
+	case token.LPAREN:
+		lparen = p.expect(token.LPAREN)
+		arg1 = p.parseExpression()
+		comma = p.expect(token.COMMA)
+		arg2 = p.parseExpression()
+		rparen = p.expect(token.RPAREN)
+	case token.APOS, token.QUOTE:
+		arg1 = p.parseQuotedExpr()
+		arg2 = p.parseQuotedExpr()
+	default:
+		p.expectOneOf(token.LPAREN, token.APOS, token.QUOTE)
+	}
 
 	return &ast.IfeqDir{
 		Tok:    tok,

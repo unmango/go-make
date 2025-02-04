@@ -492,6 +492,33 @@ var _ = Describe("Parser", func() {
 		Entry(nil, "VAR =", token.RECURSIVE_ASSIGN),
 	)
 
+	It("should Parse an ifeq conditional directive", func() {
+		buf := bytes.NewBufferString("ifeq (baz, bin)\nendif")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.IfBlock{
+			Directive: &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Open:   token.Pos(6),
+				Arg1: &ast.Text{
+					Value:    "baz",
+					ValuePos: token.Pos(7),
+				},
+				Comma: token.Pos(10),
+				Arg2: &ast.Text{
+					Value:    "bin",
+					ValuePos: token.Pos(12),
+				},
+				Close: token.Pos(15),
+			},
+			Endif: token.Pos(17),
+		}))
+	})
+
 	It("should Parse an ifneq conditional directive", func() {
 		buf := bytes.NewBufferString("ifneq (baz, bin)\nendif")
 		p := parser.New(buf, file)
@@ -519,8 +546,8 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
-	It("should Parse an ifeq conditional directive", func() {
-		buf := bytes.NewBufferString("ifeq (baz, bin)\nendif")
+	It("should Parse an ifeq conditional directive with quotes", func() {
+		buf := bytes.NewBufferString("ifeq 'baz' \"bin\"\nendif")
 		p := parser.New(buf, file)
 
 		f, err := p.ParseFile()
@@ -530,21 +557,43 @@ var _ = Describe("Parser", func() {
 			Directive: &ast.IfeqDir{
 				Tok:    token.IFEQ,
 				TokPos: token.Pos(1),
-				Open:   token.Pos(6),
-				Arg1: &ast.Text{
-					Value:    "baz",
-					ValuePos: token.Pos(7),
+				Arg1: &ast.QuotedExpr{
+					Quote: token.APOS,
+					Open:  token.Pos(6),
+					Value: &ast.Text{
+						Value:    "baz",
+						ValuePos: token.Pos(7),
+					},
+					Close: token.Pos(10),
 				},
-				Comma: token.Pos(10),
-				Arg2: &ast.Text{
-					Value:    "bin",
-					ValuePos: token.Pos(12),
+				Arg2: &ast.QuotedExpr{
+					Quote: token.QUOTE,
+					Open:  token.Pos(12),
+					Value: &ast.Text{
+						Value:    "bin",
+						ValuePos: token.Pos(13),
+					},
+					Close: token.Pos(16),
 				},
-				Close: token.Pos(15),
 			},
-			Endif: token.Pos(17),
+			Endif: token.Pos(18),
 		}))
 	})
+
+	DescribeTable("should error when quotes are mismatched",
+		Entry(nil, "ifeq 'baz\" \"bin\"\nendif", "test:1:10: expected ''', found '\"'"),
+		Entry(nil, "ifeq \"baz' \"bin\"\nendif", "test:1:10: expected '\"', found '''"),
+		Entry(nil, "ifeq 'baz' \"bin'\nendif", "test:1:16: expected '\"', found '''"),
+		Entry(nil, "ifeq 'baz' 'bin\"\nendif", "test:1:16: expected ''', found '\"'"),
+		func(input, msg string) {
+			buf := bytes.NewBufferString(input)
+			p := parser.New(buf, file)
+
+			_, err := p.ParseFile()
+
+			Expect(err).To(MatchError(msg))
+		},
+	)
 
 	It("should Parse an ifdef conditional directive", func() {
 		buf := bytes.NewBufferString("ifdef FOO\nendif")
