@@ -34,6 +34,8 @@ const (
 	COLON   // :
 	SEMI    // ;
 	COMMA   // ,
+	APOS    // '
+	QUOTE   // "
 	PIPE    // |
 	NEWLINE // \n
 	TAB     // \t
@@ -123,6 +125,8 @@ var tokens = [...]string{
 	COLON:   ":",
 	SEMI:    ";",
 	COMMA:   ",",
+	APOS:    "'",
+	QUOTE:   `"`,
 	PIPE:    "|",
 	NEWLINE: "\n",
 	TAB:     "\t",
@@ -278,7 +282,7 @@ func IsToken(text string) bool {
 		return false
 	}
 	switch text {
-	case "(", ")", "{", "}", "$", ":", ";", ",", "\n", "\t", "|", "#", " ":
+	case "(", ")", "{", "}", "$", ":", ";", ",", "'", `"`, "\n", "\t", "|", "#", " ":
 		fallthrough
 	case "=", ":=", "::=", ":::=", "?=", "!=":
 		return false
@@ -293,7 +297,7 @@ func IsLit(text string) bool {
 		return true
 	}
 	switch text {
-	case "(", ")", "{", "}", "$", ":", ";", ",", "\n", "\t", "|", "#", " ", "",
+	case "(", ")", "{", "}", "$", ":", ";", ",", "'", `"`, "\n", "\t", "|", "#", " ", "",
 		"=", ":=", "::=", ":::=", "?=", "!=":
 		return false
 	}
