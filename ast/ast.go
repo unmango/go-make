@@ -105,6 +105,13 @@ type Rule struct {
 	Recipes      []*Recipe // rule recipe lines
 }
 
+func NewRule(t Expr, colon token.Pos) *Rule {
+	return &Rule{
+		Targets: []Expr{t},
+		Colon:   colon,
+	}
+}
+
 func (*Rule) objNode() {}
 
 // Pos implements Node
