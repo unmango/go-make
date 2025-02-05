@@ -316,6 +316,53 @@ var _ = Describe("Ast", func() {
 		})
 	})
 
+	Describe("DefDir", func() {
+		It("should return the position of the directive token", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.DefDir{TokPos: token.Pos(n)}
+
+				return d.Pos() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the endef", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.DefDir{Endef: token.Pos(n)}
+
+				return d.End() == token.Pos(n+5)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("UndefDir", func() {
+		It("should return the position of the directive token", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.UndefDir{TokPos: token.Pos(n)}
+
+				return d.Pos() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the variable name", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.UndefDir{VarName: &ast.Text{
+					Value:    "foo",
+					ValuePos: token.Pos(n),
+				}}
+
+				return d.End() == token.Pos(n+3)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
 	Describe("IfeqDir", func() {
 		It("should return the position of the directive token", func() {
 			err := quick.Check(func(n int) bool {

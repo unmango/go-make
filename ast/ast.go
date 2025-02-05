@@ -251,6 +251,48 @@ func (s *Variable) End() token.Pos {
 	}
 }
 
+// DefDir represents a define directive
+type DefDir struct {
+	TokPos  token.Pos   // position of 'define'
+	VarName Expr        // variable name
+	Op      token.Token // -, :=, ::=, :::=, +=, ?= if it exists; ILLEGAL otherwise
+	OpPos   token.Pos   // position of Op, if it exists
+	Value   []Expr      // value expressions
+	Endef   token.Pos   // position of 'endef'
+}
+
+func (*DefDir) objNode() {}
+func (*DefDir) dirNode() {}
+
+// Pos implements Node
+func (d *DefDir) Pos() token.Pos {
+	return d.TokPos
+}
+
+// End implements Node
+func (d *DefDir) End() token.Pos {
+	return d.Endef + 5 // pos + len("endef")
+}
+
+// DefDir represents an undefine directive
+type UndefDir struct {
+	TokPos  token.Pos // position of 'undefine'
+	VarName Expr      // variable name
+}
+
+func (*UndefDir) objNode() {}
+func (*UndefDir) dirNode() {}
+
+// Pos implements Node
+func (d *UndefDir) Pos() token.Pos {
+	return d.TokPos
+}
+
+// End implements Node
+func (d *UndefDir) End() token.Pos {
+	return d.VarName.End()
+}
+
 // IfBlock represents a conditional directive and its parts.
 type IfBlock struct {
 	Directive IfDir        // conditional directive
