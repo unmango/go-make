@@ -33,3 +33,17 @@ func (b *builder) text(t string) *ast.Text {
 		ValuePos: b.nextStr(t),
 	}
 }
+
+func (b *builder) varRef(name string) *ast.VarRef {
+	dollar := b.nextPos()
+	_ = b.nextPos() // Open
+	_ = b.nextStr(name)
+	_ = b.nextPos() // Close
+
+	return &ast.VarRef{
+		Dollar: dollar,
+		Open:   token.LBRACE,
+		Name:   name,
+		Close:  token.RBRACE,
+	}
+}

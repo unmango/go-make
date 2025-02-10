@@ -16,7 +16,7 @@ import (
 	"github.com/unmango/go-make/token"
 )
 
-var _ = Describe("Builder", func() {
+var _ = Describe("Nodes", func() {
 	Describe("NewFile", func() {
 		It("should set the file start", func() {
 			err := quick.Check(func(n int) bool {

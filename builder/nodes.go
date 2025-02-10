@@ -10,25 +10,12 @@ type expr struct {
 	e ast.Expr
 }
 
-func (e *expr) VarRef(name string) {
-	dollar := e.nextPos()
-	_ = e.nextPos() // Open
-	_ = e.nextStr(name)
-	_ = e.nextPos() // Close
-
-	e.e = &ast.VarRef{
-		Dollar: dollar,
-		Open:   token.LBRACE,
-		Name:   name,
-		Close:  token.RBRACE,
-	}
+func (b *expr) VarRef(name string) {
+	b.e = b.varRef(name)
 }
 
-func (e *expr) Text(t string) {
-	e.e = &ast.Text{
-		Value:    t,
-		ValuePos: e.nextStr(t),
-	}
+func (b *expr) Text(t string) {
+	b.e = b.text(t)
 }
 
 type rule struct {
