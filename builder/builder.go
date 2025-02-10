@@ -75,12 +75,15 @@ type file struct {
 	f *ast.File
 }
 
-func (b *file) Rule(t func(Expr), f func(Rule)) {
+func (b *file) Rule(t ExprBuilder, fs ...RuleBuilder) {
 	e := &expr{builder: b.builder}
 	t(e)
 
 	r := &rule{b.builder, ast.NewRule(e.e, 0)}
-	f(r)
+	for _, f := range fs {
+		f(r)
+	}
+
 	r.r.Colon = r.nextPos()
 	b.f.Contents = append(b.f.Contents, r.r)
 }

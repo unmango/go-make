@@ -9,7 +9,7 @@ type (
 
 type File interface {
 	Start(token.Pos)
-	Rule(ExprBuilder, RuleBuilder)
+	Rule(ExprBuilder, ...RuleBuilder)
 }
 
 type Rule interface {
