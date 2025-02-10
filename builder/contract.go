@@ -5,6 +5,7 @@ import "github.com/unmango/go-make/token"
 type (
 	RuleBuilder = func(Rule)
 	ExprBuilder = func(Expr)
+	FileBuilder = func(File)
 )
 
 type File interface {

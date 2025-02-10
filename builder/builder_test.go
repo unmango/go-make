@@ -11,6 +11,8 @@ import (
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/builder"
 	"github.com/unmango/go-make/builder/expr"
+	"github.com/unmango/go-make/builder/file"
+	"github.com/unmango/go-make/builder/rule"
 	"github.com/unmango/go-make/token"
 )
 
@@ -27,9 +29,9 @@ var _ = Describe("Builder", func() {
 		})
 
 		It("should build a rule", func() {
-			f := builder.NewFile(token.Pos(1), func(f builder.File) {
-				f.Rule(expr.Text("target"), builder.Noop)
-			})
+			f := builder.NewFile(token.Pos(1),
+				file.WithRule(expr.Text("target")),
+			)
 
 			Expect(f).To(Equal(&ast.File{
 				FileStart: token.Pos(1),
@@ -46,11 +48,11 @@ var _ = Describe("Builder", func() {
 		})
 
 		It("should build a rule with multiple targets", func() {
-			f := builder.NewFile(token.Pos(1), func(f builder.File) {
-				f.Rule(expr.Text("target"), func(r builder.Rule) {
-					r.Target(expr.Text("target2"))
-				})
-			})
+			f := builder.NewFile(token.Pos(1),
+				file.WithRule(expr.Text("target"),
+					rule.WithTextTarget("target2"),
+				),
+			)
 
 			Expect(f).To(Equal(&ast.File{
 				FileStart: token.Pos(1),
@@ -67,9 +69,9 @@ var _ = Describe("Builder", func() {
 		})
 
 		It("should build a rule with a target expression", func() {
-			f := builder.NewFile(token.Pos(1), func(f builder.File) {
-				f.Rule(expr.VarRef("FOO"), builder.Noop)
-			})
+			f := builder.NewFile(token.Pos(1),
+				file.WithRule(expr.VarRef("FOO")),
+			)
 
 			Expect(f).To(Equal(&ast.File{
 				FileStart: token.Pos(1),
@@ -85,6 +87,32 @@ var _ = Describe("Builder", func() {
 				}},
 			}))
 			ExpectFprintToEqual(f, "${FOO}:\n")
+		})
+
+		It("should build a rule with a second target expression", func() {
+			f := builder.NewFile(token.Pos(1),
+				file.WithRule(expr.Text("target"),
+					rule.WithVarRefTarget("FOO"),
+				),
+			)
+
+			Expect(f).To(Equal(&ast.File{
+				FileStart: token.Pos(1),
+				FileEnd:   token.Pos(15),
+				Contents: []ast.Obj{&ast.Rule{
+					Targets: []ast.Expr{
+						&ast.Text{Value: "target", ValuePos: token.Pos(1)},
+						&ast.VarRef{
+							Dollar: token.Pos(8),
+							Open:   token.LBRACE,
+							Name:   "FOO",
+							Close:  token.RBRACE,
+						},
+					},
+					Colon: token.Pos(14),
+				}},
+			}))
+			ExpectFprintToEqual(f, "target ${FOO}:\n")
 		})
 	})
 })
