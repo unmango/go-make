@@ -2,7 +2,6 @@ package builder_test
 
 import (
 	"bytes"
-	"go/token"
 	"testing/quick"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -11,6 +10,7 @@ import (
 	"github.com/unmango/go-make"
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/builder"
+	"github.com/unmango/go-make/token"
 )
 
 var _ = Describe("Builder", func() {
@@ -68,11 +68,26 @@ var _ = Describe("Builder", func() {
 		It("should build a rule with a target expression", func() {
 			f := builder.NewFile(token.Pos(1), func(f builder.File) {
 				f.Rule("target", func(r builder.Rule) {
-					r.TargetExpr(builder.Noop)
+					r.TargetExpr(func(e builder.Expr) {
+						e.VarRef("FOO")
+					})
 				})
 			})
 
-			Expect(f).NotTo(BeNil()) // TODO
+			Expect(f).To(Equal(&ast.File{
+				FileStart: token.Pos(1),
+				FileEnd:   token.Pos(16),
+				Contents: []ast.Obj{&ast.Rule{
+					Targets: []ast.Expr{&ast.VarRef{
+						Dollar: token.Pos(1),
+						Open:   token.LPAREN,
+						Name:   "FOO",
+						Close:  token.RPAREN,
+					}},
+					Colon: token.Pos(15),
+				}},
+			}))
+			ExpectFprintToEqual(f, "${FOO}:")
 		})
 	})
 })

@@ -43,11 +43,19 @@ type Rule interface {
 	TargetExpr(func(Expr))
 }
 
-type Expr interface{}
+type Expr interface {
+	VarRef(string)
+}
 
 type expr struct {
 	*builder
 	e ast.Expr
+}
+
+func (e *expr) VarRef(name string) {
+	e.e = &ast.VarRef{
+		Dollar: e.nextPos(),
+	}
 }
 
 type rule struct {
@@ -61,7 +69,7 @@ func (b *rule) Target(t string) {
 }
 
 func (b *rule) TargetExpr(f func(Expr)) {
-	e := expr{}
+	e := &expr{builder: b.builder}
 	f(e)
 	b.space()
 	b.r.Targets = append(b.r.Targets, e.e)
