@@ -1,9 +1,8 @@
 package builder
 
 import (
-	"go/token"
-
 	"github.com/unmango/go-make/ast"
+	"github.com/unmango/go-make/token"
 )
 
 type builder struct {
@@ -33,28 +32,29 @@ func (b *builder) text(t string) *ast.Text {
 	}
 }
 
-type File interface {
-	Start(token.Pos)
-	Rule(string, func(Rule))
-}
-
-type Rule interface {
-	Target(string)
-	TargetExpr(func(Expr))
-}
-
-type Expr interface {
-	VarRef(string)
-}
-
 type expr struct {
 	*builder
 	e ast.Expr
 }
 
 func (e *expr) VarRef(name string) {
+	dollar := e.nextPos()
+	_ = e.nextPos() // Open
+	_ = e.nextStr(name)
+	_ = e.nextPos() // Close
+
 	e.e = &ast.VarRef{
-		Dollar: e.nextPos(),
+		Dollar: dollar,
+		Open:   token.LBRACE,
+		Name:   name,
+		Close:  token.RBRACE,
+	}
+}
+
+func (e *expr) Text(t string) {
+	e.e = &ast.Text{
+		Value:    t,
+		ValuePos: e.nextStr(t),
 	}
 }
 
@@ -63,15 +63,10 @@ type rule struct {
 	r *ast.Rule
 }
 
-func (b *rule) Target(t string) {
+func (b *rule) Target(f func(Expr)) {
 	b.space()
-	b.r.Targets = append(b.r.Targets, b.text(t))
-}
-
-func (b *rule) TargetExpr(f func(Expr)) {
 	e := &expr{builder: b.builder}
 	f(e)
-	b.space()
 	b.r.Targets = append(b.r.Targets, e.e)
 }
 
@@ -80,8 +75,11 @@ type file struct {
 	f *ast.File
 }
 
-func (b *file) Rule(target string, f func(Rule)) {
-	r := &rule{b.builder, ast.NewRule(b.text(target), 0)}
+func (b *file) Rule(t func(Expr), f func(Rule)) {
+	e := &expr{builder: b.builder}
+	t(e)
+
+	r := &rule{b.builder, ast.NewRule(e.e, 0)}
 	f(r)
 	r.r.Colon = r.nextPos()
 	b.f.Contents = append(b.f.Contents, r.r)

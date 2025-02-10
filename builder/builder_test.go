@@ -10,6 +10,7 @@ import (
 	"github.com/unmango/go-make"
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/builder"
+	"github.com/unmango/go-make/builder/expr"
 	"github.com/unmango/go-make/token"
 )
 
@@ -27,7 +28,7 @@ var _ = Describe("Builder", func() {
 
 		It("should build a rule", func() {
 			f := builder.NewFile(token.Pos(1), func(f builder.File) {
-				f.Rule("target", builder.Noop)
+				f.Rule(expr.Text("target"), builder.Noop)
 			})
 
 			Expect(f).To(Equal(&ast.File{
@@ -46,8 +47,8 @@ var _ = Describe("Builder", func() {
 
 		It("should build a rule with multiple targets", func() {
 			f := builder.NewFile(token.Pos(1), func(f builder.File) {
-				f.Rule("target", func(r builder.Rule) {
-					r.Target("target2")
+				f.Rule(expr.Text("target"), func(r builder.Rule) {
+					r.Target(expr.Text("target2"))
 				})
 			})
 
@@ -67,27 +68,23 @@ var _ = Describe("Builder", func() {
 
 		It("should build a rule with a target expression", func() {
 			f := builder.NewFile(token.Pos(1), func(f builder.File) {
-				f.Rule("target", func(r builder.Rule) {
-					r.TargetExpr(func(e builder.Expr) {
-						e.VarRef("FOO")
-					})
-				})
+				f.Rule(expr.VarRef("FOO"), builder.Noop)
 			})
 
 			Expect(f).To(Equal(&ast.File{
 				FileStart: token.Pos(1),
-				FileEnd:   token.Pos(16),
+				FileEnd:   token.Pos(8),
 				Contents: []ast.Obj{&ast.Rule{
 					Targets: []ast.Expr{&ast.VarRef{
 						Dollar: token.Pos(1),
-						Open:   token.LPAREN,
+						Open:   token.LBRACE,
 						Name:   "FOO",
-						Close:  token.RPAREN,
+						Close:  token.RBRACE,
 					}},
-					Colon: token.Pos(15),
+					Colon: token.Pos(7),
 				}},
 			}))
-			ExpectFprintToEqual(f, "${FOO}:")
+			ExpectFprintToEqual(f, "${FOO}:\n")
 		})
 	})
 })
