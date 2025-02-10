@@ -115,6 +115,69 @@ var _ = Describe("Builder", func() {
 			ExpectFprintToEqual(f, "target ${FOO}:\n")
 		})
 	})
+
+	Describe("NewRule", func() {
+		It("should build a new Rule", func() {
+			r := builder.NewRule(token.Pos(1), expr.Text("target"))
+
+			Expect(r).To(Equal(&ast.Rule{
+				Targets: []ast.Expr{&ast.Text{
+					Value:    "target",
+					ValuePos: token.Pos(1),
+				}},
+				Colon: token.Pos(7),
+			}))
+			ExpectFprintToEqual(r, "target:\n")
+		})
+
+		It("should build a Rule with multiple targets", func() {
+			r := builder.NewRule(token.Pos(1),
+				expr.Text("target"),
+				rule.WithVarRefTarget("FOO"),
+			)
+
+			Expect(r).To(Equal(&ast.Rule{
+				Targets: []ast.Expr{
+					&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					},
+					&ast.VarRef{
+						Dollar: token.Pos(8),
+						Open:   token.LBRACE,
+						Name:   "FOO",
+						Close:  token.RBRACE,
+					},
+				},
+				Colon: token.Pos(14),
+			}))
+			ExpectFprintToEqual(r, "target ${FOO}:\n")
+		})
+	})
+
+	Describe("NewExpr", func() {
+		It("should build a Text expression", func() {
+			e := builder.NewExpr(token.Pos(1), expr.Text("test"))
+
+			Expect(e).To(Equal(&ast.Text{
+				Value:    "test",
+				ValuePos: token.Pos(1),
+			}))
+			ExpectFprintToEqual(e, "test")
+		})
+
+		It("should build a VarRef expression", func() {
+			e := builder.NewExpr(token.Pos(1), expr.VarRef("FOO"))
+
+			Expect(e).To(Equal(&ast.VarRef{
+				Dollar: token.Pos(1),
+				Open:   token.LBRACE,
+				Name:   "FOO",
+				Close:  token.RBRACE,
+			}))
+			ExpectFprintToEqual(e, "${FOO}")
+		})
+	})
 })
 
 func ExpectFprintToEqual(x any, text string) {
