@@ -21,3 +21,14 @@ func AtRule(node *ast.Rule, f RuleFunc) *ast.Rule {
 
 	return r.r
 }
+
+func copyRule(rule *ast.Rule, b Rule) {
+	for _, t := range rule.Targets {
+		switch n := t.(type) {
+		case *ast.Text:
+			b.Target(func(e Expr) {
+				e.Text(n.Value)
+			})
+		}
+	}
+}
