@@ -3,18 +3,18 @@ package builder
 import "github.com/unmango/go-make/token"
 
 type (
-	RuleBuilder = func(Rule)
-	ExprBuilder = func(Expr)
-	FileBuilder = func(File)
+	RuleFunc = func(Rule)
+	ExprFunc = func(Expr)
+	FileFunc = func(File)
 )
 
 type File interface {
 	Start(token.Pos)
-	Rule(ExprBuilder, ...RuleBuilder)
+	Rule(ExprFunc, ...RuleFunc)
 }
 
 type Rule interface {
-	Target(ExprBuilder)
+	Target(ExprFunc)
 }
 
 type Expr interface {

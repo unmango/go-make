@@ -5,7 +5,7 @@ import (
 	"github.com/unmango/go-make/token"
 )
 
-func AtRule(node *ast.Rule, f RuleBuilder) *ast.Rule {
+func AtRule(node *ast.Rule, f RuleFunc) *ast.Rule {
 	if node == nil {
 		return nil
 	}

@@ -23,7 +23,7 @@ type rule struct {
 	r *ast.Rule
 }
 
-func (b *rule) Target(f ExprBuilder) {
+func (b *rule) Target(f ExprFunc) {
 	if b.r != nil && len(b.r.Targets) > 0 {
 		b.space()
 	}
@@ -38,7 +38,7 @@ type file struct {
 	f *ast.File
 }
 
-func (b *file) Rule(t ExprBuilder, rs ...RuleBuilder) {
+func (b *file) Rule(t ExprFunc, rs ...RuleFunc) {
 	b.f.Contents = append(b.f.Contents,
 		newRule(b.builder, t, rs),
 	)
@@ -48,17 +48,17 @@ func (b *file) Start(pos token.Pos) {
 	b.f.FileStart = pos
 }
 
-func newExpr(b *builder, f ExprBuilder) ast.Expr {
+func newExpr(b *builder, f ExprFunc) ast.Expr {
 	e := &expr{builder: b}
 	f(e)
 	return e.e
 }
 
-func NewExpr(start token.Pos, f ExprBuilder) ast.Expr {
+func NewExpr(start token.Pos, f ExprFunc) ast.Expr {
 	return newExpr(&builder{start}, f)
 }
 
-func newRule(b *builder, e ExprBuilder, rs []RuleBuilder) *ast.Rule {
+func newRule(b *builder, e ExprFunc, rs []RuleFunc) *ast.Rule {
 	r := &rule{b, &ast.Rule{
 		Targets: []ast.Expr{newExpr(b, e)},
 	}}
@@ -70,11 +70,11 @@ func newRule(b *builder, e ExprBuilder, rs []RuleBuilder) *ast.Rule {
 	return r.r
 }
 
-func NewRule(start token.Pos, e ExprBuilder, rs ...RuleBuilder) *ast.Rule {
+func NewRule(start token.Pos, e ExprFunc, rs ...RuleFunc) *ast.Rule {
 	return newRule(&builder{start}, e, rs)
 }
 
-func NewFile(start token.Pos, fs ...FileBuilder) *ast.File {
+func NewFile(start token.Pos, fs ...FileFunc) *ast.File {
 	b := &file{&builder{start}, &ast.File{FileStart: start}}
 	for _, f := range fs {
 		f(b)
