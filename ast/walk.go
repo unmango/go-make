@@ -1,6 +1,9 @@
 package ast
 
-import "go/ast"
+import (
+	"go/ast"
+	"iter"
+)
 
 type Visitor = ast.Visitor
 
@@ -46,5 +49,32 @@ func Walk(v Visitor, node Node) {
 		Walk(v, n.Directive)
 		walkList(v, n.Text)
 		walkList(v, n.Else)
+	}
+}
+
+type inspector func(Node) bool
+
+// Visit implements ast.Visitor.
+func (i inspector) Visit(node ast.Node) (w ast.Visitor) {
+	if i(node) {
+		return i
+	} else {
+		return nil
+	}
+}
+
+func Inspect(node Node, f func(Node) bool) {
+	Walk(inspector(f), node)
+}
+
+func Preorder(root Node) iter.Seq[Node] {
+	return func(yield func(Node) bool) {
+		ok := true
+		Inspect(root, func(n Node) bool {
+			if n != nil {
+				ok = ok && yield(n)
+			}
+			return ok
+		})
 	}
 }
