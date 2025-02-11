@@ -170,3 +170,7 @@ Binaries are stored in a `.gitignore`d `bin/` directory at the root of the repos
 An example `.envrc` file for [direnv](https://github.com/direnv/direnv) is provided in [hack/example.envrc](./hack/example.envrc) to add `./bin` to your `PATH` automatically.
 To use it, run `make .envrc` or `make dev`.
 This will copy `hack/example.envrc` to `.envrc` at the root of the repository.
+
+## References
+
+GNU Make Quick Reference: <https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html>
