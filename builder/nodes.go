@@ -24,7 +24,10 @@ type rule struct {
 }
 
 func (b *rule) Target(f ExprBuilder) {
-	b.space()
+	if b.r != nil && len(b.r.Targets) > 0 {
+		b.space()
+	}
+
 	e := &expr{builder: b.builder}
 	f(e)
 	b.r.Targets = append(b.r.Targets, e.e)
