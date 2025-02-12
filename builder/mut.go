@@ -15,8 +15,12 @@ func AtRule(node *ast.Rule, f RuleFunc) *ast.Rule {
 		pos = node.Pos()
 	}
 
-	r := &rule{&builder{pos}, node}
-	f(r)
+	// apply the transformations from f to node
+	f(&rule{&builder{pos}, node})
+
+	// re-write node into a new rule to fix positions
+	r := &rule{&builder{pos}, &ast.Rule{}}
+	copyRule(node, r)
 	r.r.Colon = r.pos
 
 	return r.r
@@ -24,11 +28,13 @@ func AtRule(node *ast.Rule, f RuleFunc) *ast.Rule {
 
 func copyRule(rule *ast.Rule, b Rule) {
 	for _, t := range rule.Targets {
-		switch n := t.(type) {
-		case *ast.Text:
-			b.Target(func(e Expr) {
+		b.Target(func(e Expr) {
+			switch n := t.(type) {
+			case *ast.Text:
 				e.Text(n.Value)
-			})
-		}
+			case *ast.VarRef:
+				e.VarRef(n.Name)
+			}
+		})
 	}
 }
