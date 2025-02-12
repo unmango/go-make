@@ -2,10 +2,11 @@ package builder
 
 import (
 	"github.com/unmango/go-make/ast"
+	"github.com/unmango/go-make/builder/build"
 	"github.com/unmango/go-make/token"
 )
 
-func AtRule(node *ast.Rule, f RuleFunc) *ast.Rule {
+func AtRule(node *ast.Rule, f func(build.Rule)) *ast.Rule {
 	if node == nil {
 		return nil
 	}
@@ -26,9 +27,9 @@ func AtRule(node *ast.Rule, f RuleFunc) *ast.Rule {
 	return r.r
 }
 
-func copyRule(rule *ast.Rule, b Rule) {
+func copyRule(rule *ast.Rule, b build.Rule) {
 	for _, t := range rule.Targets {
-		b.Target(func(e Expr) {
+		b.Target(func(e build.Expr) {
 			switch n := t.(type) {
 			case *ast.Text:
 				e.Text(n.Value)
