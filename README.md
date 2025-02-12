@@ -79,6 +79,8 @@ n, err := w.WriteRule(&ast.Rule{})
 
 The `builder` package contains utilities for building AST nodes.
 
+🚧 This API is not stable yet 🚧
+
 ```go
 f := builder.NewFile(1,
   file.WithRule(expr.Text("target1"),
