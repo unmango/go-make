@@ -1,10 +1,14 @@
 package build
 
-import "go/token"
+import (
+	"github.com/unmango/go-make/ast"
+	"github.com/unmango/go-make/token"
+)
 
 type File interface {
+	Add(ast.Obj)
 	Start(token.Pos)
-	Rule(func(Expr), ...func(Rule))
+	Rule(target func(Expr), fs ...func(Rule))
 }
 
 type Rule interface {
@@ -12,6 +16,6 @@ type Rule interface {
 }
 
 type Expr interface {
-	Text(string)
-	VarRef(string)
+	Text(text string)
+	VarRef(name string)
 }
