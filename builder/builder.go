@@ -2,10 +2,17 @@ package builder
 
 import (
 	"github.com/unmango/go-make/ast"
+	"github.com/unmango/go-make/builder/build"
 	"github.com/unmango/go-make/token"
 )
 
 func Noop[T any](T) {}
+
+type (
+	File = build.File
+	Rule = build.Rule
+	Expr = build.Expr
+)
 
 type builder struct {
 	pos token.Pos

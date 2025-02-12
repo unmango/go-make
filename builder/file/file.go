@@ -1,9 +1,11 @@
 package file
 
-import "github.com/unmango/go-make/builder"
+import (
+	"github.com/unmango/go-make/builder/build"
+)
 
-func WithRule(e builder.ExprFunc, rs ...builder.RuleFunc) builder.FileFunc {
-	return func(f builder.File) {
+func WithRule(e func(build.Expr), rs ...func(build.Rule)) func(build.File) {
+	return func(f build.File) {
 		f.Rule(e, rs...)
 	}
 }
