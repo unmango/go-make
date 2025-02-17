@@ -10,12 +10,12 @@ import (
 	"github.com/unmango/go-make/token"
 )
 
-var _ = Describe("Mut", func() {
-	Describe("AtRule", func() {
+var _ = Describe("Apply", func() {
+	Describe("ApplyRule", func() {
 		It("should add a target", func() {
 			node := &ast.Rule{}
 
-			r := builder.AtRule(node, rule.WithTextTarget("target"))
+			r := builder.ApplyRule(node, rule.WithTextTarget("target"))
 
 			Expect(r).To(Equal(&ast.Rule{
 				Targets: []ast.Expr{
@@ -31,7 +31,7 @@ var _ = Describe("Mut", func() {
 					&ast.Text{Value: "target", ValuePos: token.Pos(1)},
 				}}
 
-				r := builder.AtRule(node, rule.WithTextTarget("target2"))
+				r := builder.ApplyRule(node, rule.WithTextTarget("target2"))
 
 				Expect(r).To(Equal(&ast.Rule{
 					Targets: []ast.Expr{
@@ -47,7 +47,7 @@ var _ = Describe("Mut", func() {
 					&ast.Text{Value: "target", ValuePos: token.Pos(69)},
 				}}
 
-				r := builder.AtRule(node, rule.WithTextTarget("target2"))
+				r := builder.ApplyRule(node, rule.WithTextTarget("target2"))
 
 				Expect(r).To(Equal(&ast.Rule{
 					Targets: []ast.Expr{
