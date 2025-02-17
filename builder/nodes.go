@@ -44,14 +44,23 @@ type file struct {
 	f *ast.File
 }
 
+func (b *file) insert(i int, obj ast.Obj) {
+	b.f.Contents = slices.Insert(b.f.Contents, i, obj)
+	for i := i; i < len(b.f.Contents); i++ {
+		switch n := b.f.Contents[i].(type) {
+		case *ast.Rule:
+			b.f.Contents[i] = ApplyRule(n, func(r build.Rule) {})
+		}
+	}
+}
+
 func (b *file) AddRule(fn func(build.Rule), fs ...func(build.Rule)) {
 	var o ast.Obj = newRule(b.builder, fn, fs)
 	b.f.Contents = append(b.f.Contents, o)
 }
 
 func (b *file) InsertRule(i int, fn func(build.Rule), fs ...func(build.Rule)) {
-	var o ast.Obj = newRule(b.builder, fn, fs)
-	b.f.Contents = slices.Insert(b.f.Contents, i, o)
+	b.insert(i, newRule(b.builder, fn, fs))
 }
 
 func (b *file) Start(pos token.Pos) {

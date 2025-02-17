@@ -10,6 +10,7 @@ import (
 	"github.com/unmango/go-make"
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/builder"
+	"github.com/unmango/go-make/builder/build"
 	"github.com/unmango/go-make/builder/expr"
 	"github.com/unmango/go-make/builder/file"
 	"github.com/unmango/go-make/builder/rule"
@@ -113,6 +114,51 @@ var _ = Describe("Nodes", func() {
 				}},
 			}))
 			ExpectFprintToEqual(f, "target ${FOO}:\n")
+		})
+
+		It("should insert a rule into an empty file", func() {
+			f := builder.NewFile(token.Pos(1), func(f build.File) {
+				f.InsertRule(0, rule.TextTarget("target"))
+			})
+
+			Expect(f).To(Equal(&ast.File{
+				FileStart: token.Pos(1),
+				FileEnd:   token.Pos(8),
+				Contents: []ast.Obj{&ast.Rule{
+					Targets: []ast.Expr{
+						&ast.Text{Value: "target", ValuePos: token.Pos(1)},
+					},
+					Colon: token.Pos(7),
+				}},
+			}))
+			ExpectFprintToEqual(f, "target:\n")
+		})
+
+		It("should insert a rule before an existing rule", func() {
+			f := builder.NewFile(token.Pos(1), func(f build.File) {
+				f.AddRule(rule.TextTarget("target"))
+				f.InsertRule(0, rule.TextTarget("target2"))
+			})
+
+			Expect(f).To(Equal(&ast.File{
+				FileStart: token.Pos(1),
+				FileEnd:   token.Pos(16),
+				Contents: []ast.Obj{
+					&ast.Rule{
+						Targets: []ast.Expr{
+							&ast.Text{Value: "target2", ValuePos: token.Pos(1)},
+						},
+						Colon: token.Pos(8),
+					},
+					&ast.Rule{
+						Targets: []ast.Expr{
+							&ast.Text{Value: "target", ValuePos: token.Pos(10)},
+						},
+						Colon: token.Pos(15),
+					},
+				},
+			}))
+			ExpectFprintToEqual(f, "target2:\ntarget:\n")
 		})
 	})
 
