@@ -15,7 +15,7 @@ var _ = Describe("Apply", func() {
 		It("should add a target", func() {
 			node := &ast.Rule{}
 
-			r := builder.ApplyRule(node, rule.WithTextTarget("target"))
+			r := builder.ApplyRule(node, rule.TextTarget("target"))
 
 			Expect(r).To(Equal(&ast.Rule{
 				Targets: []ast.Expr{
@@ -31,7 +31,7 @@ var _ = Describe("Apply", func() {
 					&ast.Text{Value: "target", ValuePos: token.Pos(1)},
 				}}
 
-				r := builder.ApplyRule(node, rule.WithTextTarget("target2"))
+				r := builder.ApplyRule(node, rule.TextTarget("target2"))
 
 				Expect(r).To(Equal(&ast.Rule{
 					Targets: []ast.Expr{
@@ -47,7 +47,7 @@ var _ = Describe("Apply", func() {
 					&ast.Text{Value: "target", ValuePos: token.Pos(69)},
 				}}
 
-				r := builder.ApplyRule(node, rule.WithTextTarget("target2"))
+				r := builder.ApplyRule(node, rule.TextTarget("target2"))
 
 				Expect(r).To(Equal(&ast.Rule{
 					Targets: []ast.Expr{

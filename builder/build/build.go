@@ -6,11 +6,12 @@ import (
 
 type File interface {
 	Start(token.Pos)
-	Rule(target func(Expr), fs ...func(Rule))
+	AddRule(func(Rule), ...func(Rule))
+	InsertRule(int, func(Rule), ...func(Rule))
 }
 
 type Rule interface {
-	Target(func(Expr))
+	Target(func(Expr), ...func(Expr))
 }
 
 type Expr interface {

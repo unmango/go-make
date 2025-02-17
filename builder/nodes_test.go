@@ -30,7 +30,7 @@ var _ = Describe("Nodes", func() {
 
 		It("should build a rule", func() {
 			f := builder.NewFile(token.Pos(1),
-				file.WithRule(expr.Text("target")),
+				file.Rule(rule.TextTarget("target")),
 			)
 
 			Expect(f).To(Equal(&ast.File{
@@ -49,8 +49,8 @@ var _ = Describe("Nodes", func() {
 
 		It("should build a rule with multiple targets", func() {
 			f := builder.NewFile(token.Pos(1),
-				file.WithRule(expr.Text("target"),
-					rule.WithTextTarget("target2"),
+				file.Rule(rule.TextTarget("target"),
+					rule.TextTarget("target2"),
 				),
 			)
 
@@ -70,7 +70,7 @@ var _ = Describe("Nodes", func() {
 
 		It("should build a rule with a target expression", func() {
 			f := builder.NewFile(token.Pos(1),
-				file.WithRule(expr.VarRef("FOO")),
+				file.Rule(rule.VarRefTarget("FOO")),
 			)
 
 			Expect(f).To(Equal(&ast.File{
@@ -91,8 +91,8 @@ var _ = Describe("Nodes", func() {
 
 		It("should build a rule with a second target expression", func() {
 			f := builder.NewFile(token.Pos(1),
-				file.WithRule(expr.Text("target"),
-					rule.WithVarRefTarget("FOO"),
+				file.Rule(rule.TextTarget("target"),
+					rule.VarRefTarget("FOO"),
 				),
 			)
 
@@ -118,7 +118,9 @@ var _ = Describe("Nodes", func() {
 
 	Describe("NewRule", func() {
 		It("should build a new Rule", func() {
-			r := builder.NewRule(token.Pos(1), expr.Text("target"))
+			r := builder.NewRule(token.Pos(1),
+				rule.TextTarget("target"),
+			)
 
 			Expect(r).To(Equal(&ast.Rule{
 				Targets: []ast.Expr{&ast.Text{
@@ -132,8 +134,8 @@ var _ = Describe("Nodes", func() {
 
 		It("should build a Rule with multiple targets", func() {
 			r := builder.NewRule(token.Pos(1),
-				expr.Text("target"),
-				rule.WithVarRefTarget("FOO"),
+				rule.TextTarget("target"),
+				rule.VarRefTarget("FOO"),
 			)
 
 			Expect(r).To(Equal(&ast.Rule{

@@ -1,6 +1,8 @@
 package builder
 
 import (
+	"slices"
+
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/builder/build"
 	"github.com/unmango/go-make/token"
@@ -24,13 +26,16 @@ type rule struct {
 	r *ast.Rule
 }
 
-func (b *rule) Target(f func(build.Expr)) {
+func (b *rule) Target(fn func(build.Expr), fs ...func(build.Expr)) {
 	if b.r != nil && len(b.r.Targets) > 0 {
 		b.space()
 	}
 
 	e := &expr{builder: b.builder}
-	f(e)
+	fn(e)
+	for _, f := range fs {
+		f(e)
+	}
 	b.r.Targets = append(b.r.Targets, e.e)
 }
 
@@ -39,10 +44,14 @@ type file struct {
 	f *ast.File
 }
 
-func (b *file) Rule(t func(build.Expr), rs ...func(build.Rule)) {
-	b.f.Contents = append(b.f.Contents,
-		newRule(b.builder, t, rs),
-	)
+func (b *file) AddRule(fn func(build.Rule), fs ...func(build.Rule)) {
+	var o ast.Obj = newRule(b.builder, fn, fs)
+	b.f.Contents = append(b.f.Contents, o)
+}
+
+func (b *file) InsertRule(i int, fn func(build.Rule), fs ...func(build.Rule)) {
+	var o ast.Obj = newRule(b.builder, fn, fs)
+	b.f.Contents = slices.Insert(b.f.Contents, i, o)
 }
 
 func (b *file) Start(pos token.Pos) {
@@ -59,11 +68,10 @@ func NewExpr(start token.Pos, f func(build.Expr)) ast.Expr {
 	return newExpr(&builder{start}, f)
 }
 
-func newRule(b *builder, e func(build.Expr), rs []func(build.Rule)) *ast.Rule {
-	r := &rule{b, &ast.Rule{
-		Targets: []ast.Expr{newExpr(b, e)},
-	}}
-	for _, f := range rs {
+func newRule(b *builder, fn func(build.Rule), fs []func(build.Rule)) *ast.Rule {
+	r := &rule{b, &ast.Rule{}}
+	fn(r)
+	for _, f := range fs {
 		f(r)
 	}
 
@@ -71,8 +79,8 @@ func newRule(b *builder, e func(build.Expr), rs []func(build.Rule)) *ast.Rule {
 	return r.r
 }
 
-func NewRule(start token.Pos, e func(build.Expr), rs ...func(build.Rule)) *ast.Rule {
-	return newRule(&builder{start}, e, rs)
+func NewRule(start token.Pos, fn func(build.Rule), fs ...func(build.Rule)) *ast.Rule {
+	return newRule(&builder{start}, fn, fs)
 }
 
 func NewFile(start token.Pos, fs ...func(build.File)) *ast.File {

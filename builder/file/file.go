@@ -4,8 +4,8 @@ import (
 	"github.com/unmango/go-make/builder/build"
 )
 
-func WithRule(e func(build.Expr), rs ...func(build.Rule)) func(build.File) {
+func Rule(fn func(build.Rule), fs ...func(build.Rule)) func(build.File) {
 	return func(f build.File) {
-		f.Rule(e, rs...)
+		f.AddRule(fn, fs...)
 	}
 }
