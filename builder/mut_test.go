@@ -41,6 +41,22 @@ var _ = Describe("Mut", func() {
 					Colon: token.Pos(15),
 				}))
 			})
+
+			It("should add a target with a different start", func() {
+				node := &ast.Rule{Targets: []ast.Expr{
+					&ast.Text{Value: "target", ValuePos: token.Pos(69)},
+				}}
+
+				r := builder.AtRule(node, rule.WithTextTarget("target2"))
+
+				Expect(r).To(Equal(&ast.Rule{
+					Targets: []ast.Expr{
+						&ast.Text{Value: "target", ValuePos: token.Pos(69)},
+						&ast.Text{Value: "target2", ValuePos: token.Pos(76)},
+					},
+					Colon: token.Pos(83),
+				}))
+			})
 		})
 	})
 })
