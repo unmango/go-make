@@ -2,17 +2,10 @@ package builder
 
 import (
 	"github.com/unmango/go-make/ast"
-	"github.com/unmango/go-make/builder/build"
 	"github.com/unmango/go-make/token"
 )
 
 func Noop[T any](T) {}
-
-type (
-	File = build.File
-	Rule = build.Rule
-	Expr = build.Expr
-)
 
 type builder struct {
 	pos token.Pos
@@ -53,4 +46,39 @@ func (b *builder) varRef(name string) *ast.VarRef {
 		Name:   name,
 		Close:  token.RBRACE,
 	}
+}
+
+type State interface {
+	Advance(n int) token.Pos
+	Increment() token.Pos
+}
+
+type state struct {
+	pos token.Pos
+}
+
+// Advance returns the current position and
+// increments the position by n
+func (s *state) Advance(n int) token.Pos {
+	pos := s.pos
+	s.pos += token.Pos(n)
+	return pos
+}
+
+// Increment returns the current position
+// and increments the position by 1
+func (s *state) Increment() token.Pos {
+	return s.Advance(1)
+}
+
+type Builder[T ast.Node] func(State) T
+
+type (
+	File Builder[*ast.File]
+	Rule Builder[*ast.Rule]
+	Expr Builder[ast.Expr]
+)
+
+func NewFile2(b File) *ast.File {
+	return b(&state{})
 }
