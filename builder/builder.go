@@ -48,19 +48,14 @@ func (b *builder) varRef(name string) *ast.VarRef {
 	}
 }
 
-type State interface {
-	Advance(n int) token.Pos
-	Increment() token.Pos
-}
-
-type state[T ast.Node] struct {
+type State[T ast.Node] struct {
 	pos  token.Pos
-	node T
+	Node T
 }
 
 // Advance returns the current position and
 // increments the position by n
-func (s *state[T]) Advance(n int) token.Pos {
+func (s *State[T]) Advance(n int) token.Pos {
 	pos := s.pos
 	s.pos += token.Pos(n)
 	return pos
@@ -68,28 +63,47 @@ func (s *state[T]) Advance(n int) token.Pos {
 
 // Increment returns the current position
 // and increments the position by 1
-func (s *state[T]) Increment() token.Pos {
+func (s *State[T]) Increment() token.Pos {
 	return s.Advance(1)
 }
 
-type Builder[T ast.Node] func(State) T
+type Builder[T ast.Node] = func(token.Pos, T)
 
 type (
-	File Builder[*ast.File]
-	Rule Builder[*ast.Rule]
-	Expr Builder[ast.Expr]
+	File = Builder[*ast.File]
+	Rule = Builder[*ast.Rule]
+	Expr = Builder[ast.Expr]
 )
 
 func NewFile2(builder ...File) *ast.File {
-	s := &state[*ast.File]{1, &ast.File{}}
+	var pos token.Pos = 1
+	file := &ast.File{}
 	for _, fn := range builder {
-		fn(s)
+		fn(pos, file)
+		pos = file.End()
 	}
-	return s.node
+
+	return file
 }
 
 func FileRule(builder ...Rule) File {
-	return func(s State) *ast.File {
-		return nil
+	return func(p token.Pos, f *ast.File) {
+		f.Contents = append(f.Contents, NewRule2(p, builder...))
+	}
+}
+
+func NewRule2(pos token.Pos, builder ...Rule) *ast.Rule {
+	rule := &ast.Rule{}
+	for _, fn := range builder {
+		fn(pos, rule)
+		pos = rule.End()
+	}
+
+	return rule
+}
+
+func RuleTargetText(name string) Rule {
+	return func(p token.Pos, r *ast.Rule) {
+		r.Targets = append(r.Targets, nil)
 	}
 }
