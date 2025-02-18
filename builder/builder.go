@@ -53,13 +53,14 @@ type State interface {
 	Increment() token.Pos
 }
 
-type state struct {
-	pos token.Pos
+type state[T ast.Node] struct {
+	pos  token.Pos
+	node T
 }
 
 // Advance returns the current position and
 // increments the position by n
-func (s *state) Advance(n int) token.Pos {
+func (s *state[T]) Advance(n int) token.Pos {
 	pos := s.pos
 	s.pos += token.Pos(n)
 	return pos
@@ -67,7 +68,7 @@ func (s *state) Advance(n int) token.Pos {
 
 // Increment returns the current position
 // and increments the position by 1
-func (s *state) Increment() token.Pos {
+func (s *state[T]) Increment() token.Pos {
 	return s.Advance(1)
 }
 
@@ -79,6 +80,16 @@ type (
 	Expr Builder[ast.Expr]
 )
 
-func NewFile2(b File) *ast.File {
-	return b(&state{})
+func NewFile2(builder ...File) *ast.File {
+	s := &state[*ast.File]{1, &ast.File{}}
+	for _, fn := range builder {
+		fn(s)
+	}
+	return s.node
+}
+
+func FileRule(builder ...Rule) File {
+	return func(s State) *ast.File {
+		return nil
+	}
 }
