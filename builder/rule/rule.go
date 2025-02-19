@@ -3,27 +3,10 @@ package rule
 import (
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/builder"
-	"github.com/unmango/go-make/builder/build"
+	"github.com/unmango/go-make/builder/expr"
+	"github.com/unmango/go-make/builder/text"
 	"github.com/unmango/go-make/token"
 )
-
-func Target(f func(build.Expr)) func(build.Rule) {
-	return func(r build.Rule) {
-		r.Target(f)
-	}
-}
-
-func TextTarget(text string) func(build.Rule) {
-	return Target(func(e build.Expr) {
-		e.Text(text)
-	})
-}
-
-func VarRefTarget(name string) func(build.Rule) {
-	return Target(func(e build.Expr) {
-		e.VarRef(name)
-	})
-}
 
 func New(pos token.Pos, builder ...builder.Rule) *ast.Rule {
 	rule := &ast.Rule{}
@@ -34,14 +17,45 @@ func New(pos token.Pos, builder ...builder.Rule) *ast.Rule {
 	return rule
 }
 
-func AddTarget(expr func(token.Pos) ast.Expr) builder.Rule {
+func Target(expr func(token.Pos) ast.Expr) builder.Rule {
 	return func(p token.Pos, r *ast.Rule) {
 		r.Targets = append(r.Targets, expr(p))
 	}
 }
 
-func AddTextTarget(builder ...builder.Text) builder.Rule {
-	return AddTarget(func(p token.Pos) ast.Expr {
-		return &ast.Text{} // text.New(p, builder...)
+func TextTarget(value string) builder.Rule {
+	return Target(func(p token.Pos) ast.Expr {
+		return text.New(p, text.Value(value))
 	})
+}
+
+// func Copy(rule *ast.Rule) builder.Rule {
+// 	return func(p token.Pos, r *ast.Rule) {
+// 		for _, t := range rule.Targets {
+
+// 		}
+// 	}
+// }
+
+func Flat(builders []builder.Rule) builder.Rule {
+	return func(p token.Pos, r *ast.Rule) {
+		for _, b := range builders {
+			b(p, r)
+		}
+	}
+}
+
+func RePos(pos token.Pos, rule *ast.Rule) {
+	for _, t := range rule.Targets {
+		expr.RePos(pos, t)
+		pos = t.End() + 1
+	}
+
+	rule.Colon = pos + 1
+	pos += 2
+
+	for _, p := range rule.PreReqs {
+		expr.RePos(pos, p)
+		pos = p.End()
+	}
 }

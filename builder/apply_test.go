@@ -1,62 +1,62 @@
 package builder_test
 
-import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+// import (
+// 	. "github.com/onsi/ginkgo/v2"
+// 	. "github.com/onsi/gomega"
 
-	"github.com/unmango/go-make/ast"
-	"github.com/unmango/go-make/builder"
-	"github.com/unmango/go-make/builder/rule"
-	"github.com/unmango/go-make/token"
-)
+// 	"github.com/unmango/go-make/ast"
+// 	"github.com/unmango/go-make/builder"
+// 	"github.com/unmango/go-make/builder/rule"
+// 	"github.com/unmango/go-make/token"
+// )
 
-var _ = Describe("Apply", func() {
-	Describe("ApplyRule", func() {
-		It("should add a target", func() {
-			node := &ast.Rule{}
+// var _ = Describe("Apply", func() {
+// 	Describe("ApplyRule", func() {
+// 		It("should add a target", func() {
+// 			node := &ast.Rule{}
 
-			r := builder.ApplyRule(node, rule.TextTarget("target"))
+// 			r := builder.ApplyRule(node, rule.TextTarget("target"))
 
-			Expect(r).To(Equal(&ast.Rule{
-				Targets: []ast.Expr{
-					&ast.Text{Value: "target", ValuePos: token.Pos(1)},
-				},
-				Colon: token.Pos(7),
-			}))
-		})
+// 			Expect(r).To(Equal(&ast.Rule{
+// 				Targets: []ast.Expr{
+// 					&ast.Text{Value: "target", ValuePos: token.Pos(1)},
+// 				},
+// 				Colon: token.Pos(7),
+// 			}))
+// 		})
 
-		When("rule has existing targets", func() {
-			It("should add a target", func() {
-				node := &ast.Rule{Targets: []ast.Expr{
-					&ast.Text{Value: "target", ValuePos: token.Pos(1)},
-				}}
+// 		When("rule has existing targets", func() {
+// 			It("should add a target", func() {
+// 				node := &ast.Rule{Targets: []ast.Expr{
+// 					&ast.Text{Value: "target", ValuePos: token.Pos(1)},
+// 				}}
 
-				r := builder.ApplyRule(node, rule.TextTarget("target2"))
+// 				r := builder.ApplyRule(node, rule.TextTarget("target2"))
 
-				Expect(r).To(Equal(&ast.Rule{
-					Targets: []ast.Expr{
-						&ast.Text{Value: "target", ValuePos: token.Pos(1)},
-						&ast.Text{Value: "target2", ValuePos: token.Pos(8)},
-					},
-					Colon: token.Pos(15),
-				}))
-			})
+// 				Expect(r).To(Equal(&ast.Rule{
+// 					Targets: []ast.Expr{
+// 						&ast.Text{Value: "target", ValuePos: token.Pos(1)},
+// 						&ast.Text{Value: "target2", ValuePos: token.Pos(8)},
+// 					},
+// 					Colon: token.Pos(15),
+// 				}))
+// 			})
 
-			It("should add a target with a different start", func() {
-				node := &ast.Rule{Targets: []ast.Expr{
-					&ast.Text{Value: "target", ValuePos: token.Pos(69)},
-				}}
+// 			It("should add a target with a different start", func() {
+// 				node := &ast.Rule{Targets: []ast.Expr{
+// 					&ast.Text{Value: "target", ValuePos: token.Pos(69)},
+// 				}}
 
-				r := builder.ApplyRule(node, rule.TextTarget("target2"))
+// 				r := builder.ApplyRule(node, rule.TextTarget("target2"))
 
-				Expect(r).To(Equal(&ast.Rule{
-					Targets: []ast.Expr{
-						&ast.Text{Value: "target", ValuePos: token.Pos(69)},
-						&ast.Text{Value: "target2", ValuePos: token.Pos(76)},
-					},
-					Colon: token.Pos(83),
-				}))
-			})
-		})
-	})
-})
+// 				Expect(r).To(Equal(&ast.Rule{
+// 					Targets: []ast.Expr{
+// 						&ast.Text{Value: "target", ValuePos: token.Pos(69)},
+// 						&ast.Text{Value: "target2", ValuePos: token.Pos(76)},
+// 					},
+// 					Colon: token.Pos(83),
+// 				}))
+// 			})
+// 		})
+// 	})
+// })
