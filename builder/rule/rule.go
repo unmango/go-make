@@ -52,6 +52,10 @@ func TextTarget(value string) builder.Rule {
 	})
 }
 
+func InsertTarget(r *ast.Rule, i int, builder ...builder.Expr) {
+
+}
+
 func Copy(pos token.Pos, r *ast.Rule) *ast.Rule {
 	rule := &ast.Rule{}
 	for _, t := range r.Targets {
