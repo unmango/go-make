@@ -28,20 +28,6 @@ func Rule(builder ...builder.Rule) builder.File {
 	}
 }
 
-// func InsertRule(i int, builder ...builder.Rule) builder.File {
-// 	return func(p token.Pos, f *ast.File) {
-// 		var r ast.Obj = rule.New(p, builder...)
-// 		f.Contents = slices.Insert(f.Contents, i, r)
-
-// 		for _, n := range f.Contents[i:] {
-// 			switch n := n.(type) {
-// 			case *ast.Rule:
-// 				rule.RePos(1, n)
-// 			}
-// 		}
-// 	}
-// }
-
 func InsertRule(f *ast.File, i int, builder ...builder.Rule) {
 	var pos token.Pos
 	contents := []ast.Obj{}

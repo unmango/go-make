@@ -48,15 +48,6 @@ func TextTarget(value string) builder.Rule {
 	})
 }
 
-// func Copy(r *ast.Rule) builder.Rule {
-// 	builders := []builder.Rule{}
-// 	for _, t := range r.Targets {
-// 		builders = append(builders, Target(expr.Copy(t)))
-// 	}
-
-//		return builder.Flat(builders)
-//	}
-
 func Copy(pos token.Pos, r *ast.Rule) *ast.Rule {
 	rule := &ast.Rule{}
 	for _, t := range r.Targets {
@@ -96,19 +87,4 @@ func Copy(pos token.Pos, r *ast.Rule) *ast.Rule {
 	}
 
 	return rule
-}
-
-func RePos(pos token.Pos, rule *ast.Rule) {
-	for _, t := range rule.Targets {
-		expr.RePos(pos, t)
-		pos = t.End() + 1
-	}
-
-	rule.Colon = pos
-	pos += 2
-
-	for _, p := range rule.PreReqs {
-		expr.RePos(pos, p)
-		pos = p.End()
-	}
 }

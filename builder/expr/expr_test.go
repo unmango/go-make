@@ -1,8 +1,6 @@
 package expr_test
 
 import (
-	"go/token"
-
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -11,12 +9,13 @@ import (
 )
 
 var _ = Describe("Expr", func() {
-	Describe("RePos", func() {
-		It("shoudl reposition text", func() {
+	Describe("Copy", func() {
+		It("shoudl copy text", func() {
 			t := text.New(1)
-			expr.RePos(2, t)
 
-			Expect(t.Pos()).To(Equal(token.Pos(2)))
+			actual := expr.Copy(2, t)
+
+			Expect(actual).To(Equal(text.Copy(2, t)))
 		})
 	})
 })

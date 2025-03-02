@@ -28,7 +28,3 @@ func Copy(pos token.Pos, text *ast.Text) *ast.Text {
 		ValuePos: pos,
 	}
 }
-
-func RePos(pos token.Pos, text *ast.Text) {
-	text.ValuePos = pos
-}

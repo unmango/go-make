@@ -16,13 +16,4 @@ var _ = Describe("Text", func() {
 			Expect(t.Pos()).To(Equal(token.Pos(1)))
 		})
 	})
-
-	Describe("RePos", func() {
-		It("should work", func() {
-			t := text.New(1)
-			text.RePos(2, t)
-
-			Expect(t.Pos()).To(Equal(token.Pos(2)))
-		})
-	})
 })
