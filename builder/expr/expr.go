@@ -27,14 +27,23 @@ import (
 // 	}
 // }
 
-func Copy(expr ast.Expr) func(token.Pos) ast.Expr {
-	return func(p token.Pos) ast.Expr {
-		switch n := expr.(type) {
-		case *ast.Text:
-			return text.Copy(p, n)
-		default:
-			panic("unsupported node type")
-		}
+// func Copy(expr ast.Expr) func(token.Pos) ast.Expr {
+// 	return func(p token.Pos) ast.Expr {
+// 		switch n := expr.(type) {
+// 		case *ast.Text:
+// 			return text.Copy(p, n)
+// 		default:
+// 			panic("unsupported node type")
+// 		}
+// 	}
+// }
+
+func Copy(pos token.Pos, expr ast.Expr) ast.Expr {
+	switch n := expr.(type) {
+	case *ast.Text:
+		return text.Copy(pos, n)
+	default:
+		panic("unsupported node type")
 	}
 }
 

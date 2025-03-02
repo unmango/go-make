@@ -23,7 +23,7 @@ var _ = Describe("File", func() {
 					rule.New(1, rule.TextTarget("target")),
 					rule.New(9, rule.TextTarget("target2")),
 				},
-				FileEnd: 15,
+				FileEnd: 18,
 			}))
 		})
 	})
@@ -40,25 +40,11 @@ var _ = Describe("File", func() {
 			Expect(f).To(Equal(&ast.File{
 				FileStart: 1,
 				Contents: []ast.Obj{
-					&ast.Rule{
-						Targets: []ast.Expr{
-							&ast.Text{Value: "target", ValuePos: 1},
-						},
-						Colon: 7,
-					},
-					&ast.Rule{
-						Targets: []ast.Expr{
-							&ast.Text{Value: "target2", ValuePos: 9},
-						},
-						Colon: 15,
-					},
-					&ast.Rule{
-						Targets: []ast.Expr{
-							&ast.Text{Value: "target3", ValuePos: 17},
-						},
-						Colon: 24,
-					},
+					rule.New(1, rule.TextTarget("target")),
+					rule.New(9, rule.TextTarget("target2")),
+					rule.New(18, rule.TextTarget("target3")),
 				},
+				FileEnd: 26,
 			}))
 		})
 	})

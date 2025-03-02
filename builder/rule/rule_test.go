@@ -40,6 +40,78 @@ var _ = Describe("Rule", func() {
 		})
 	})
 
+	Describe("Copy", func() {
+		It("should copy an empty rule", func() {
+			r := rule.New(1)
+
+			actual := rule.Copy(2, r)
+
+			Expect(actual).To(Equal(&ast.Rule{
+				Colon: 2,
+			}))
+		})
+
+		It("should copy a rule with a target", func() {
+			r := rule.New(1, rule.TextTarget("test"))
+
+			actual := rule.Copy(2, r)
+
+			Expect(actual).To(Equal(&ast.Rule{
+				Targets: []ast.Expr{
+					&ast.Text{Value: "test", ValuePos: 2},
+				},
+				Colon: 6,
+			}))
+		})
+
+		It("should copy a rule with multiple targets", func() {
+			r := rule.New(1,
+				rule.TextTarget("test"),
+				rule.TextTarget("test2"),
+			)
+
+			actual := rule.Copy(2, r)
+
+			Expect(actual).To(Equal(&ast.Rule{
+				Targets: []ast.Expr{
+					&ast.Text{Value: "test", ValuePos: 2},
+					&ast.Text{Value: "test2", ValuePos: 7},
+				},
+				Colon: 12,
+			}))
+		})
+
+		It("should copy a rule with a pre-requisite", func() {
+			r := rule.New(1, rule.TextPreReq("test"))
+
+			actual := rule.Copy(2, r)
+
+			Expect(actual).To(Equal(&ast.Rule{
+				Colon: 2,
+				PreReqs: []ast.Expr{
+					&ast.Text{Value: "test", ValuePos: 4},
+				},
+			}))
+		})
+
+		It("should copy a rule with multiple pre-requisites", func() {
+			r := rule.New(1,
+				rule.TextPreReq("test"),
+				rule.TextPreReq("test2"),
+			)
+
+			actual := rule.Copy(2, r)
+
+			Expect(actual).To(Equal(&ast.Rule{
+				Colon: 2,
+				PreReqs: []ast.Expr{
+					&ast.Text{Value: "test", ValuePos: 4},
+					&ast.Text{Value: "test2", ValuePos: 9},
+				},
+			}))
+		})
+	})
+
 	Describe("RePos", Pending, func() {
 		It("should reposition a rule with a text target", func() {
 			r := rule.New(1, rule.TextTarget("test"))
