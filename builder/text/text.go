@@ -22,6 +22,13 @@ func Value(text string) builder.Text {
 	}
 }
 
+func Copy(pos token.Pos, text *ast.Text) *ast.Text {
+	return &ast.Text{
+		Value:    text.Value,
+		ValuePos: pos,
+	}
+}
+
 func RePos(pos token.Pos, text *ast.Text) {
 	text.ValuePos = pos
 }

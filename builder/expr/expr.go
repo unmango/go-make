@@ -18,6 +18,26 @@ import (
 // 	}
 // }
 
+// func Copy(expr ast.Expr) builder.Expr {
+// 	switch n := expr.(type) {
+// 	case *ast.Text:
+// 		return upcast(text.Copy(n))
+// 	default:
+// 		return builder.NoOp
+// 	}
+// }
+
+func Copy(expr ast.Expr) func(token.Pos) ast.Expr {
+	return func(p token.Pos) ast.Expr {
+		switch n := expr.(type) {
+		case *ast.Text:
+			return text.Copy(p, n)
+		default:
+			panic("unsupported node type")
+		}
+	}
+}
+
 func RePos(pos token.Pos, expr ast.Expr) {
 	switch n := expr.(type) {
 	case *ast.Text:

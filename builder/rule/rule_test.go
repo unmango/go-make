@@ -26,5 +26,30 @@ var _ = Describe("Rule", func() {
 
 			Expect(r).To(BeIdenticalTo(expected))
 		})
+
+		It("should position the colon", func() {
+			r := rule.New(1)
+
+			Expect(r.Colon).To(Equal(token.Pos(1)))
+		})
+	})
+
+	Describe("RePos", func() {
+		It("should reposition a rule with a text target", func() {
+			r := rule.New(1, rule.TextTarget("test"))
+			rule.RePos(2, r)
+
+			Expect(r.Pos()).To(Equal(token.Pos(2)))
+			Expect(r.Targets[0].Pos()).To(Equal(token.Pos(2)))
+			Expect(r.Colon).To(Equal(token.Pos(6)))
+		})
+
+		It("should reposition a rule with a text prereq", func() {
+			r := rule.New(1, rule.TextTarget("test"), rule.TextPreReq("test"))
+			rule.RePos(2, r)
+
+			Expect(r.Pos()).To(Equal(token.Pos(2)))
+			Expect(r.Targets[0].Pos()).To(Equal(token.Pos(2)))
+		})
 	})
 })

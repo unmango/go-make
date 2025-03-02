@@ -14,7 +14,25 @@ func New(pos token.Pos, builder ...builder.Rule) *ast.Rule {
 		fn(pos, rule)
 	}
 
+	if n := len(rule.Targets); n > 0 {
+		rule.Colon = rule.Targets[n-1].End() + 1
+	} else {
+		rule.Colon = pos
+	}
+
 	return rule
+}
+
+func PreReq(expr func(token.Pos) ast.Expr) builder.Rule {
+	return func(p token.Pos, r *ast.Rule) {
+		r.PreReqs = append(r.PreReqs, expr(p))
+	}
+}
+
+func TextPreReq(value string) builder.Rule {
+	return PreReq(func(p token.Pos) ast.Expr {
+		return text.New(p, text.Value(value))
+	})
 }
 
 func Target(expr func(token.Pos) ast.Expr) builder.Rule {
@@ -29,20 +47,13 @@ func TextTarget(value string) builder.Rule {
 	})
 }
 
-// func Copy(rule *ast.Rule) builder.Rule {
-// 	return func(p token.Pos, r *ast.Rule) {
-// 		for _, t := range rule.Targets {
-
-// 		}
-// 	}
-// }
-
-func Flat(builders []builder.Rule) builder.Rule {
-	return func(p token.Pos, r *ast.Rule) {
-		for _, b := range builders {
-			b(p, r)
-		}
+func Copy(r *ast.Rule) builder.Rule {
+	builders := []builder.Rule{}
+	for _, t := range r.Targets {
+		builders = append(builders, Target(expr.Copy(t)))
 	}
+
+	return builder.Flat(builders)
 }
 
 func RePos(pos token.Pos, rule *ast.Rule) {
@@ -51,7 +62,7 @@ func RePos(pos token.Pos, rule *ast.Rule) {
 		pos = t.End() + 1
 	}
 
-	rule.Colon = pos + 1
+	rule.Colon = pos
 	pos += 2
 
 	for _, p := range rule.PreReqs {

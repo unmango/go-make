@@ -35,3 +35,17 @@ func NewRule(pos token.Pos, builder ...Rule) *ast.Rule {
 
 	return rule
 }
+
+func Flat[T ast.Node](builders []Builder[T]) Builder[T] {
+	return func(p token.Pos, t T) {
+		for _, build := range builders {
+			build(p, t)
+		}
+	}
+}
+
+func RePos(pos token.Pos, node ast.Node) {
+	
+}
+
+func NoOp[T ast.Node](token.Pos, T) {}
