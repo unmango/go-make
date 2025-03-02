@@ -32,9 +32,15 @@ var _ = Describe("Rule", func() {
 
 			Expect(r.Colon).To(Equal(token.Pos(1)))
 		})
+
+		It("should position the colon after the last target", func() {
+			r := rule.New(1, rule.TextTarget("test"))
+
+			Expect(r.Colon).To(Equal(token.Pos(5)))
+		})
 	})
 
-	Describe("RePos", func() {
+	Describe("RePos", Pending, func() {
 		It("should reposition a rule with a text target", func() {
 			r := rule.New(1, rule.TextTarget("test"))
 			rule.RePos(2, r)

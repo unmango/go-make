@@ -15,7 +15,7 @@ func New(pos token.Pos, builder ...builder.Rule) *ast.Rule {
 	}
 
 	if n := len(rule.Targets); n > 0 {
-		rule.Colon = rule.Targets[n-1].End() + 1
+		rule.Colon = rule.Targets[n-1].End()
 	} else {
 		rule.Colon = pos
 	}
