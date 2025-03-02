@@ -20,8 +20,9 @@ var _ = Describe("Rule", func() {
 		It("should apply the given builders", func() {
 			var expected *ast.Rule
 
-			r := rule.New(1, func(p token.Pos, r *ast.Rule) {
+			r := rule.New(1, func(p token.Pos, r *ast.Rule) token.Pos {
 				expected = r
+				return p
 			})
 
 			Expect(r).To(BeIdenticalTo(expected))

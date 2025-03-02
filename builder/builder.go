@@ -5,7 +5,7 @@ import (
 	"github.com/unmango/go-make/token"
 )
 
-type Builder[T ast.Node] = func(token.Pos, T)
+type Builder[T ast.Node] = func(token.Pos, T) token.Pos
 
 type (
 	File   = Builder[*ast.File]
@@ -16,11 +16,15 @@ type (
 )
 
 func Flat[T ast.Node](builders []Builder[T]) Builder[T] {
-	return func(p token.Pos, t T) {
+	return func(p token.Pos, t T) token.Pos {
 		for _, build := range builders {
-			build(p, t)
+			p = build(p, t)
 		}
+
+		return p
 	}
 }
 
-func NoOp[T ast.Node](token.Pos, T) {}
+func NoOp[T ast.Node](pos token.Pos, _ T) token.Pos {
+	return pos
+}
