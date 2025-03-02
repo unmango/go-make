@@ -9,16 +9,17 @@ import (
 func New(pos token.Pos, builder ...builder.Text) *ast.Text {
 	text := &ast.Text{ValuePos: pos}
 	for _, fn := range builder {
-		fn(pos, text)
+		pos = fn(pos, text)
 	}
 
 	return text
 }
 
 func Value(text string) builder.Text {
-	return func(p token.Pos, t *ast.Text) {
+	return func(p token.Pos, t *ast.Text) token.Pos {
 		t.Value = text
 		t.ValuePos = p
+		return t.End()
 	}
 }
 

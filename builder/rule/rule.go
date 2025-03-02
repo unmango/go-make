@@ -25,8 +25,10 @@ func New(pos token.Pos, builder ...builder.Rule) *ast.Rule {
 }
 
 func PreReq(expr func(token.Pos) ast.Expr) builder.Rule {
-	return func(p token.Pos, r *ast.Rule) {
-		r.PreReqs = append(r.PreReqs, expr(p))
+	return func(pos token.Pos, r *ast.Rule) token.Pos {
+		p := expr(pos)
+		r.PreReqs = append(r.PreReqs, p)
+		return p.End()
 	}
 }
 
@@ -37,8 +39,10 @@ func TextPreReq(value string) builder.Rule {
 }
 
 func Target(expr func(token.Pos) ast.Expr) builder.Rule {
-	return func(p token.Pos, r *ast.Rule) {
-		r.Targets = append(r.Targets, expr(p))
+	return func(p token.Pos, r *ast.Rule) token.Pos {
+		t := expr(p)
+		r.Targets = append(r.Targets, t)
+		return t.End()
 	}
 }
 

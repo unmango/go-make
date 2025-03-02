@@ -11,11 +11,7 @@ import (
 func New(pos token.Pos, builder ...builder.File) *ast.File {
 	file := &ast.File{FileStart: pos}
 	for _, fn := range builder {
-		fn(pos, file)
-
-		if n := len(file.Contents); n > 0 {
-			pos = file.Contents[n-1].End() + 1 // Obj.End() + /n
-		}
+		pos = fn(pos, file) + 1 // \n
 	}
 
 	file.FileEnd = pos
@@ -23,8 +19,10 @@ func New(pos token.Pos, builder ...builder.File) *ast.File {
 }
 
 func Rule(builder ...builder.Rule) builder.File {
-	return func(p token.Pos, f *ast.File) {
-		f.Contents = append(f.Contents, rule.New(p, builder...))
+	return func(p token.Pos, f *ast.File) token.Pos {
+		r := rule.New(p, builder...)
+		f.Contents = append(f.Contents, r)
+		return r.End()
 	}
 }
 
