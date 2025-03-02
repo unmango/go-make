@@ -114,7 +114,17 @@ func (r *Rule) Pos() token.Pos {
 
 // End implements Node
 func (r *Rule) End() token.Pos {
-	return r.Recipes[len(r.Recipes)-1].End()
+	if n := len(r.Recipes); n > 0 {
+		return r.Recipes[n-1].End()
+	}
+	if n := len(r.OrderPreReqs); n > 0 {
+		return r.OrderPreReqs[n-1].End()
+	}
+	if n := len(r.PreReqs); n > 0 {
+		return r.PreReqs[n-1].End()
+	}
+
+	return r.Colon + 1
 }
 
 // Text represents a string of text that has no special meaning to make.

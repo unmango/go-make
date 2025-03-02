@@ -98,13 +98,37 @@ var _ = Describe("Ast", func() {
 			Expect(c.Pos()).To(Equal(token.Pos(69)))
 		})
 
+		It("should return the position after the colon", func() {
+			r := &ast.Rule{
+				Targets: []ast.Expr{&ast.Text{Value: "test"}},
+				Colon:   5,
+			}
+
+			Expect(r.End()).To(Equal(token.Pos(6)))
+		})
+
+		It("should return the position after the final pre-requisite", func() {
+			p := &ast.Text{Value: "test", ValuePos: 3}
+			r := &ast.Rule{PreReqs: []ast.Expr{p}}
+
+			Expect(r.End()).To(Equal(p.End()))
+		})
+
+		It("should return the position after the final order-only pre-requisite", func() {
+			p := &ast.Text{Value: "test", ValuePos: 5}
+			r := &ast.Rule{OrderPreReqs: []ast.Expr{p}}
+
+			Expect(r.End()).To(Equal(p.End()))
+		})
+
 		It("should return the position after the final recipe", func() {
-			c := &ast.Rule{Recipes: []*ast.Recipe{{
+			r := &ast.Recipe{
 				PrefixPos: token.Pos(420),
 				Text:      ast.Text{Value: "some text"},
-			}}}
+			}
+			c := &ast.Rule{Recipes: []*ast.Recipe{r}}
 
-			Expect(c.End()).To(Equal(token.Pos(429)))
+			Expect(c.End()).To(Equal(r.End()))
 		})
 	})
 
