@@ -39,6 +39,41 @@ var _ = Describe("Rule", func() {
 
 			Expect(r.Colon).To(Equal(token.Pos(5)))
 		})
+
+		It("should build multiple targets", func() {
+			r := rule.New(1,
+				rule.TextTarget("test"),
+				rule.TextTarget("test2"),
+			)
+
+			Expect(r).To(Equal(&ast.Rule{
+				Targets: []ast.Expr{
+					&ast.Text{Value: "test", ValuePos: 1},
+					&ast.Text{Value: "test2", ValuePos: 6},
+				},
+				Colon: 11,
+			}))
+		})
+	})
+
+	Describe("InsertTarget", func() {
+		It("should work", func() {
+			r := rule.New(1,
+				rule.TextTarget("test"),
+				rule.TextTarget("test3"),
+			)
+
+			rule.InsertTarget(r, 1)
+
+			Expect(r).To(Equal(&ast.Rule{
+				Targets: []ast.Expr{
+					&ast.Text{Value: "test", ValuePos: 1},
+					&ast.Text{Value: "test2", ValuePos: 6},
+					&ast.Text{Value: "test3", ValuePos: 12},
+				},
+				Colon: 17,
+			}))
+		})
 	})
 
 	Describe("Copy", func() {
