@@ -2,55 +2,25 @@ package builder
 
 import (
 	"github.com/unmango/go-make/ast"
-	"github.com/unmango/go-make/builder/build"
 	"github.com/unmango/go-make/token"
 )
 
-func Noop[T any](T) {}
+type Builder[T ast.Node] = func(token.Pos, T)
 
 type (
-	File = build.File
-	Rule = build.Rule
-	Expr = build.Expr
+	File   = Builder[*ast.File]
+	Rule   = Builder[*ast.Rule]
+	Expr   = Builder[ast.Expr]
+	Text   = Builder[*ast.Text]
+	VarRef = Builder[*ast.VarRef]
 )
 
-type builder struct {
-	pos token.Pos
-}
-
-func (b *builder) nextPos() token.Pos {
-	pos := b.pos
-	b.pos++
-	return pos
-}
-
-func (b *builder) nextStr(s string) token.Pos {
-	pos := b.pos
-	b.pos += token.Pos(len(s))
-	return pos
-}
-
-func (b *builder) space() {
-	_ = b.nextPos()
-}
-
-func (b *builder) text(t string) *ast.Text {
-	return &ast.Text{
-		Value:    t,
-		ValuePos: b.nextStr(t),
+func Flat[T ast.Node](builders []Builder[T]) Builder[T] {
+	return func(p token.Pos, t T) {
+		for _, build := range builders {
+			build(p, t)
+		}
 	}
 }
 
-func (b *builder) varRef(name string) *ast.VarRef {
-	dollar := b.nextPos()
-	_ = b.nextPos() // Open
-	_ = b.nextStr(name)
-	_ = b.nextPos() // Close
-
-	return &ast.VarRef{
-		Dollar: dollar,
-		Open:   token.LBRACE,
-		Name:   name,
-		Close:  token.RBRACE,
-	}
-}
+func NoOp[T ast.Node](token.Pos, T) {}
