@@ -12,7 +12,7 @@ import (
 func New(pos token.Pos, builder ...builder.Rule) *ast.Rule {
 	rule := &ast.Rule{}
 	for _, fn := range builder {
-		fn(pos, rule)
+		pos = fn(pos, rule) + 1
 	}
 
 	if n := len(rule.Targets); n > 0 {
