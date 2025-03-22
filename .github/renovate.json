@@ -3,5 +3,6 @@
   "extends": [
     "config:recommended",
     "github>UnstoppableMango/renovate-config"
-  ]
+  ],
+  "automerge": true
 }
