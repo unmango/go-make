@@ -7,10 +7,9 @@ tool (
 	github.com/unmango/devctl
 )
 
-
 require (
-	github.com/onsi/ginkgo/v2 v2.23.0
-	github.com/onsi/gomega v1.36.2
+	github.com/onsi/ginkgo/v2 v2.23.3
+	github.com/onsi/gomega v1.36.3
 	github.com/unmango/go v0.3.0
 )
 
