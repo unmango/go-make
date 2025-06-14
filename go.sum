@@ -81,6 +81,8 @@ github.com/unmango/devctl v0.1.6/go.mod h1:wPaDpUt2HMjYAxYePi419BMB1TZ7UoZ1Atj1W
 github.com/unmango/devctl v0.1.7/go.mod h1:VQ6OmiM4AfWuXR7huZPkARrUyKX5OJmDiJxZsqfrFG8=
 github.com/unmango/go v0.3.0 h1:0udbxchqbmVa6UiqIti7UU1bq3YNjR900kcYNmcxvG8=
 github.com/unmango/go v0.3.0/go.mod h1:4naCo6n5yEyN17iUdGdZCgRvMvPk7IhWbdA/Lw4R38o=
+github.com/unmango/go v0.4.1 h1:EAIO7La54FQzzhN8nmPGiPTqrXfk8vp/+1UBsX6L4EY=
+github.com/unmango/go v0.4.1/go.mod h1:IVjltbHfp9M1WZU8iH/0AVM+ZRmGMeQdfaqNEI14hEo=
 go.uber.org/automaxprocs v1.6.0 h1:O3y2/QNTOdbF+e/dpXNNW7Rx2hZ4sTIPyybbxyNqTUs=
 go.uber.org/automaxprocs v1.6.0/go.mod h1:ifeIMSnPZuznNm6jmdzmU3/bfk01Fe2fotchwEFJ8r8=
 golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 h1:nDVHiLt8aIbd/VzvPWN6kSOPE7+F/fNFDSXLVYkE/Iw=
@@ -88,6 +90,8 @@ golang.org/x/exp v0.0.0-20250305212735-054e65f0b394/go.mod h1:sIifuuw/Yco/y6yb6+
 golang.org/x/net v0.0.0-20190213061140-3a22650c66bd/go.mod h1:mL1N/T3taQHkDXs73rZJwtUhF3w3ftmwwsq0BUmARs4=
 golang.org/x/net v0.37.0 h1:1zLorHbz+LYj7MQlSf1+2tPIIgibq2eL5xkrGk6f+2c=
 golang.org/x/net v0.37.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
+golang.org/x/net v0.38.0 h1:vRMAPTMaeGqVhG5QyLJHqNDwecKTomGeqbnfZyKlBI8=
+golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
 golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.31.0 h1:ioabZlmFYtWhL+TRYpcnNlLwhyxaM9kWTDEmfnprqik=
 golang.org/x/sys v0.31.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
