@@ -124,9 +124,6 @@ schema = 3
   [mod."go.uber.org/atomic"]
     version = "v1.9.0"
     hash = "sha256-D8OtLaViqPShz1w8ijhIHmjw9xVaRu0qD2hXKj63r4Q="
-  [mod."go.uber.org/automaxprocs"]
-    version = "v1.6.0"
-    hash = "sha256-a/Agm+kM9x+VRo0CYyTL3ipUYv9Glrc4NeGSZJdpobA="
   [mod."go.uber.org/multierr"]
     version = "v1.9.0"
     hash = "sha256-tlDRooh/V4HDhZohsUrxot/Y6uVInVBtRWCZbj/tPds="
