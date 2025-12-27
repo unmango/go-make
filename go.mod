@@ -1,8 +1,6 @@
 module github.com/unmango/go-make
 
-go 1.24.4
-
-toolchain go1.25.5
+go 1.25.4
 
 tool (
 	github.com/onsi/ginkgo/v2/ginkgo
