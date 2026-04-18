@@ -57,6 +57,7 @@
 
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [
+              bash # For copilot
               gnumake
               go
               goEnv
