@@ -181,6 +181,8 @@ func (p *Parser) parseExpression() ast.Expr {
 
 func (p *Parser) parseComment() *ast.Comment {
 	pos, lit := p.pos, p.lit
+	// The scanner keeps the post-# space so recipe lines can round-trip comments
+	// exactly; top-level comment nodes still normalize that leading space away.
 	lit = strings.TrimPrefix(lit, " ")
 	p.next()
 
