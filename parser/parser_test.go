@@ -363,6 +363,32 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should preserve double quotes in a recipe", func() {
+		buf := bytes.NewBufferString("target:\n\t@echo \"testing has been started...\"")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.TAB,
+				PrefixPos: token.Pos(9),
+				Text: ast.Text{
+					Value:    "@echo \"testing has been started...\"",
+					ValuePos: token.Pos(10),
+				},
+			}},
+		}))
+	})
+
 	It("should Parse a target with a prereq and a recipe", func() {
 		buf := bytes.NewBufferString("target: prereq\n\trecipe")
 		p := parser.New(buf, file)
