@@ -181,6 +181,7 @@ func (p *Parser) parseExpression() ast.Expr {
 
 func (p *Parser) parseComment() *ast.Comment {
 	pos, lit := p.pos, p.lit
+	lit = strings.TrimPrefix(lit, " ")
 	p.next()
 
 	return &ast.Comment{
@@ -385,14 +386,31 @@ func (p *Parser) parseVar(name ast.Expr) ast.Obj {
 	}
 }
 
+func (p *Parser) recipeTokenText() string {
+	switch p.tok {
+	case token.TEXT:
+		return p.lit
+	case token.COMMENT:
+		return "#" + p.lit
+	default:
+		return p.tok.String()
+	}
+}
+
 func (p *Parser) parseRecipe() *ast.Recipe {
 	prefixPos := p.expect(p.recipePrefix)
 	b := &strings.Builder{}
+	nextPos := prefixPos + 1
 	for p.tok != token.NEWLINE && p.tok != token.EOF {
-		if p.pos > prefixPos+1 {
-			b.WriteRune(' ')
+		if gap := int(p.pos - nextPos); gap > 0 {
+			for range gap {
+				b.WriteByte(' ')
+			}
 		}
-		b.WriteString(p.lit)
+
+		text := p.recipeTokenText()
+		b.WriteString(text)
+		nextPos = p.pos + token.Pos(len(text))
 		p.next()
 	}
 	if p.tok == token.NEWLINE {
