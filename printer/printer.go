@@ -6,7 +6,7 @@ import (
 
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/token"
-	"github.com/unmango/go/option"
+	"github.com/unmango/go/fopt"
 )
 
 type printer struct {
@@ -312,7 +312,7 @@ func (p *printer) printNode(node any) error {
 
 func Fprint(w io.Writer, node any, opts ...Op) (n int, err error) {
 	p := &printer{f: &token.File{}}
-	option.ApplyAll(p, opts)
+	fopt.ApplyAll(p, opts)
 
 	if err = p.printNode(node); err != nil {
 		return
