@@ -60,6 +60,9 @@ if err := s.Err(); err != nil {
 
 Use `make.Fprint` to write ast nodes.
 
+> **Note**
+> The AST in this project is a made-up, package-specific representation for Makefiles. It is not an official GNU Make or POSIX AST.
+
 ```go
 var file *ast.File
 
