@@ -389,6 +389,32 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should preserve comments and operator tokens in a recipe", func() {
+		buf := bytes.NewBufferString("target:\n\t@echo $@: # keep this comment")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.TAB,
+				PrefixPos: token.Pos(9),
+				Text: ast.Text{
+					Value:    "@echo $@: # keep this comment",
+					ValuePos: token.Pos(10),
+				},
+			}},
+		}))
+	})
+
 	It("should Parse a target with a prereq and a recipe", func() {
 		buf := bytes.NewBufferString("target: prereq\n\trecipe")
 		p := parser.New(buf, file)

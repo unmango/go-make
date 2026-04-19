@@ -401,8 +401,10 @@ func (p *Parser) recipeTokenText() string {
 
 func (p *Parser) parseRecipe() *ast.Recipe {
 	prefixPos := p.expect(p.recipePrefix)
+	prefixText := p.recipePrefix.String()
+	prefixWidth := token.Pos(len(prefixText))
 	b := &strings.Builder{}
-	nextPos := prefixPos + 1
+	nextPos := prefixPos + prefixWidth
 	for p.tok != token.NEWLINE && p.tok != token.EOF {
 		if gap := int(p.pos - nextPos); gap > 0 {
 			for range gap {
@@ -420,11 +422,11 @@ func (p *Parser) parseRecipe() *ast.Recipe {
 	}
 
 	return &ast.Recipe{
-		Prefix:    token.TAB,
+		Prefix:    p.recipePrefix,
 		PrefixPos: prefixPos,
 		Text: ast.Text{
 			Value:    b.String(),
-			ValuePos: prefixPos + 1,
+			ValuePos: prefixPos + prefixWidth,
 		},
 	}
 }
