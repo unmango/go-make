@@ -169,10 +169,10 @@ var _ = Describe("Scanner", func() {
 	DescribeTable("Scan comment tokens",
 		Entry(nil, "#", ""),
 		Entry(nil, "#some text", "some text"),
-		Entry(nil, "# some text", "some text"),
+		Entry(nil, "# some text", " some text"),
 		Entry(nil, "#\n", ""),
 		Entry(nil, "#some text\n", "some text"),
-		Entry(nil, "# some text\n", "some text"),
+		Entry(nil, "# some text\n", " some text"),
 		func(input, expected string) {
 			buf := bytes.NewBufferString(input)
 			s := scanner.New(buf, file)

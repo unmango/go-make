@@ -57,10 +57,6 @@ func (s *Scanner) skipWhitespace() {
 }
 
 func (s *Scanner) scanComment() string {
-	if bytes.ContainsRune(s.s.Bytes(), ' ') {
-		s.next() // skip space following '#'
-	}
-
 	b := strings.Builder{}
 	for !s.done && !bytes.ContainsRune(s.s.Bytes(), '\n') {
 		b.Write(s.s.Bytes())
