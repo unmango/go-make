@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/unmango/go-make/ast"
+	"github.com/unmango/go-make/token"
 )
 
 func onlyIfeqDir(input string) *ast.IfeqDir {
@@ -208,6 +209,48 @@ var _ = Describe("Punctuation written inside a delimited construct", func() {
 			"ifeq \"a;b\" \"a|b\"\nX = 1\nendif\n", `"a;b"`, `"a|b"`,
 		),
 	)
+})
+
+// A ';' introduces a recipe in two places that are written with the same
+// character and printed differently: on the target line, after the
+// prerequisites, and at the start of a line of its own when .RECIPEPREFIX
+// binds it. The first is recorded as [token.SEMI] and the second as a
+// [token.TEXT] prefix carrying the character, the same as any other custom
+// prefix, so the printer can tell them apart.
+var _ = Describe("Semicolon introducing a recipe", func() {
+	It("should record a target line semicolon apart from a .RECIPEPREFIX one", func() {
+		f := parseOne(".RECIPEPREFIX = ;\ntarget: ; echo semi\n;echo hi\n")
+
+		Expect(f.Contents).To(HaveLen(2))
+		rule, ok := f.Contents[1].(*ast.Rule)
+		Expect(ok).To(BeTrue(), "expected a *ast.Rule, got %T", f.Contents[1])
+		Expect(rule.Recipes).To(HaveLen(2))
+
+		Expect(rule.Recipes[0].Prefix).To(Equal(token.SEMI))
+		Expect(rule.Recipes[0].PrefixLit).To(BeEmpty())
+		// The body is reconstructed from the gap after the prefix, so the
+		// blank separating the semicolon from the command belongs to it.
+		Expect(rule.Recipes[0].Value).To(Equal(" echo semi"))
+
+		Expect(rule.Recipes[1].Prefix).To(Equal(token.TEXT))
+		Expect(rule.Recipes[1].PrefixLit).To(Equal(";"))
+		Expect(rule.Recipes[1].Value).To(Equal("echo hi"))
+	})
+
+	It("should read every line of a .RECIPEPREFIX of a semicolon", func() {
+		f := parseOne(".RECIPEPREFIX = ;\ntarget:\n;echo hi\n;echo bye\n")
+
+		Expect(f.Contents).To(HaveLen(2))
+		rule, ok := f.Contents[1].(*ast.Rule)
+		Expect(ok).To(BeTrue(), "expected a *ast.Rule, got %T", f.Contents[1])
+		Expect(rule.Recipes).To(HaveLen(2))
+		for _, r := range rule.Recipes {
+			Expect(r.Prefix).To(Equal(token.TEXT))
+			Expect(r.PrefixText()).To(Equal(";"))
+		}
+		Expect(rule.Recipes[0].Value).To(Equal("echo hi"))
+		Expect(rule.Recipes[1].Value).To(Equal("echo bye"))
+	})
 })
 
 // A recipe is captured as the flat text of the line, so the pieces the scanner

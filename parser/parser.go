@@ -49,18 +49,20 @@ func New(r io.Reader, file *token.File) *Parser {
 	return p
 }
 
-// recipePrefixToken returns the token a prefix of the given source text scans
-// as. A tab and a semicolon have tokens of their own, every other prefix is a
-// character the scanner has no meaning for and reports as text.
+// recipePrefixToken returns the token recording a recipe introduced by the
+// .RECIPEPREFIX character prefix.
+//
+// A tab is the character make introduces a recipe with by default and has a
+// token of its own. Every other character is recorded as text carrying the
+// character, including a ';', which has a token of its own but means something
+// else: [token.SEMI] marks the semicolon that introduces a recipe on a target
+// line, and the two are written in different places and printed differently.
 func recipePrefixToken(prefix string) token.Token {
-	switch prefix {
-	case token.TAB.String():
+	if prefix == token.TAB.String() {
 		return token.TAB
-	case token.SEMI.String():
-		return token.SEMI
-	default:
-		return token.TEXT
 	}
+
+	return token.TEXT
 }
 
 // isRecipePrefix reports whether the current token introduces a recipe line.
@@ -912,11 +914,13 @@ func (p *Parser) recipeTokenText() string {
 	return p.tok.String()
 }
 
-// parseRecipe reads a recipe introduced by the source text prefix. A rule may
-// introduce its first recipe with a semicolon on the target line, so the
-// prefix is a parameter rather than always [Parser.recipePrefix].
-func (p *Parser) parseRecipe(prefix string) *ast.Recipe {
-	prefixTok := recipePrefixToken(prefix)
+// parseRecipe reads a recipe introduced by prefixTok, written as the source
+// text prefix. A rule may introduce its first recipe with a semicolon on the
+// target line, so both are parameters rather than always [token.TEXT] and
+// [Parser.recipePrefix]. The token is what tells that semicolon from a ';'
+// that .RECIPEPREFIX bound to introduce a recipe line of its own, because the
+// two are written with the same character.
+func (p *Parser) parseRecipe(prefixTok token.Token, prefix string) *ast.Recipe {
 	prefixPos := p.pos
 	prefixWidth := token.Pos(len(prefix))
 	if prefixTok == token.TEXT {
@@ -986,7 +990,7 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	// which is otherwise skipped here.
 	recipes := make([]*ast.Recipe, 0)
 	if p.tok == token.SEMI {
-		recipes = append(recipes, p.parseRecipe(token.SEMI.String()))
+		recipes = append(recipes, p.parseRecipe(token.SEMI, token.SEMI.String()))
 	} else if p.tok == token.NEWLINE {
 		p.next()
 	}
@@ -1001,7 +1005,7 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 		if p.tok == token.NEWLINE {
 			p.skipNewlines()
 		} else {
-			recipes = append(recipes, p.parseRecipe(p.recipePrefix))
+			recipes = append(recipes, p.parseRecipe(recipePrefixToken(p.recipePrefix), p.recipePrefix))
 		}
 	}
 
