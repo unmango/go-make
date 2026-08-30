@@ -39,7 +39,7 @@ func New(r io.Reader, file *token.File) *Parser {
 	return p
 }
 
-func (p Parser) isRecipePrefix() bool {
+func (p *Parser) isRecipePrefix() bool {
 	return p.tok == p.recipePrefix
 }
 
