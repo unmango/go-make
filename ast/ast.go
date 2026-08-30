@@ -102,10 +102,15 @@ func (c *CommentGroup) End() token.Pos {
 	return c.List[len(c.List)-1].End()
 }
 
-// A comment represents a single comment starting with '#'
+// A comment represents a single comment starting with '#'.
+//
+// Text is the source between the pound and the end of the line, verbatim. It
+// excludes the '#' and the terminating '\n' and includes any whitespace that
+// follows the pound, so "#foo" and "# foo" are distinct nodes and the printer
+// writes back exactly what was parsed.
 type Comment struct {
 	Pound token.Pos // position of '#' starting the comment
-	Text  string    // comment text, excluding '\n'
+	Text  string    // comment text following '#', excluding '\n'
 }
 
 // Pos implements Node
@@ -115,12 +120,11 @@ func (c *Comment) Pos() token.Pos {
 
 // End implements Node.
 //
-// The printer renders a comment as '#', a single space, and Text, so End
-// accounts for both leading characters. Text never includes the '#', and the
-// parser normalizes away the space that follows it, so the two characters
-// cannot be recovered from Text alone.
+// The printer renders a comment as '#' followed by Text, so End accounts for
+// the pound. Text never includes the '#', but it does include the whitespace
+// that follows it, so no other character has to be accounted for.
 func (c *Comment) End() token.Pos {
-	return c.Pound + 2 + token.Pos(len(c.Text)) // '#' + ' ' + Text
+	return c.Pound + 1 + token.Pos(len(c.Text)) // '#' + Text
 }
 
 // A Rule represents the Recipes and PreRequisites required to build Targets. [Rule Syntax]

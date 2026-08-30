@@ -28,9 +28,27 @@ var _ = Describe("Parser", func() {
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Contents).To(ConsistOf(&ast.CommentGroup{
-			List: []*ast.Comment{{Pound: token.Pos(1), Text: "comment text"}},
+			List: []*ast.Comment{{Pound: token.Pos(1), Text: " comment text"}},
 		}))
 	})
+
+	DescribeTable("should Parse a comment preserving the text after the pound",
+		func(input, text string) {
+			p := parser.New(bytes.NewBufferString(input), file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(ConsistOf(&ast.CommentGroup{
+				List: []*ast.Comment{{Pound: token.Pos(1), Text: text}},
+			}))
+		},
+		Entry("no space", "#comment text", "comment text"),
+		Entry("one space", "# comment text", " comment text"),
+		Entry("two spaces", "#  comment text", "  comment text"),
+		Entry("no text", "#", ""),
+		Entry("no text and a newline", "#\n", ""),
+	)
 
 	It("should Parse a comment group", func() {
 		buf := bytes.NewBufferString("# comment text\n# more text on this line")
@@ -41,8 +59,8 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Contents).To(ConsistOf(&ast.CommentGroup{
 			List: []*ast.Comment{
-				{Pound: token.Pos(1), Text: "comment text"},
-				{Pound: token.Pos(16), Text: "more text on this line"},
+				{Pound: token.Pos(1), Text: " comment text"},
+				{Pound: token.Pos(16), Text: " more text on this line"},
 			},
 		}))
 	})
@@ -56,10 +74,10 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Contents).To(ConsistOf(
 			&ast.CommentGroup{List: []*ast.Comment{
-				{Pound: token.Pos(1), Text: "comment text"},
+				{Pound: token.Pos(1), Text: " comment text"},
 			}},
 			&ast.CommentGroup{List: []*ast.Comment{
-				{Pound: token.Pos(17), Text: "new comment group"},
+				{Pound: token.Pos(17), Text: " new comment group"},
 			}},
 		))
 	})

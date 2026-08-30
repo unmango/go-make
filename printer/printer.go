@@ -193,7 +193,6 @@ func (p *printer) rule(r *ast.Rule) {
 
 func (p *printer) comment(c *ast.Comment) {
 	p.writeString(p.posFor(c.Pound), "#")
-	p.fillSpace(c.Pound + 2)
 	p.writeString(p.pos, c.Text)
 }
 

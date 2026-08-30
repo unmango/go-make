@@ -131,7 +131,7 @@ var _ = Describe("File", func() {
 				FileStart: 1,
 				Contents: []ast.Obj{
 					&ast.CommentGroup{List: []*ast.Comment{
-						{Pound: 1, Text: "a comment"},
+						{Pound: 1, Text: " a comment"},
 					}},
 					&ast.Variable{
 						Name:  &ast.Text{Value: "FOO", ValuePos: 13},
@@ -150,7 +150,7 @@ var _ = Describe("File", func() {
 
 		It("should preserve the objects preceding the insertion point", func() {
 			group := &ast.CommentGroup{List: []*ast.Comment{
-				{Pound: 1, Text: "a comment"},
+				{Pound: 1, Text: " a comment"},
 			}}
 			f := &ast.File{FileStart: 1, Contents: []ast.Obj{group}, FileEnd: 13}
 
