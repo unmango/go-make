@@ -190,6 +190,13 @@ var _ = Describe("Rule", func() {
 					{Text: ast.Text{Value: "touch thing"}, Prefix: token.TAB},
 				},
 			}),
+			Entry("custom prefix recipes", "target:\n>cat thing\n>touch thing\n", &ast.Rule{
+				Targets: []ast.Expr{&ast.Text{Value: "target"}},
+				Recipes: []*ast.Recipe{
+					{Text: ast.Text{Value: "cat thing"}, Prefix: token.TEXT, PrefixLit: ">"},
+					{Text: ast.Text{Value: "touch thing"}, Prefix: token.TEXT, PrefixLit: ">"},
+				},
+			}),
 			Entry("a var ref target", "$(FOO) bar: baz\n", &ast.Rule{
 				Targets: []ast.Expr{
 					&ast.VarRef{Open: token.LPAREN, Name: "FOO", Close: token.RPAREN},

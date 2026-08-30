@@ -176,6 +176,45 @@ var _ = Describe("Printer", func() {
 				},
 				"target: ; recipe\n\trecipe2\n",
 			),
+			Entry("target and custom prefix recipe",
+				&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+					Recipes: []*ast.Recipe{{
+						Prefix:    token.TEXT,
+						PrefixLit: ">",
+						PrefixPos: token.Pos(9),
+						Text:      ast.Text{Value: "recipe", ValuePos: token.Pos(10)},
+					}},
+				},
+				"target:\n>recipe\n",
+			),
+			Entry("target, semicolon recipe, and custom prefix recipe",
+				&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+					Recipes: []*ast.Recipe{
+						{
+							Prefix:    token.SEMI,
+							PrefixPos: token.Pos(9),
+							Text:      ast.Text{Value: " recipe", ValuePos: token.Pos(10)},
+						},
+						{
+							Prefix:    token.TEXT,
+							PrefixLit: ">",
+							PrefixPos: token.Pos(18),
+							Text:      ast.Text{Value: "recipe2", ValuePos: token.Pos(19)},
+						},
+					},
+				},
+				"target: ; recipe\n>recipe2\n",
+			),
 			Entry("target with recipe",
 				&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{Value: "target"}},

@@ -21,8 +21,17 @@ type Parser struct {
 	tok token.Token // one token look-ahead
 	lit string      // token literal
 
-	recipePrefix token.Token
+	// recipePrefix is the source text of the character introducing a recipe
+	// line, rebound by an assignment to .RECIPEPREFIX.
+	recipePrefix string
 }
+
+// defaultRecipePrefix introduces a recipe line when .RECIPEPREFIX is empty.
+const defaultRecipePrefix = "\t"
+
+// recipePrefixVar is the variable that rebinds the character introducing a
+// recipe line.
+const recipePrefixVar = ".RECIPEPREFIX"
 
 func New(r io.Reader, file *token.File) *Parser {
 	if file == nil {
@@ -33,15 +42,86 @@ func New(r io.Reader, file *token.File) *Parser {
 		s:    scanner.New(r, file),
 		file: file,
 
-		recipePrefix: token.TAB,
+		recipePrefix: defaultRecipePrefix,
 	}
 	p.next()
 
 	return p
 }
 
+// recipePrefixToken returns the token a prefix of the given source text scans
+// as. A tab and a semicolon have tokens of their own, every other prefix is a
+// character the scanner has no meaning for and reports as text.
+func recipePrefixToken(prefix string) token.Token {
+	switch prefix {
+	case token.TAB.String():
+		return token.TAB
+	case token.SEMI.String():
+		return token.SEMI
+	default:
+		return token.TEXT
+	}
+}
+
+// isRecipePrefix reports whether the current token introduces a recipe line.
+//
+// The scanner has no notion of .RECIPEPREFIX, so a custom prefix is not a
+// token of its own. It arrives as the leading character of the token that
+// begins the line, and the token text is what identifies it.
 func (p *Parser) isRecipePrefix() bool {
-	return p.tok == p.recipePrefix
+	if p.tok == token.NEWLINE || p.tok == token.EOF {
+		return false
+	}
+	if tok := recipePrefixToken(p.recipePrefix); tok != token.TEXT {
+		return p.tok == tok
+	}
+
+	return strings.HasPrefix(p.recipeTokenText(), p.recipePrefix)
+}
+
+// setRecipePrefix rebinds the recipe prefix from an assignment to
+// .RECIPEPREFIX. make introduces a recipe with the first character of the
+// value of the variable, and with a tab when the value is empty.
+//
+// The value is only known while parsing when it is written literally. A value
+// that is a variable reference or a function call is expanded by make, so the
+// prefix in effect is left alone rather than guessed at.
+func (p *Parser) setRecipePrefix(v *ast.Variable) {
+	switch v.Op {
+	case token.RECURSIVE_ASSIGN, token.SIMPLE_ASSIGN,
+		token.POSIX_ASSIGN, token.IMMEDIATE_ASSIGN:
+	case token.APPEND_ASSIGN:
+		// Appending changes the first character of the value only when the
+		// value is empty, which is the case exactly when the prefix is a tab.
+		if p.recipePrefix != defaultRecipePrefix {
+			return
+		}
+	default:
+		// '?=' assigns nothing because .RECIPEPREFIX always has a value, and
+		// the output of '!=' is not known until make runs the command.
+		return
+	}
+
+	if len(v.Value) == 0 {
+		p.recipePrefix = defaultRecipePrefix
+		return
+	}
+	if t, ok := v.Value[0].(*ast.Text); ok && len(t.Value) > 0 {
+		p.recipePrefix = t.Value[:1]
+	}
+}
+
+// consumeRecipePrefix advances past a custom recipe prefix. The scanner does
+// not know the prefix, so it reads it as the leading character of a token that
+// holds the beginning of the recipe body as well. The remainder of that token
+// is left in place for the body.
+func (p *Parser) consumeRecipePrefix(prefix string) {
+	if text := p.recipeTokenText(); len(text) > len(prefix) {
+		p.tok, p.lit = token.TEXT, text[len(prefix):]
+		p.pos += token.Pos(len(prefix))
+	} else {
+		p.next()
+	}
 }
 
 func (p *Parser) error(pos token.Pos, msg string) {
@@ -686,12 +766,20 @@ func (p *Parser) parseVar(name ast.Expr) ast.Obj {
 		rhs = append(rhs, p.parseExpression())
 	}
 
-	return &ast.Variable{
+	v := &ast.Variable{
 		Name:  name,
 		Op:    op,
 		OpPos: opPos,
 		Value: rhs,
 	}
+	// .RECIPEPREFIX is an ordinary variable that the parser reads as well,
+	// because it rebinds the character introducing a recipe for the rest of
+	// the file.
+	if t, ok := name.(*ast.Text); ok && t.Value == recipePrefixVar {
+		p.setRecipePrefix(v)
+	}
+
+	return v
 }
 
 // recipeTokenText returns the source text of the current token. Tokens such
@@ -710,13 +798,18 @@ func (p *Parser) recipeTokenText() string {
 	return p.tok.String()
 }
 
-// parseRecipe reads a recipe introduced by prefix. A rule may introduce its
-// first recipe with a semicolon on the target line, so the prefix is a
-// parameter rather than always [Parser.recipePrefix].
-func (p *Parser) parseRecipe(prefix token.Token) *ast.Recipe {
-	prefixPos := p.expect(prefix)
-	prefixText := prefix.String()
-	prefixWidth := token.Pos(len(prefixText))
+// parseRecipe reads a recipe introduced by the source text prefix. A rule may
+// introduce its first recipe with a semicolon on the target line, so the
+// prefix is a parameter rather than always [Parser.recipePrefix].
+func (p *Parser) parseRecipe(prefix string) *ast.Recipe {
+	prefixTok := recipePrefixToken(prefix)
+	prefixPos := p.pos
+	prefixWidth := token.Pos(len(prefix))
+	if prefixTok == token.TEXT {
+		p.consumeRecipePrefix(prefix)
+	} else {
+		p.expect(prefixTok)
+	}
 	b := &strings.Builder{}
 	nextPos := prefixPos + prefixWidth
 	for p.tok != token.NEWLINE && p.tok != token.EOF {
@@ -735,14 +828,19 @@ func (p *Parser) parseRecipe(prefix token.Token) *ast.Recipe {
 		p.next()
 	}
 
-	return &ast.Recipe{
-		Prefix:    prefix,
+	r := &ast.Recipe{
+		Prefix:    prefixTok,
 		PrefixPos: prefixPos,
 		Text: ast.Text{
 			Value:    b.String(),
 			ValuePos: prefixPos + prefixWidth,
 		},
 	}
+	if prefixTok == token.TEXT {
+		r.PrefixLit = prefix
+	}
+
+	return r
 }
 
 func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
@@ -767,7 +865,7 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	// which is otherwise skipped here.
 	recipes := make([]*ast.Recipe, 0)
 	if p.tok == token.SEMI {
-		recipes = append(recipes, p.parseRecipe(token.SEMI))
+		recipes = append(recipes, p.parseRecipe(token.SEMI.String()))
 	} else if p.tok == token.NEWLINE {
 		p.next()
 	}

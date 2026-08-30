@@ -150,8 +150,10 @@ func (p *printer) juxtaposedExpr(e *ast.JuxtaposedExpr) {
 }
 
 func (p *printer) recipe(r *ast.Recipe) {
+	// A custom .RECIPEPREFIX has no token of its own, so the prefix is written
+	// from the source text the recipe carries rather than from the token.
 	pos := p.posFor(r.PrefixPos)
-	p.tok(pos, r.Prefix)
+	p.writeString(pos, r.PrefixText())
 	p.expr(r)
 	p.writeLine()
 }

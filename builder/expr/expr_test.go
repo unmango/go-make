@@ -61,6 +61,10 @@ var _ = Describe("Expr", func() {
 				&ast.Recipe{Text: ast.Text{Value: "test", ValuePos: 2}, Prefix: token.TAB, PrefixPos: 1},
 				&ast.Recipe{Text: ast.Text{Value: "test", ValuePos: 3}, Prefix: token.TAB, PrefixPos: 2},
 			),
+			Entry("a custom prefix recipe",
+				&ast.Recipe{Text: ast.Text{Value: "test", ValuePos: 2}, Prefix: token.TEXT, PrefixLit: ">", PrefixPos: 1},
+				&ast.Recipe{Text: ast.Text{Value: "test", ValuePos: 3}, Prefix: token.TEXT, PrefixLit: ">", PrefixPos: 2},
+			),
 			Entry("a function call",
 				// "$(shell pwd)"
 				&ast.FuncCall{

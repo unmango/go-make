@@ -798,6 +798,200 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should Parse a recipe introduced by a custom .RECIPEPREFIX", func() {
+		buf := bytes.NewBufferString(".RECIPEPREFIX = >\ntarget:\n>echo hi\n")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(
+			&ast.Variable{
+				Name:  &ast.Text{Value: ".RECIPEPREFIX", ValuePos: token.Pos(1)},
+				Op:    token.RECURSIVE_ASSIGN,
+				OpPos: token.Pos(15),
+				Value: []ast.Expr{&ast.Text{Value: ">", ValuePos: token.Pos(17)}},
+			},
+			&ast.Rule{
+				Colon:        token.Pos(25),
+				Targets:      []ast.Expr{&ast.Text{Value: "target", ValuePos: token.Pos(19)}},
+				PreReqs:      []ast.Expr{},
+				OrderPreReqs: []ast.Expr{},
+				Recipes: []*ast.Recipe{{
+					Prefix:    token.TEXT,
+					PrefixLit: ">",
+					PrefixPos: token.Pos(27),
+					Text: ast.Text{
+						Value:    "echo hi",
+						ValuePos: token.Pos(28),
+					},
+				}},
+			},
+		))
+	})
+
+	It("should Parse a .RECIPEPREFIX that changes partway through the file", func() {
+		buf := bytes.NewBufferString(".RECIPEPREFIX = >\na:\n>echo a\n.RECIPEPREFIX = !\nb:\n!echo b\n")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveLen(4))
+		Expect(f.Contents[1]).To(Equal(&ast.Rule{
+			Colon:        token.Pos(20),
+			Targets:      []ast.Expr{&ast.Text{Value: "a", ValuePos: token.Pos(19)}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.TEXT,
+				PrefixLit: ">",
+				PrefixPos: token.Pos(22),
+				Text: ast.Text{
+					Value:    "echo a",
+					ValuePos: token.Pos(23),
+				},
+			}},
+		}))
+		Expect(f.Contents[3]).To(Equal(&ast.Rule{
+			Colon:        token.Pos(49),
+			Targets:      []ast.Expr{&ast.Text{Value: "b", ValuePos: token.Pos(48)}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.TEXT,
+				PrefixLit: "!",
+				PrefixPos: token.Pos(51),
+				Text: ast.Text{
+					Value:    "echo b",
+					ValuePos: token.Pos(52),
+				},
+			}},
+		}))
+	})
+
+	It("should Parse a tab recipe after .RECIPEPREFIX is set back to empty", func() {
+		buf := bytes.NewBufferString(".RECIPEPREFIX = >\na:\n>echo a\n.RECIPEPREFIX =\nb:\n\techo b\n")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveLen(4))
+		Expect(f.Contents[3]).To(Equal(&ast.Rule{
+			Colon:        token.Pos(47),
+			Targets:      []ast.Expr{&ast.Text{Value: "b", ValuePos: token.Pos(46)}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.TAB,
+				PrefixPos: token.Pos(49),
+				Text: ast.Text{
+					Value:    "echo b",
+					ValuePos: token.Pos(50),
+				},
+			}},
+		}))
+	})
+
+	// make uses the first character of the value of .RECIPEPREFIX and ignores
+	// the rest of it.
+	It("should Parse a recipe introduced by the first character of .RECIPEPREFIX", func() {
+		buf := bytes.NewBufferString(".RECIPEPREFIX = >>\ntarget:\n>echo hi\n")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveLen(2))
+		Expect(f.Contents[1].(*ast.Rule).Recipes).To(ConsistOf(&ast.Recipe{
+			Prefix:    token.TEXT,
+			PrefixLit: ">",
+			PrefixPos: token.Pos(28),
+			Text: ast.Text{
+				Value:    "echo hi",
+				ValuePos: token.Pos(29),
+			},
+		}))
+	})
+
+	It("should Parse a recipe introduced by an appended .RECIPEPREFIX", func() {
+		buf := bytes.NewBufferString(".RECIPEPREFIX += >\ntarget:\n>echo hi\n")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveLen(2))
+		Expect(f.Contents[1].(*ast.Rule).Recipes).To(ConsistOf(&ast.Recipe{
+			Prefix:    token.TEXT,
+			PrefixLit: ">",
+			PrefixPos: token.Pos(28),
+			Text: ast.Text{
+				Value:    "echo hi",
+				ValuePos: token.Pos(29),
+			},
+		}))
+	})
+
+	// make evaluates the value of .RECIPEPREFIX, and the parser does not, so
+	// the prefix in effect is left alone rather than guessed at.
+	It("should keep the recipe prefix when .RECIPEPREFIX is a variable reference", func() {
+		buf := bytes.NewBufferString(".RECIPEPREFIX = $(P)\ntarget:\n\techo hi\n")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveLen(2))
+		Expect(f.Contents[1].(*ast.Rule).Recipes).To(ConsistOf(&ast.Recipe{
+			Prefix:    token.TAB,
+			PrefixPos: token.Pos(30),
+			Text: ast.Text{
+				Value:    "echo hi",
+				ValuePos: token.Pos(31),
+			},
+		}))
+	})
+
+	// '.RECIPEPREFIX' always has a value, so '?=' never assigns to it.
+	It("should keep the recipe prefix when .RECIPEPREFIX is assigned with '?='", func() {
+		buf := bytes.NewBufferString(".RECIPEPREFIX ?= >\ntarget:\n\techo hi\n")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveLen(2))
+		Expect(f.Contents[1].(*ast.Rule).Recipes).To(ConsistOf(&ast.Recipe{
+			Prefix:    token.TAB,
+			PrefixPos: token.Pos(28),
+			Text: ast.Text{
+				Value:    "echo hi",
+				ValuePos: token.Pos(29),
+			},
+		}))
+	})
+
+	// A tab has no meaning once .RECIPEPREFIX names another character. make
+	// reports "missing separator" for the line, and the parser records it
+	// verbatim the way it records every other line it does not understand.
+	It("should Parse a tab line as a bad object when a custom prefix is in effect", func() {
+		buf := bytes.NewBufferString(".RECIPEPREFIX = >\ntarget:\n\techo hi\n")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveLen(3))
+		Expect(f.Contents[1].(*ast.Rule).Recipes).To(BeEmpty())
+		Expect(f.Contents[2]).To(Equal(&ast.BadObj{
+			From: token.Pos(27),
+			To:   token.Pos(35),
+			Text: "\techo hi",
+		}))
+	})
+
 	It("should Parse a target with multiple recipes", func() {
 		buf := bytes.NewBufferString("target:\n\trecipe\n\trecipe2")
 		p := parser.New(buf, file)
