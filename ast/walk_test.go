@@ -17,6 +17,19 @@ func (v *visitor) Visit(node ast.Node) (w ast.Visitor) {
 	return v
 }
 
+// strictVisitor fails the spec when Walk hands it a nil node.
+type strictVisitor struct {
+	nodes []ast.Node
+}
+
+// Visit implements ast.Visitor.
+func (v *strictVisitor) Visit(node ast.Node) (w ast.Visitor) {
+	GinkgoHelper()
+	Expect(node).NotTo(BeNil(), "Walk passed a nil node to the Visitor")
+	v.nodes = append(v.nodes, node)
+	return v
+}
+
 var _ = Describe("Walk", func() {
 	It("should walk nil", func() {
 		v := &visitor{}
@@ -288,6 +301,106 @@ var _ = Describe("Walk", func() {
 		ast.Walk(v, f)
 
 		Expect(v.nodes).To(HaveExactElements(f, d2, t2, v2, e, d1, t1, v1))
+	})
+
+	Describe("nil children", func() {
+		DescribeTable("should not pass a nil child to the visitor",
+			func(node ast.Node) {
+				v := &strictVisitor{}
+
+				ast.Walk(v, node)
+
+				Expect(v.nodes).To(HaveExactElements(node))
+			},
+			Entry("quoted expression without a value", &ast.QuotedExpr{}),
+			Entry("variable without a name", &ast.Variable{}),
+			Entry("ifeq directive without arguments", &ast.IfeqDir{}),
+			Entry("ifeq directive without a second argument",
+				&ast.IfeqDir{Arg1: nil, Arg2: nil},
+			),
+			Entry("ifdef directive without a variable name", &ast.IfdefDir{}),
+			Entry("else block without a condition", &ast.ElseBlock{}),
+			Entry("if block without a directive", &ast.IfBlock{}),
+		)
+
+		It("should skip nil entries in a list", func() {
+			v := &strictVisitor{}
+			rule := &ast.Rule{
+				Targets: []ast.Expr{nil},
+				Recipes: []*ast.Recipe{nil},
+			}
+			file := &ast.File{Contents: []ast.Obj{nil, rule}}
+
+			ast.Walk(v, file)
+
+			Expect(v.nodes).To(HaveExactElements(file, rule))
+		})
+
+		It("should walk the non-nil argument of an ifeq directive", func() {
+			v := &strictVisitor{}
+			t1 := &ast.Text{}
+			d := &ast.IfeqDir{Arg2: t1}
+
+			ast.Walk(v, d)
+
+			Expect(v.nodes).To(HaveExactElements(d, t1))
+		})
+
+		It("should walk the text of an else block without a condition", func() {
+			v := &strictVisitor{}
+			v1 := &ast.Variable{Name: &ast.Text{}}
+			e := &ast.ElseBlock{Text: []ast.Obj{v1}}
+
+			ast.Walk(v, e)
+
+			Expect(v.nodes).To(HaveExactElements(e, v1, v1.Name))
+		})
+
+		It("should visit every child of a fully populated tree", func() {
+			v := &strictVisitor{}
+			name := &ast.Text{Value: "VAR"}
+			value := &ast.Text{Value: "value"}
+			variable := &ast.Variable{Name: name, Value: []ast.Expr{value}}
+			quoted := &ast.QuotedExpr{Value: &ast.Text{Value: "quoted"}}
+			arg1 := &ast.Text{Value: "a"}
+			ifeq := &ast.IfeqDir{Arg1: arg1, Arg2: quoted}
+			elseName := &ast.Text{Value: "ELSE"}
+			elseDir := &ast.IfdefDir{VarName: elseName}
+			elseObj := &ast.Variable{Name: &ast.Text{Value: "E"}}
+			elseBlock := &ast.ElseBlock{Condition: elseDir, Text: []ast.Obj{elseObj}}
+			ifBlock := &ast.IfBlock{
+				Directive: ifeq,
+				Text:      []ast.Obj{variable},
+				Else:      []*ast.ElseBlock{elseBlock},
+			}
+			target := &ast.Text{Value: "all"}
+			preReq := &ast.Text{Value: "dep"}
+			orderPreReq := &ast.Text{Value: "order"}
+			recipe := &ast.Recipe{Text: ast.Text{Value: "echo hi"}}
+			rule := &ast.Rule{
+				Targets:      []ast.Expr{target},
+				PreReqs:      []ast.Expr{preReq},
+				OrderPreReqs: []ast.Expr{orderPreReq},
+				Recipes:      []*ast.Recipe{recipe},
+			}
+			comment := &ast.Comment{}
+			group := &ast.CommentGroup{List: []*ast.Comment{comment}}
+			bad := &ast.BadObj{Text: "include foo.mk"}
+			file := &ast.File{Contents: []ast.Obj{rule, ifBlock, bad}}
+
+			ast.Walk(v, file)
+			ast.Walk(v, group)
+
+			Expect(v.nodes).To(HaveExactElements(
+				file,
+				rule, target, preReq, orderPreReq, recipe, &recipe.Text,
+				ifBlock, ifeq, arg1, quoted, quoted.Value,
+				variable, name, value,
+				elseBlock, elseDir, elseName, elseObj, elseObj.Name,
+				bad,
+				group, comment,
+			))
+		})
 	})
 
 	Describe("Inspect", func() {
