@@ -12,6 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/unmango/go-make"
+	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/printer"
 	"github.com/unmango/go-make/scanner"
 	"github.com/unmango/go-make/token"
@@ -50,6 +51,22 @@ var _ = Describe("E2E", func() {
 		_, err = p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should attach recipes separated by a blank line to their rule", func() {
+		data, err := testdata.ReadFile("testdata/roundtrip/recipe-blank-line.mk")
+		Expect(err).NotTo(HaveOccurred())
+		p := make.NewParser(bytes.NewBuffer(data), nil)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveLen(1))
+		rule, ok := f.Contents[0].(*ast.Rule)
+		Expect(ok).To(BeTrue(), "expected a *ast.Rule, got %T", f.Contents[0])
+		Expect(rule.Recipes).To(HaveLen(2))
+		Expect(rule.Recipes[0].Value).To(Equal("first"))
+		Expect(rule.Recipes[1].Value).To(Equal("second"))
 	})
 
 	DescribeTable("should round-trip", RoundTripEntries(testdata, "testdata/roundtrip"),
