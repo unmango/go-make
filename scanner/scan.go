@@ -14,6 +14,15 @@ func ScanTokens(data []byte, atEOF bool) (advance int, token []byte, err error) 
 	switch data[0] {
 	case ' ':
 		return 1, data[:1], nil
+	case '\r':
+		if len(data) == 1 && !atEOF {
+			return 0, nil, nil // We need more info to make a decision
+		}
+		if len(data) > 1 && data[1] == '\n' {
+			return 2, data[:2], nil // A CRLF line ending is a single token
+		}
+
+		return 1, data[:1], nil
 	case '?':
 		if len(data) > 1 && data[1] == '=' {
 			return 2, data[:2], nil
@@ -39,7 +48,7 @@ func ScanTokens(data []byte, atEOF bool) (advance int, token []byte, err error) 
 		return 1, data[:1], nil
 	}
 
-	if i := bytes.IndexAny(data, ":\n\t (){},'\""); i > 0 {
+	if i := bytes.IndexAny(data, ":\r\n\t (){},'\""); i > 0 {
 		return i, data[:i], nil
 	}
 
