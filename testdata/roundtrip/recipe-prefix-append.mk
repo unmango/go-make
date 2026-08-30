@@ -1,0 +1,3 @@
+.RECIPEPREFIX += >
+target:
+>echo hi

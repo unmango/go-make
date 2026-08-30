@@ -462,8 +462,26 @@ func (b *textBuilder) String() string {
 // A Recipe represents a line of text to be passed to the shell to build a Target.
 type Recipe struct {
 	Text                  // recipe text excluding '\n'
-	Prefix    token.Token // TAB, SEMI, or .RECIPEPREFIX
-	PrefixPos token.Pos   // position of Tok
+	Prefix    token.Token // TAB, SEMI, or TEXT for a custom .RECIPEPREFIX
+	PrefixPos token.Pos   // position of Prefix
+	PrefixLit string      // source text of a TEXT prefix
+}
+
+// PrefixText returns the source text of the prefix introducing the recipe.
+//
+// A recipe introduced by a custom .RECIPEPREFIX begins with an arbitrary
+// character that has no token of its own, so it is recorded as [token.TEXT]
+// carrying the character in PrefixLit. [token.ILLEGAL] marks an absent prefix
+// rather than a literal, so it has no text.
+func (r *Recipe) PrefixText() string {
+	switch r.Prefix {
+	case token.TEXT:
+		return r.PrefixLit
+	case token.ILLEGAL:
+		return ""
+	default:
+		return r.Prefix.String()
+	}
 }
 
 // Pos implements Node
@@ -473,7 +491,7 @@ func (r *Recipe) Pos() token.Pos {
 
 // End implements Node
 func (r *Recipe) End() token.Pos {
-	return r.PrefixPos + tokenLen(r.Prefix) + token.Pos(len(r.Value)) // Prefix + Value
+	return r.PrefixPos + token.Pos(len(r.PrefixText())) + token.Pos(len(r.Value)) // Prefix + Value
 }
 
 // An Variable represents a make variable.

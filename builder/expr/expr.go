@@ -35,8 +35,10 @@ func SetPos(pos token.Pos, expr ast.Expr) token.Pos {
 	case *ast.FuncCall:
 		setCallPos(pos, n)
 	case *ast.Recipe:
+		// A custom .RECIPEPREFIX is not a token, so the width of the prefix
+		// comes from its source text.
 		n.PrefixPos = pos
-		n.ValuePos = pos + length(n.Prefix)
+		n.ValuePos = pos + token.Pos(len(n.PrefixText()))
 	case *ast.JuxtaposedExpr:
 		// The parts are written with nothing between them, so each one begins
 		// where the one before it ended. An empty juxtaposition occupies no

@@ -27,5 +27,24 @@ var _ = Describe("Recipe", func() {
 				ValuePos: 3,
 			}))
 		})
+
+		It("should work with a custom prefix", func() {
+			r := &ast.Recipe{
+				Text:      ast.Text{Value: "test"},
+				Prefix:    token.TEXT,
+				PrefixLit: ">",
+				PrefixPos: 1,
+			}
+
+			actual := recipe.Copy(2, r)
+
+			Expect(actual.Prefix).To(Equal(token.TEXT))
+			Expect(actual.PrefixLit).To(Equal(">"))
+			Expect(actual.PrefixPos).To(Equal(token.Pos(2)))
+			Expect(actual.Text).To(Equal(ast.Text{
+				Value:    "test",
+				ValuePos: 3,
+			}))
+		})
 	})
 })

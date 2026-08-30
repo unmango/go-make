@@ -568,6 +568,28 @@ var _ = Describe("Ast", func() {
 			// '\t' + len("foo")
 			Expect(c.End()).To(Equal(token.Pos(424)))
 		})
+
+		It("should return the position after the text of a custom prefix", func() {
+			c := &ast.Recipe{
+				PrefixPos: token.Pos(420),
+				Prefix:    token.TEXT,
+				PrefixLit: ">",
+				Text:      ast.Text{Value: "foo"},
+			}
+
+			// '>' + len("foo")
+			Expect(c.End()).To(Equal(token.Pos(424)))
+		})
+
+		DescribeTable("should return the prefix text",
+			Entry("tab", &ast.Recipe{Prefix: token.TAB}, "\t"),
+			Entry("semicolon", &ast.Recipe{Prefix: token.SEMI}, ";"),
+			Entry("custom", &ast.Recipe{Prefix: token.TEXT, PrefixLit: ">"}, ">"),
+			Entry("absent", &ast.Recipe{}, ""),
+			func(r *ast.Recipe, expected string) {
+				Expect(r.PrefixText()).To(Equal(expected))
+			},
+		)
 	})
 
 	Describe("Variable", func() {
@@ -860,6 +882,12 @@ var _ = Describe("End", func() {
 	It("should span the recipe including the prefix", func() {
 		assertSpans("target: dep\n\techo hi\n", "\techo hi", func(f *ast.File) ast.Node {
 			return f.Contents[0].(*ast.Rule).Recipes[0]
+		})
+	})
+
+	It("should span the recipe including a custom prefix", func() {
+		assertSpans(".RECIPEPREFIX = >\ntarget: dep\n>echo hi\n", ">echo hi", func(f *ast.File) ast.Node {
+			return f.Contents[1].(*ast.Rule).Recipes[0]
 		})
 	})
 })
