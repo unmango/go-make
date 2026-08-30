@@ -17,6 +17,7 @@ const (
 	Notparallel        = ".NOTPARALLEL"
 	Oneshell           = ".ONESHELL"
 	Posix              = ".POSIX"
+	Wait               = ".WAIT"
 )
 
 var Builtin = []string{
@@ -36,4 +37,5 @@ var Builtin = []string{
 	Notparallel,
 	Oneshell,
 	Posix,
+	Wait,
 }
