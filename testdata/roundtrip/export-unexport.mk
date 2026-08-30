@@ -1,0 +1,2 @@
+export VAR
+unexport OTHER

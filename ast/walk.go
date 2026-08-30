@@ -19,6 +19,8 @@ func Walk(v Visitor, node Node) {
 	}
 
 	switch n := node.(type) {
+	case *BadObj:
+		// nothing to do
 	case *File:
 		walkList(v, n.Contents)
 	case *CommentGroup:

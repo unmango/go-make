@@ -60,6 +60,31 @@ func (f *File) End() token.Pos {
 	}
 }
 
+// A BadObj represents a line containing syntax the parser does not
+// understand. It records the line verbatim so unsupported syntax survives a
+// parse and print round trip.
+type BadObj struct {
+	From, To token.Pos // position range of the bad object
+	Text     string    // source text of the bad object, excluding '\n'
+}
+
+func (*BadObj) objNode() {}
+
+// Pos implements Node
+func (o *BadObj) Pos() token.Pos {
+	return o.From
+}
+
+// End implements Node
+func (o *BadObj) End() token.Pos {
+	return o.To
+}
+
+// String returns the source text of the bad object
+func (o *BadObj) String() string {
+	return o.Text
+}
+
 // A CommentGroup represents a sequence of comments with no other tokens and no empty lines between.
 type CommentGroup struct {
 	List []*Comment
