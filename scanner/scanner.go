@@ -19,8 +19,6 @@ type Scanner struct {
 
 	offset   int
 	rdOffset int
-	tok      token.Token
-	lit      string
 
 	done bool
 }
@@ -85,6 +83,13 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 
 	// current token start
 	pos = s.file.Pos(s.offset)
+
+	// Trailing whitespace exhausted the input.
+	if s.done {
+		tok = token.EOF
+		return
+	}
+
 	var atNewline bool
 
 	switch txt := s.s.Text(); {
@@ -143,7 +148,7 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 			tok = token.COMMENT
 		default:
 			tok = token.UNSUPPORTED
-			s.lit = txt
+			lit = txt
 		}
 	}
 

@@ -352,6 +352,32 @@ var _ = Describe("Scanner", func() {
 		},
 	)
 
+	DescribeTable("Scan trailing whitespace without a newline",
+		Entry(nil, "a: b  "),
+		Entry(nil, "target: dep "),
+		Entry(nil, "ident "),
+		Entry(nil, " "),
+		Entry(nil, "  "),
+		func(input string) {
+			buf := bytes.NewBufferString(input)
+			s := scanner.New(buf, file)
+
+			var (
+				pos token.Pos
+				tok token.Token
+				lit string
+			)
+			for tok != token.EOF {
+				pos, tok, lit = s.Scan()
+				Expect(tok).NotTo(Equal(token.UNSUPPORTED),
+					"expected a supported token, got literal %q", lit,
+				)
+			}
+
+			Expect(pos).To(Equal(token.Pos(len(input) + 1)))
+		},
+	)
+
 	It("should return IO errors", func() {
 		r := testing.ErrReader("io error")
 		s := scanner.New(r, file)
