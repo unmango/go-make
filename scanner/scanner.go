@@ -70,11 +70,11 @@ func (s *Scanner) scanComment() string {
 	return b.String()
 }
 
-func (s Scanner) Err() error {
+func (s *Scanner) Err() error {
 	return s.s.Err()
 }
 
-func (s Scanner) Position(pos token.Pos) token.Position {
+func (s *Scanner) Position(pos token.Pos) token.Position {
 	return token.PositionFor(s.file, pos)
 }
 
