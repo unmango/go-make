@@ -353,6 +353,11 @@ func (p *printer) ifDir(d ast.IfDir) {
 }
 
 func (p *printer) elseBlock(b *ast.ElseBlock) {
+	// The blank lines between the end of the preceding branch and the else
+	// belong in front of it. Writing the token without filling the gap first
+	// moves them past the else, because the following object list fills from
+	// the position of the branch's first object.
+	p.fillLines(b.Else)
 	p.tok(p.posFor(b.Else), token.ELSE)
 	if b.Condition != nil {
 		p.fillSpace(b.Condition.Pos())
@@ -368,6 +373,9 @@ func (p *printer) ifBlock(b *ast.IfBlock) {
 	for _, e := range b.Else {
 		p.elseBlock(e)
 	}
+	// Blank lines in front of the endif are filled for the same reason they
+	// are in front of an else.
+	p.fillLines(b.Endif)
 	p.tok(p.posFor(b.Endif), token.ENDIF)
 	p.writeLine()
 }
