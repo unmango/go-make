@@ -7,14 +7,14 @@ on:
   pull_request:
     branches: [main]
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Codecov uploads with use_oidc: true
+      id-token: write
     steps:
       - uses: actions/checkout@v6
 
@@ -34,6 +34,8 @@ jobs:
 
   nix:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -47,6 +49,8 @@ jobs:
   quickref:
     name: Manual Fixture
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
