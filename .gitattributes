@@ -1,0 +1,4 @@
+# A lone carriage return is meaningful input in this fixture. Marking it -text
+# keeps git from classifying the file as text and rewriting its line endings on
+# checkout, which would change the bytes the round-trip test compares against.
+testdata/roundtrip/unsupported-carriage-return.mk -text
