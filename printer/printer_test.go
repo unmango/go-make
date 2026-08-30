@@ -1062,6 +1062,200 @@ var _ = Describe("Printer", func() {
 		})
 	})
 
+	// A blank line between two nodes of a conditional is the byte gap between
+	// the end of one and the start of the next, the same as anywhere else in
+	// a file. The positions below are the offsets the parser records for the
+	// source each entry prints.
+	Describe("blank lines in conditionals", func() {
+		DescribeTable("should print a blank line",
+			func(file *ast.File, expected string) {
+				buf := &bytes.Buffer{}
+
+				_, err := printer.Fprint(buf, file)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal(expected))
+			},
+			Entry("before an else",
+				&ast.File{
+					LineEnding: "\n",
+					Contents: []ast.Obj{&ast.IfBlock{
+						Directive: &ast.IfdefDir{
+							Tok:     token.IFDEF,
+							TokPos:  token.Pos(1),
+							VarName: &ast.Text{Value: "foo", ValuePos: token.Pos(7)},
+						},
+						Text: []ast.Obj{&ast.Rule{
+							Targets: []ast.Expr{&ast.Text{Value: "bar", ValuePos: token.Pos(11)}},
+							Colon:   token.Pos(14),
+						}},
+						Else: []*ast.ElseBlock{{
+							Else: token.Pos(17),
+							Text: []ast.Obj{&ast.Rule{
+								Targets: []ast.Expr{&ast.Text{Value: "baz", ValuePos: token.Pos(22)}},
+								Colon:   token.Pos(25),
+							}},
+						}},
+						Endif: token.Pos(27),
+					}},
+				},
+				"ifdef foo\nbar:\n\nelse\nbaz:\nendif\n",
+			),
+			Entry("twice before an else",
+				&ast.File{
+					LineEnding: "\n",
+					Contents: []ast.Obj{&ast.IfBlock{
+						Directive: &ast.IfdefDir{
+							Tok:     token.IFDEF,
+							TokPos:  token.Pos(1),
+							VarName: &ast.Text{Value: "foo", ValuePos: token.Pos(7)},
+						},
+						Text: []ast.Obj{&ast.Rule{
+							Targets: []ast.Expr{&ast.Text{Value: "bar", ValuePos: token.Pos(11)}},
+							Colon:   token.Pos(14),
+						}},
+						Else: []*ast.ElseBlock{{
+							Else: token.Pos(18),
+							Text: []ast.Obj{&ast.Rule{
+								Targets: []ast.Expr{&ast.Text{Value: "baz", ValuePos: token.Pos(23)}},
+								Colon:   token.Pos(26),
+							}},
+						}},
+						Endif: token.Pos(28),
+					}},
+				},
+				"ifdef foo\nbar:\n\n\nelse\nbaz:\nendif\n",
+			),
+			Entry("before an else if",
+				&ast.File{
+					LineEnding: "\n",
+					Contents: []ast.Obj{&ast.IfBlock{
+						Directive: &ast.IfdefDir{
+							Tok:     token.IFDEF,
+							TokPos:  token.Pos(1),
+							VarName: &ast.Text{Value: "foo", ValuePos: token.Pos(7)},
+						},
+						Text: []ast.Obj{&ast.Rule{
+							Targets: []ast.Expr{&ast.Text{Value: "bar", ValuePos: token.Pos(11)}},
+							Colon:   token.Pos(14),
+						}},
+						Else: []*ast.ElseBlock{{
+							Else: token.Pos(17),
+							Condition: &ast.IfdefDir{
+								Tok:     token.IFDEF,
+								TokPos:  token.Pos(22),
+								VarName: &ast.Text{Value: "baz", ValuePos: token.Pos(28)},
+							},
+							Text: []ast.Obj{&ast.Rule{
+								Targets: []ast.Expr{&ast.Text{Value: "bin", ValuePos: token.Pos(32)}},
+								Colon:   token.Pos(35),
+							}},
+						}},
+						Endif: token.Pos(37),
+					}},
+				},
+				"ifdef foo\nbar:\n\nelse ifdef baz\nbin:\nendif\n",
+			),
+			Entry("before an endif",
+				&ast.File{
+					LineEnding: "\n",
+					Contents: []ast.Obj{&ast.IfBlock{
+						Directive: &ast.IfdefDir{
+							Tok:     token.IFDEF,
+							TokPos:  token.Pos(1),
+							VarName: &ast.Text{Value: "foo", ValuePos: token.Pos(7)},
+						},
+						Text: []ast.Obj{&ast.Rule{
+							Targets: []ast.Expr{&ast.Text{Value: "bar", ValuePos: token.Pos(11)}},
+							Colon:   token.Pos(14),
+						}},
+						Endif: token.Pos(17),
+					}},
+				},
+				"ifdef foo\nbar:\n\nendif\n",
+			),
+			Entry("twice before an endif",
+				&ast.File{
+					LineEnding: "\n",
+					Contents: []ast.Obj{&ast.IfBlock{
+						Directive: &ast.IfdefDir{
+							Tok:     token.IFDEF,
+							TokPos:  token.Pos(1),
+							VarName: &ast.Text{Value: "foo", ValuePos: token.Pos(7)},
+						},
+						Text: []ast.Obj{&ast.Rule{
+							Targets: []ast.Expr{&ast.Text{Value: "bar", ValuePos: token.Pos(11)}},
+							Colon:   token.Pos(14),
+						}},
+						Endif: token.Pos(18),
+					}},
+				},
+				"ifdef foo\nbar:\n\n\nendif\n",
+			),
+			Entry("between an if and its first object",
+				&ast.File{
+					LineEnding: "\n",
+					Contents: []ast.Obj{&ast.IfBlock{
+						Directive: &ast.IfdefDir{
+							Tok:     token.IFDEF,
+							TokPos:  token.Pos(1),
+							VarName: &ast.Text{Value: "foo", ValuePos: token.Pos(7)},
+						},
+						Text: []ast.Obj{&ast.Rule{
+							Targets: []ast.Expr{&ast.Text{Value: "bar", ValuePos: token.Pos(12)}},
+							Colon:   token.Pos(15),
+						}},
+						Endif: token.Pos(17),
+					}},
+				},
+				"ifdef foo\n\nbar:\nendif\n",
+			),
+			Entry("before an else of a CRLF file",
+				&ast.File{
+					LineEnding: "\r\n",
+					Contents: []ast.Obj{&ast.IfBlock{
+						Directive: &ast.IfdefDir{
+							Tok:     token.IFDEF,
+							TokPos:  token.Pos(1),
+							VarName: &ast.Text{Value: "foo", ValuePos: token.Pos(7)},
+						},
+						Text: []ast.Obj{&ast.Rule{
+							Targets: []ast.Expr{&ast.Text{Value: "bar", ValuePos: token.Pos(12)}},
+							Colon:   token.Pos(15),
+						}},
+						Else: []*ast.ElseBlock{{
+							Else: token.Pos(20),
+							Text: []ast.Obj{&ast.Rule{
+								Targets: []ast.Expr{&ast.Text{Value: "baz", ValuePos: token.Pos(26)}},
+								Colon:   token.Pos(29),
+							}},
+						}},
+						Endif: token.Pos(32),
+					}},
+				},
+				"ifdef foo\r\nbar:\r\n\r\nelse\r\nbaz:\r\nendif\r\n",
+			),
+			Entry("before an endif of a CRLF file",
+				&ast.File{
+					LineEnding: "\r\n",
+					Contents: []ast.Obj{&ast.IfBlock{
+						Directive: &ast.IfdefDir{
+							Tok:     token.IFDEF,
+							TokPos:  token.Pos(1),
+							VarName: &ast.Text{Value: "foo", ValuePos: token.Pos(7)},
+						},
+						Text: []ast.Obj{&ast.Rule{
+							Targets: []ast.Expr{&ast.Text{Value: "bar", ValuePos: token.Pos(12)}},
+							Colon:   token.Pos(15),
+						}},
+						Endif: token.Pos(20),
+					}},
+				},
+				"ifdef foo\r\nbar:\r\n\r\nendif\r\n",
+			),
+		)
+	})
+
 	Describe("positions", func() {
 		It("should not corrupt output when node positions run backwards", func() {
 			buf := &bytes.Buffer{}
