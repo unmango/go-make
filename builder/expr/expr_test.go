@@ -88,7 +88,32 @@ var _ = Describe("Expr", func() {
 					ClosePos: 13,
 				},
 			),
+			Entry("a juxtaposed expression",
+				// "$(FOO)bar"
+				&ast.JuxtaposedExpr{Parts: []ast.Expr{
+					&ast.VarRef{Dollar: 1, Open: token.LPAREN, Name: "FOO", Close: token.RPAREN},
+					&ast.Text{Value: "bar", ValuePos: 7},
+				}},
+				&ast.JuxtaposedExpr{Parts: []ast.Expr{
+					&ast.VarRef{Dollar: 2, Open: token.LPAREN, Name: "FOO", Close: token.RPAREN},
+					&ast.Text{Value: "bar", ValuePos: 8},
+				}},
+			),
+			Entry("an empty juxtaposed expression",
+				&ast.JuxtaposedExpr{Parts: []ast.Expr{}},
+				&ast.JuxtaposedExpr{Parts: []ast.Expr{}},
+			),
 		)
+
+		It("should not alias the parts of a juxtaposed expression", func() {
+			part := &ast.Text{Value: "bar"}
+			e := &ast.JuxtaposedExpr{Parts: []ast.Expr{part}}
+
+			actual := expr.Copy(2, e).(*ast.JuxtaposedExpr)
+
+			Expect(actual.Parts[0]).NotTo(BeIdenticalTo(part))
+			Expect(part.Pos()).To(Equal(token.NoPos))
+		})
 
 		It("should not alias the arguments of a function call", func() {
 			part := &ast.Text{Value: "pwd"}
@@ -151,6 +176,17 @@ var _ = Describe("Expr", func() {
 			&ast.FuncCall{Close: token.RPAREN, ClosePos: 12},
 			token.Pos(13), // $(shell pwd)
 		),
+		Entry("a juxtaposed expression",
+			&ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.VarRef{Dollar: 1, Open: token.LPAREN, Name: "FOO", Close: token.RPAREN},
+				&ast.Text{Value: "bar", ValuePos: 7},
+			}},
+			token.Pos(10), // $(FOO)bar
+		),
+		Entry("an empty juxtaposed expression",
+			&ast.JuxtaposedExpr{},
+			token.NoPos,
+		),
 	)
 
 	Describe("SetPos", func() {
@@ -161,6 +197,28 @@ var _ = Describe("Expr", func() {
 
 			Expect(e.ValuePos).To(Equal(token.Pos(4)))
 			Expect(end).To(Equal(token.Pos(8)))
+		})
+
+		It("should lay the parts of a juxtaposition out back to back", func() {
+			e := &ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.VarRef{Open: token.LPAREN, Name: "FOO", Close: token.RPAREN},
+				&ast.Text{Value: "bar"},
+			}}
+
+			end := expr.SetPos(1, e)
+
+			// "$(FOO)bar"
+			Expect(e.Parts[0].Pos()).To(Equal(token.Pos(1)))
+			Expect(e.Parts[1].Pos()).To(Equal(token.Pos(7)))
+			Expect(end).To(Equal(token.Pos(10)))
+		})
+
+		It("should leave an empty juxtaposition where it was placed", func() {
+			e := &ast.JuxtaposedExpr{}
+
+			end := expr.SetPos(4, e)
+
+			Expect(end).To(Equal(token.Pos(4)))
 		})
 
 		It("should lay a function call out canonically", func() {

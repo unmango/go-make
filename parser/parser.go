@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/unmango/go-make/ast"
@@ -344,15 +345,83 @@ func (p *Parser) parseCallArgPart() ast.Expr {
 	}
 }
 
-func (p *Parser) parseExpression() ast.Expr {
+// juxtaposable reports whether tok continues the expression that precedes it
+// when the two are written with nothing between them. make expands an
+// unseparated run of text and expansions as a single value, so a delimiter
+// that only means something inside an expansion is ordinary text out here:
+// $$(notdir is the escape '$$' joined to the text '(notdir'.
+//
+// The tokens that end a construct are absent, so ':', '|', ';', and the
+// assignment operators still terminate what they terminated before.
+func juxtaposable(tok token.Token) bool {
+	switch tok {
+	case token.TEXT, token.DOLLAR,
+		token.LPAREN, token.RPAREN,
+		token.LBRACE, token.RBRACE,
+		token.COMMA:
+		return true
+	default:
+		// A built-in function name is a name only inside an expansion. Written
+		// anywhere else it is the text it spells, which is what $$(notdir x)
+		// makes of "notdir".
+		return tok.IsBuiltinFunction()
+	}
+}
+
+// parseExpression parses one whitespace-delimited expression.
+//
+// Expressions written with nothing between them are one expression, collected
+// into an [ast.JuxtaposedExpr]. A run of a single part carries nothing the
+// part does not, so it is returned as itself and the common case keeps the
+// node it has always had.
+//
+// stop holds tokens the caller reads itself. An [ast.IfeqDir] ends an argument
+// on ',' and on ')', both of which are ordinary text anywhere else.
+func (p *Parser) parseExpression(stop ...token.Token) ast.Expr {
+	if p.tok != token.TEXT && p.tok != token.DOLLAR {
+		p.expectOneOf(token.TEXT, token.DOLLAR)
+		return nil
+	}
+
+	first := p.parseExprPart()
+	if first == nil {
+		return nil
+	}
+
+	// The scanner drops the blanks between tokens, so a gap in the positions
+	// is what reports one, the same way an expansion tells a call from a
+	// reference.
+	parts, end := []ast.Expr{first}, first.End()
+	for p.pos == end && juxtaposable(p.tok) && !slices.Contains(stop, p.tok) {
+		part := p.parseExprPart()
+		if part == nil {
+			break
+		}
+
+		parts = append(parts, part)
+		end = part.End()
+	}
+	if len(parts) == 1 {
+		return first
+	}
+
+	return &ast.JuxtaposedExpr{Parts: parts}
+}
+
+// parseExprPart parses one piece of an expression: an expansion introduced by
+// '$', or the text everything else was written with. Only '$' means anything
+// to make in a value, so a delimiter reached while joining pieces together
+// reaches the printer as the character it was written with.
+func (p *Parser) parseExprPart() ast.Expr {
 	switch p.tok {
 	case token.TEXT:
 		return p.parseText()
 	case token.DOLLAR:
 		return p.parseRef()
 	default:
-		p.expectOneOf(token.TEXT, token.DOLLAR)
-		return nil
+		text := &ast.Text{ValuePos: p.pos, Value: p.recipeTokenText()}
+		p.next()
+		return text
 	}
 }
 
@@ -444,11 +513,11 @@ func (p *Parser) parseIfeqDir() *ast.IfeqDir {
 		// string. The delimiter that follows marks the absence, and a nil Arg
 		// records it.
 		if p.tok != token.COMMA {
-			arg1 = p.parseExpression()
+			arg1 = p.parseExpression(token.COMMA, token.RPAREN)
 		}
 		comma = p.expect(token.COMMA)
 		if p.tok != token.RPAREN {
-			arg2 = p.parseExpression()
+			arg2 = p.parseExpression(token.COMMA, token.RPAREN)
 		}
 		rparen = p.expect(token.RPAREN)
 	case token.APOS, token.QUOTE:

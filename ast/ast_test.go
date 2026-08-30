@@ -198,6 +198,63 @@ var _ = Describe("Ast", func() {
 		})
 	})
 
+	Describe("JuxtaposedExpr", func() {
+		It("should return the position of the first part", func() {
+			c := &ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.Text{ValuePos: token.Pos(69), Value: "foo"},
+				&ast.Text{ValuePos: token.Pos(72), Value: "bar"},
+			}}
+
+			Expect(c.Pos()).To(Equal(token.Pos(69)))
+		})
+
+		It("should return the position after the last part", func() {
+			c := &ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.Text{ValuePos: token.Pos(69), Value: "foo"},
+				&ast.Text{ValuePos: token.Pos(72), Value: "bar"},
+			}}
+
+			Expect(c.End()).To(Equal(token.Pos(75)))
+		})
+
+		It("should have no position when it has no parts", func() {
+			c := &ast.JuxtaposedExpr{}
+
+			Expect(c.Pos()).To(Equal(token.NoPos))
+			Expect(c.End()).To(Equal(token.NoPos))
+		})
+
+		It("should stringify with nothing between the parts", func() {
+			c := &ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.Text{ValuePos: token.Pos(1), Value: "$$"},
+				&ast.Text{ValuePos: token.Pos(3), Value: "("},
+				&ast.Text{ValuePos: token.Pos(4), Value: "notdir"},
+			}}
+
+			Expect(c.String()).To(Equal("$$(notdir"))
+		})
+
+		It("should stringify a reference joined to text", func() {
+			c := &ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.VarRef{
+					Dollar: token.Pos(1),
+					Open:   token.LPAREN,
+					Name:   "FOO",
+					Close:  token.RPAREN,
+				},
+				&ast.Text{ValuePos: token.Pos(7), Value: "bar"},
+			}}
+
+			Expect(c.String()).To(Equal("$(FOO)bar"))
+		})
+
+		It("should stringify an empty juxtaposition", func() {
+			c := &ast.JuxtaposedExpr{}
+
+			Expect(c.String()).To(BeEmpty())
+		})
+	})
+
 	DescribeTableSubtree("QuotedExpr",
 		Entry(nil, token.QUOTE),
 		Entry(nil, token.APOS),
@@ -767,6 +824,30 @@ var _ = Describe("End", func() {
 	It("should span the single character variable reference", func() {
 		assertSpans("target: $b\n", "$b", func(f *ast.File) ast.Node {
 			return f.Contents[0].(*ast.Rule).PreReqs[0]
+		})
+	})
+
+	It("should span the juxtaposition of an escape and the text after it", func() {
+		assertSpans("target: $$(notdir x)\n", "$$(notdir", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.Rule).PreReqs[0]
+		})
+	})
+
+	It("should span the juxtaposition of a reference and the text after it", func() {
+		assertSpans("target: $(FOO)bar\n", "$(FOO)bar", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.Rule).PreReqs[0]
+		})
+	})
+
+	It("should span the juxtaposition of two references", func() {
+		assertSpans("target: $(FOO)$(BAR)\n", "$(FOO)$(BAR)", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.Rule).PreReqs[0]
+		})
+	})
+
+	It("should span the juxtaposition of two calls", func() {
+		assertSpans("OUT := $(notdir a)$(dir b)\n", "$(notdir a)$(dir b)", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.Variable).Value[0]
 		})
 	})
 
