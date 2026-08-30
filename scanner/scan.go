@@ -7,7 +7,7 @@ import (
 // ScanTokens is a [bufio.SplitFunc] for a [bufio.Scanner] that
 // scans for tokens supported by the make syntax.
 func ScanTokens(data []byte, atEOF bool) (advance int, token []byte, err error) {
-	if atEOF && len(data) == 0 {
+	if len(data) == 0 {
 		return 0, nil, nil
 	}
 
@@ -19,7 +19,7 @@ func ScanTokens(data []byte, atEOF bool) (advance int, token []byte, err error) 
 			return 2, data[:2], nil
 		}
 	case ':':
-		if len(data) == 1 && !atEOF {
+		if len(data) < 4 && !atEOF {
 			return 0, nil, nil // We need more info to make a decision
 		}
 		if bytes.HasPrefix(data, []byte(":::=")) {
