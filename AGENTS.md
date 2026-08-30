@@ -12,6 +12,7 @@ This is the canonical repository guide for coding agents in this repo.
 - `go tool ginkgo --focus='single character variable reference and extra text' run ./parser` runs one focused spec.
 - `make cover` runs the full suite with coverage and writes `cover.profile`.
 - `make format` runs `go fmt` plus `dprint fmt`; Markdown formatting currently applies to `README.md`.
+- `make sync-quickref` refreshes `internal/conformance/testdata/quickref.json` from the GNU Make manual. It requires nix, since the manual pages are pinned by content hash in `flake.nix`.
 - If you change Nix files, CI also runs `nix flake check --all-systems` and `nix build`.
 
 ## High-level architecture
@@ -23,6 +24,7 @@ This is the canonical repository guide for coding agents in this repo.
 - `printer/` is the round-trip output engine. It uses stored positions to recreate spacing and blank lines rather than normalizing formatting. `writer/` is mostly a thin convenience layer over `printer.Fprint`.
 - `builder/` provides position-aware AST construction helpers (`builder/file`, `builder/rule`, `builder/text`, etc.) for programmatic AST creation and tests.
 - `testdata/roundtrip/*.mk` is the contract for syntax that is expected to parse and print without modification.
+- `internal/conformance/` compares the names enumerated by `token/`, `ast/target`, and `ast/variable` against summaries extracted from the GNU Make manual. The comparison reads a checked-in fixture, so the suite never touches the network.
 
 ## Key conventions
 

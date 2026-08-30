@@ -43,3 +43,19 @@ jobs:
 
       - run: nix flake check --all-systems
       - run: nix build
+
+  quickref:
+    name: Manual Fixture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: cachix/install-nix-action@v31.10.6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Realizes the pinned fetchurl derivations, so a stale hash fails here.
+      - run: make sync-quickref
+
+      - name: Fixture is up to date with the manual
+        run: git diff --exit-code internal/conformance/testdata/quickref.json

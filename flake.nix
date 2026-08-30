@@ -36,6 +36,29 @@
 
           goEnv = mkGoEnv { pwd = ./.; };
 
+          # Pages of the GNU Make manual that internal/conformance compares the
+          # enumerated syntax against. A hash mismatch means the manual changed,
+          # update the hash and review the resulting fixture diff.
+          manual = {
+            quickRef = pkgs.fetchurl {
+              url = "https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html";
+              hash = "sha256-0c/jVkSV8ZZo2Xv33f6NSEFfRBp2D1mIKv8lMILwqDQ=";
+            };
+            specialTargets = pkgs.fetchurl {
+              url = "https://www.gnu.org/software/make/manual/html_node/Special-Targets.html";
+              hash = "sha256-TTbD1INeiFAyViRpFxCRCECHX5//4pWvcldhyTk0g90=";
+            };
+          };
+
+          syncQuickRef = pkgs.writeShellApplication {
+            name = "sync-quickref";
+            runtimeInputs = [ pkgs.go ];
+            text = ''
+              exec go run ./internal/conformance/cmd/syncquickref \
+                ${manual.quickRef} ${manual.specialTargets}
+            '';
+          };
+
           goMake = buildGoApplication {
             pname = "go-make";
             version = "0.8.0";
@@ -54,6 +77,11 @@
 
           packages.goMake = goMake;
           packages.default = goMake;
+
+          apps.sync-quickref = {
+            type = "app";
+            program = pkgs.lib.getExe syncQuickRef;
+          };
 
           devShells.default = pkgs.mkShell {
             packages = with pkgs; [
