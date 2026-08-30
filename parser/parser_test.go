@@ -878,6 +878,78 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should Parse a semicolon inside a recipe as recipe text", func() {
+		buf := bytes.NewBufferString("target:\n\tcd dir; ls")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.TAB,
+				PrefixPos: token.Pos(9),
+				Text: ast.Text{
+					Value:    "cd dir; ls",
+					ValuePos: token.Pos(10),
+				},
+			}},
+		}))
+	})
+
+	It("should Parse a semicolon in a variable value as text", func() {
+		buf := bytes.NewBufferString("VAR = a; b")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Variable{
+			Name: &ast.Text{
+				Value:    "VAR",
+				ValuePos: token.Pos(1),
+			},
+			Op:    token.RECURSIVE_ASSIGN,
+			OpPos: token.Pos(5),
+			Value: []ast.Expr{
+				&ast.Text{Value: "a;", ValuePos: token.Pos(7)},
+				&ast.Text{Value: "b", ValuePos: token.Pos(10)},
+			},
+		}))
+	})
+
+	// A semicolon is only a token when it starts one, so "a;" stays text while
+	// a bare ";" reaches parseExpression, which accepts TEXT and DOLLAR only.
+	// Every non-recipe context that calls parseExpression has the same gap.
+	// See https://github.com/unmango/go-make/issues/112.
+	It("should Parse a semicolon that starts a word in a variable value as text", Pending, func() {
+		buf := bytes.NewBufferString("VAR = a ;b")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Variable{
+			Name: &ast.Text{
+				Value:    "VAR",
+				ValuePos: token.Pos(1),
+			},
+			Op:    token.RECURSIVE_ASSIGN,
+			OpPos: token.Pos(5),
+			Value: []ast.Expr{
+				&ast.Text{Value: "a", ValuePos: token.Pos(7)},
+				&ast.Text{Value: ";b", ValuePos: token.Pos(9)},
+			},
+		}))
+	})
+
 	It("should support a nil *token.File value", func() {
 		buf := bytes.NewBufferString("target:")
 		s := parser.New(buf, nil)
