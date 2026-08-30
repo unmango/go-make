@@ -419,6 +419,178 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should Parse a target with a semicolon recipe", func() {
+		buf := bytes.NewBufferString("target: ; recipe")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.SEMI,
+				PrefixPos: token.Pos(9),
+				Text: ast.Text{
+					Value:    " recipe",
+					ValuePos: token.Pos(10),
+				},
+			}},
+		}))
+	})
+
+	It("should Parse a semicolon recipe written against the colon", func() {
+		buf := bytes.NewBufferString("target:; recipe")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.SEMI,
+				PrefixPos: token.Pos(8),
+				Text: ast.Text{
+					Value:    " recipe",
+					ValuePos: token.Pos(9),
+				},
+			}},
+		}))
+	})
+
+	// A semicolon is only its own token when whitespace terminates it, so
+	// ";recipe" is scanned as one TEXT token and read as a pre-requisite.
+	// See https://github.com/unmango/go-make/issues/112.
+	It("should Parse an unseparated semicolon as a pre-requisite", func() {
+		buf := bytes.NewBufferString("target: ;recipe")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs: []ast.Expr{&ast.Text{
+				Value:    ";recipe",
+				ValuePos: token.Pos(9),
+			}},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	It("should Parse a semicolon recipe after a prereq", func() {
+		buf := bytes.NewBufferString("target: prereq ; recipe")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs: []ast.Expr{&ast.Text{
+				Value:    "prereq",
+				ValuePos: token.Pos(9),
+			}},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.SEMI,
+				PrefixPos: token.Pos(16),
+				Text: ast.Text{
+					Value:    " recipe",
+					ValuePos: token.Pos(17),
+				},
+			}},
+		}))
+	})
+
+	It("should Parse a semicolon recipe after an order-only prereq", func() {
+		buf := bytes.NewBufferString("target: | prereq ; recipe")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs: []ast.Expr{},
+			Pipe:    token.Pos(9),
+			OrderPreReqs: []ast.Expr{&ast.Text{
+				Value:    "prereq",
+				ValuePos: token.Pos(11),
+			}},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.SEMI,
+				PrefixPos: token.Pos(18),
+				Text: ast.Text{
+					Value:    " recipe",
+					ValuePos: token.Pos(19),
+				},
+			}},
+		}))
+	})
+
+	It("should Parse a semicolon recipe followed by tab recipes", func() {
+		buf := bytes.NewBufferString("target: ; recipe\n\trecipe2")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{
+				{
+					Prefix:    token.SEMI,
+					PrefixPos: token.Pos(9),
+					Text: ast.Text{
+						Value:    " recipe",
+						ValuePos: token.Pos(10),
+					},
+				},
+				{
+					Prefix:    token.TAB,
+					PrefixPos: token.Pos(18),
+					Text: ast.Text{
+						Value:    "recipe2",
+						ValuePos: token.Pos(19),
+					},
+				},
+			},
+		}))
+	})
+
 	It("should Parse a target with multiple recipes", func() {
 		buf := bytes.NewBufferString("target:\n\trecipe\n\trecipe2")
 		p := parser.New(buf, file)
@@ -728,6 +900,53 @@ var _ = Describe("Parser", func() {
 					ValuePos: token.Pos(17),
 				},
 			}},
+		}))
+	})
+
+	It("should Parse a semicolon inside a recipe as recipe text", func() {
+		buf := bytes.NewBufferString("target:\n\tcd dir; ls")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.TAB,
+				PrefixPos: token.Pos(9),
+				Text: ast.Text{
+					Value:    "cd dir; ls",
+					ValuePos: token.Pos(10),
+				},
+			}},
+		}))
+	})
+
+	It("should Parse a semicolon in a variable value as text", func() {
+		buf := bytes.NewBufferString("VAR = a; b")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Variable{
+			Name: &ast.Text{
+				Value:    "VAR",
+				ValuePos: token.Pos(1),
+			},
+			Op:    token.RECURSIVE_ASSIGN,
+			OpPos: token.Pos(5),
+			Value: []ast.Expr{
+				&ast.Text{Value: "a;", ValuePos: token.Pos(7)},
+				&ast.Text{Value: "b", ValuePos: token.Pos(10)},
+			},
 		}))
 	})
 

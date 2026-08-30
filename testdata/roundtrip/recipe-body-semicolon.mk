@@ -1,0 +1,2 @@
+target:
+	cd dir; ls

@@ -477,9 +477,12 @@ func (p *Parser) recipeTokenText() string {
 	return p.tok.String()
 }
 
-func (p *Parser) parseRecipe() *ast.Recipe {
-	prefixPos := p.expect(p.recipePrefix)
-	prefixText := p.recipePrefix.String()
+// parseRecipe reads a recipe introduced by prefix. A rule may introduce its
+// first recipe with a semicolon on the target line, so the prefix is a
+// parameter rather than always [Parser.recipePrefix].
+func (p *Parser) parseRecipe(prefix token.Token) *ast.Recipe {
+	prefixPos := p.expect(prefix)
+	prefixText := prefix.String()
 	prefixWidth := token.Pos(len(prefixText))
 	b := &strings.Builder{}
 	nextPos := prefixPos + prefixWidth
@@ -500,7 +503,7 @@ func (p *Parser) parseRecipe() *ast.Recipe {
 	}
 
 	return &ast.Recipe{
-		Prefix:    p.recipePrefix,
+		Prefix:    prefix,
 		PrefixPos: prefixPos,
 		Text: ast.Text{
 			Value:    b.String(),
@@ -512,7 +515,7 @@ func (p *Parser) parseRecipe() *ast.Recipe {
 func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	colon := p.expect(token.COLON)
 	prereqs := []ast.Expr{}
-	for p.tok != token.PIPE && p.tok != token.NEWLINE && p.tok != token.EOF {
+	for p.tok != token.PIPE && p.tok != token.SEMI && p.tok != token.NEWLINE && p.tok != token.EOF {
 		prereqs = append(prereqs, p.parseExpression())
 	}
 
@@ -520,11 +523,19 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	if p.tok == token.PIPE {
 		pipe = p.pos
 		p.next()
-		for p.tok != token.NEWLINE && p.tok != token.EOF {
+		for p.tok != token.SEMI && p.tok != token.NEWLINE && p.tok != token.EOF {
 			oprereqs = append(oprereqs, p.parseExpression())
 		}
 	}
-	if p.tok == token.NEWLINE {
+
+	// A semicolon ends the prerequisite list and introduces a recipe on the
+	// target line itself, so it is read before the prefixed recipes on the
+	// lines below. It consumes the rest of the line, the newline included,
+	// which is otherwise skipped here.
+	recipes := make([]*ast.Recipe, 0)
+	if p.tok == token.SEMI {
+		recipes = append(recipes, p.parseRecipe(token.SEMI))
+	} else if p.tok == token.NEWLINE {
 		p.next()
 	}
 
@@ -534,12 +545,11 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	// following them are the same newlines the caller would have skipped, and
 	// the blank lines survive a round trip because the printer reconstructs
 	// them from the position of whatever node comes next.
-	recipes := make([]*ast.Recipe, 0)
 	for p.isRecipePrefix() || p.tok == token.NEWLINE {
 		if p.tok == token.NEWLINE {
 			p.skipNewlines()
 		} else {
-			recipes = append(recipes, p.parseRecipe())
+			recipes = append(recipes, p.parseRecipe(p.recipePrefix))
 		}
 	}
 
