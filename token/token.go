@@ -15,8 +15,11 @@ import (
 type Token int
 
 const (
-	UNSUPPORTED Token = -1
-	ILLEGAL     Token = iota
+	// ILLEGAL is the zero value of Token, matching the convention of go/token.
+	ILLEGAL Token = iota
+	// UNSUPPORTED is text that is valid in a Makefile but that this package
+	// does not model.
+	UNSUPPORTED
 	EOF
 	COMMENT // #comment text
 
@@ -112,10 +115,11 @@ const (
 )
 
 var tokens = [...]string{
-	ILLEGAL: "ILLEGAL",
-	EOF:     "EOF",
-	COMMENT: "COMMENT",
-	TEXT:    "TEXT",
+	ILLEGAL:     "ILLEGAL",
+	UNSUPPORTED: "UNSUPPORTED",
+	EOF:         "EOF",
+	COMMENT:     "COMMENT",
+	TEXT:        "TEXT",
 
 	LPAREN:  "(",
 	LBRACE:  "{",
@@ -217,7 +221,7 @@ var (
 func init() {
 	directives = make(map[string]Token, directive_end-(directive_beg+1))
 	functions = make(map[string]Token, function_end-(function_beg+1))
-	keywords = make(map[string]Token, len(directives)+len(functions))
+	keywords = make(map[string]Token, (directive_end-(directive_beg+1))+(function_end-(function_beg+1)))
 
 	for i := directive_beg + 1; i < directive_end; i++ {
 		directives[tokens[i]] = i
