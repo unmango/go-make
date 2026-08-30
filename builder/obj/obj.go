@@ -25,7 +25,7 @@ func SetPos(pos token.Pos, obj ast.Obj) token.Pos {
 	case *ast.CommentGroup:
 		for _, c := range n.List {
 			c.Pound = pos
-			pos = commentEnd(c) + 1 // '\n'
+			pos = c.End() + 1 // '\n'
 		}
 
 		return pos
@@ -95,7 +95,7 @@ func End(obj ast.Obj) token.Pos {
 			return token.NoPos
 		}
 
-		return commentEnd(n.List[len(n.List)-1]) + 1 // '\n'
+		return n.List[len(n.List)-1].End() + 1 // '\n'
 	case *ast.Variable:
 		if len(n.Value) > 0 {
 			return expr.End(n.Value[len(n.Value)-1]) + 1 // '\n'
@@ -133,13 +133,6 @@ func setDirPos(pos token.Pos, dir ast.IfDir) token.Pos {
 	default:
 		panic(fmt.Sprintf("builder/obj: SetPos: unsupported directive type %T", dir))
 	}
-}
-
-// commentEnd returns the position immediately after the last character the
-// printer writes for c. The printer always writes a single space between the
-// pound and the comment text.
-func commentEnd(c *ast.Comment) token.Pos {
-	return c.Pound + 2 + token.Pos(len(c.Text))
 }
 
 func clone(obj ast.Obj) ast.Obj {

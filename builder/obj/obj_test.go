@@ -71,9 +71,9 @@ var _ = Describe("Obj", func() {
 				Targets: []ast.Expr{&ast.Text{Value: "target"}},
 				PreReqs: []ast.Expr{&ast.Text{Value: "prereq"}},
 			}),
-			Entry("a comment", "# a comment\n", commentGroup("a comment")),
+			Entry("a comment", "# a comment\n", commentGroup(" a comment")),
 			Entry("a comment group", "# a comment\n# another line\n",
-				commentGroup("a comment", "another line"),
+				commentGroup(" a comment", " another line"),
 			),
 			Entry("a variable", "FOO := bar\n", variable("FOO", "bar")),
 			Entry("a variable with no value", "FOO :=\n", &ast.Variable{
@@ -116,7 +116,7 @@ var _ = Describe("Obj", func() {
 		Entry("a rule", &ast.Rule{
 			Targets: []ast.Expr{&ast.Text{Value: "target"}},
 		}, token.Pos(9)), // len("target:\n") + 1
-		Entry("a comment group", commentGroup("a comment"), token.Pos(13)),
+		Entry("a comment group", commentGroup(" a comment"), token.Pos(13)),
 		Entry("a variable", variable("FOO", "bar"), token.Pos(12)),
 		Entry("an if block", ifBlock(), token.Pos(53)),
 		Entry("a bad object", &ast.BadObj{Text: "include foo.mk"},

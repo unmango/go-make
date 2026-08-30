@@ -90,7 +90,7 @@ var _ = Describe("Ast", func() {
 		It("should return the position after the last comment", func() {
 			c := &ast.CommentGroup{[]*ast.Comment{
 				{Pound: token.Pos(69), Text: "foo"},
-				{Pound: token.Pos(420), Text: "Some comment text"},
+				{Pound: token.Pos(420), Text: " Some comment text"},
 			}}
 
 			Expect(c.End()).To(Equal(token.Pos(439)))
@@ -108,11 +108,27 @@ var _ = Describe("Ast", func() {
 		It("should return the position after the comment text", func() {
 			c := &ast.Comment{
 				Pound: token.Pos(420),
+				Text:  " Some comment text",
+			}
+
+			// '#' + len(" Some comment text")
+			Expect(c.End()).To(Equal(token.Pos(439)))
+		})
+
+		It("should return the position after a comment with no leading space", func() {
+			c := &ast.Comment{
+				Pound: token.Pos(420),
 				Text:  "Some comment text",
 			}
 
-			// '#' + ' ' + len("Some comment text")
-			Expect(c.End()).To(Equal(token.Pos(439)))
+			// '#' + len("Some comment text")
+			Expect(c.End()).To(Equal(token.Pos(438)))
+		})
+
+		It("should return the position after the pound when there is no text", func() {
+			c := &ast.Comment{Pound: token.Pos(420)}
+
+			Expect(c.End()).To(Equal(token.Pos(421)))
 		})
 	})
 
@@ -517,6 +533,24 @@ var _ = Describe("End", func() {
 
 	It("should span the comment including the pound", func() {
 		assertSpans("# a comment\n", "# a comment", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.CommentGroup).List[0]
+		})
+	})
+
+	It("should span the comment with no space after the pound", func() {
+		assertSpans("#a comment\n", "#a comment", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.CommentGroup).List[0]
+		})
+	})
+
+	It("should span the comment with extra space after the pound", func() {
+		assertSpans("#  a comment\n", "#  a comment", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.CommentGroup).List[0]
+		})
+	})
+
+	It("should span the comment with no text", func() {
+		assertSpans("#\n", "#", func(f *ast.File) ast.Node {
 			return f.Contents[0].(*ast.CommentGroup).List[0]
 		})
 	})

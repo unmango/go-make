@@ -212,7 +212,7 @@ var _ = Describe("Printer", func() {
 
 			_, err := printer.Fprint(buf, &ast.File{
 				Contents: []ast.Obj{&ast.CommentGroup{List: []*ast.Comment{
-					{Pound: token.Pos(1), Text: "comment text"},
+					{Pound: token.Pos(1), Text: " comment text"},
 				}}},
 			})
 
@@ -220,13 +220,32 @@ var _ = Describe("Printer", func() {
 			Expect(buf.String()).To(Equal("# comment text\n"))
 		})
 
+		DescribeTable("should write the comment text verbatim after the pound",
+			func(text, expected string) {
+				buf := &bytes.Buffer{}
+
+				_, err := printer.Fprint(buf, &ast.File{
+					Contents: []ast.Obj{&ast.CommentGroup{List: []*ast.Comment{
+						{Pound: token.Pos(1), Text: text},
+					}}},
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal(expected))
+			},
+			Entry("no space", "comment text", "#comment text\n"),
+			Entry("one space", " comment text", "# comment text\n"),
+			Entry("two spaces", "  comment text", "#  comment text\n"),
+			Entry("no text", "", "#\n"),
+		)
+
 		It("should write a comment group", func() {
 			buf := &bytes.Buffer{}
 
 			_, err := printer.Fprint(buf, &ast.File{
 				Contents: []ast.Obj{&ast.CommentGroup{List: []*ast.Comment{
-					{Pound: token.Pos(1), Text: "comment text"},
-					{Pound: token.Pos(16), Text: "new line"},
+					{Pound: token.Pos(1), Text: " comment text"},
+					{Pound: token.Pos(16), Text: " new line"},
 				}}},
 			})
 
@@ -241,11 +260,11 @@ var _ = Describe("Printer", func() {
 				Contents: []ast.Obj{
 					&ast.CommentGroup{List: []*ast.Comment{{
 						Pound: token.Pos(1),
-						Text:  "comment text",
+						Text:  " comment text",
 					}}},
 					&ast.CommentGroup{List: []*ast.Comment{{
 						Pound: token.Pos(17),
-						Text:  "other comment text",
+						Text:  " other comment text",
 					}}},
 				},
 			})

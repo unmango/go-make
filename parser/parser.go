@@ -193,10 +193,10 @@ func (p *Parser) parseExpression() ast.Expr {
 }
 
 func (p *Parser) parseComment() *ast.Comment {
+	// The scanner reports everything between the pound and the end of the line,
+	// whitespace included. Storing it verbatim keeps "#foo" distinct from
+	// "# foo" so the printer can write either one back unchanged.
 	pos, lit := p.pos, p.lit
-	// The scanner keeps the post-# space so recipe lines can round-trip comments
-	// exactly; top-level comment nodes still normalize that leading space away.
-	lit = strings.TrimPrefix(lit, " ")
 	p.next()
 
 	return &ast.Comment{
