@@ -2,6 +2,7 @@ package parser_test
 
 import (
 	"bytes"
+	"fmt"
 	gotoken "go/token"
 	"math"
 
@@ -462,19 +463,27 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
-	DescribeTable("should error when a dollar sign is followed by an unexpected token",
-		Entry(nil, "target: $:", "':'"),
-		Entry(nil, "target: $)", "')'"),
-		Entry(nil, "target: $", "'EOF'"),
-		func(input, found string) {
+	// A '$' opens an expansion only when an expansion follows it immediately.
+	// Written anywhere else the character stands for itself, so the parser
+	// records it as text rather than reporting an error it cannot recover the
+	// source from.
+	DescribeTable("should parse a dollar sign that opens nothing as text",
+		Entry("at the end of the input", "target: $", "$"),
+		Entry("followed by a closing paren", "target: $)", "$)"),
+		Entry("followed by a blank", "target: $ x", "$"),
+		Entry("written against the text before it", "target: a$", "a$"),
+		func(input, prereq string) {
 			buf := bytes.NewBufferString(input)
 			p := parser.New(buf, file)
 
-			_, err := p.ParseFile()
+			f, err := p.ParseFile()
 
-			Expect(err).To(MatchError(
-				"test:1:10: expected one of 'TEXT', '$', '(', '{', found " + found,
-			))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(HaveLen(1))
+			rule, ok := f.Contents[0].(*ast.Rule)
+			Expect(ok).To(BeTrue(), "expected a *ast.Rule, got %T", f.Contents[0])
+			Expect(rule.PreReqs).NotTo(BeEmpty())
+			Expect(rule.PreReqs[0].(fmt.Stringer).String()).To(Equal(prereq))
 		},
 	)
 
