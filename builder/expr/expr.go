@@ -37,6 +37,14 @@ func SetPos(pos token.Pos, expr ast.Expr) token.Pos {
 	case *ast.Recipe:
 		n.PrefixPos = pos
 		n.ValuePos = pos + length(n.Prefix)
+	case *ast.JuxtaposedExpr:
+		// The parts are written with nothing between them, so each one begins
+		// where the one before it ended. An empty juxtaposition occupies no
+		// source, so it ends where it began.
+		for _, part := range n.Parts {
+			pos = SetPos(pos, part)
+		}
+		return pos
 	default:
 		panic(fmt.Sprintf("builder/expr: SetPos: unsupported expression type %T", expr))
 	}
@@ -69,6 +77,11 @@ func End(expr ast.Expr) token.Pos {
 		return n.ClosePos + length(n.Close)
 	case *ast.Recipe:
 		return n.ValuePos + token.Pos(len(n.Value))
+	case *ast.JuxtaposedExpr:
+		if len(n.Parts) == 0 {
+			return token.NoPos
+		}
+		return End(n.Parts[len(n.Parts)-1])
 	default:
 		panic(fmt.Sprintf("builder/expr: End: unsupported expression type %T", expr))
 	}
@@ -107,6 +120,13 @@ func clone(expr ast.Expr) ast.Expr {
 		return &c
 	case *ast.Recipe:
 		c := *n
+		return &c
+	case *ast.JuxtaposedExpr:
+		c := *n
+		c.Parts = make([]ast.Expr, len(n.Parts))
+		for i, part := range n.Parts {
+			c.Parts[i] = clone(part)
+		}
 		return &c
 	default:
 		panic(fmt.Sprintf("builder/expr: Copy: unsupported expression type %T", expr))

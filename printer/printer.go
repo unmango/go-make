@@ -103,6 +103,17 @@ func (p *printer) quotedExpr(e *ast.QuotedExpr) {
 	p.tok(p.posFor(e.Close), e.Quote)
 }
 
+// juxtaposedExpr writes the parts of a juxtaposition. They are written with
+// nothing between them, so padding up to each position is a no-op for a parsed
+// node and recreates the gap for a hand-built one, the same way every other
+// list of expressions is written.
+func (p *printer) juxtaposedExpr(e *ast.JuxtaposedExpr) {
+	for _, part := range e.Parts {
+		p.fillSpace(part.Pos())
+		p.expr(part)
+	}
+}
+
 func (p *printer) recipe(r *ast.Recipe) {
 	pos := p.posFor(r.PrefixPos)
 	p.tok(pos, r.Prefix)
@@ -163,6 +174,8 @@ func (p *printer) expr(expr ast.Expr) {
 		p.text(n)
 	case *ast.QuotedExpr:
 		p.quotedExpr(n)
+	case *ast.JuxtaposedExpr:
+		p.juxtaposedExpr(n)
 	case *ast.Recipe:
 		p.text(&n.Text)
 	case *ast.VarRef:

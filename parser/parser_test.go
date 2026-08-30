@@ -156,7 +156,7 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(5),
-			Targets: []ast.Expr{
+			Targets: []ast.Expr{&ast.JuxtaposedExpr{Parts: []ast.Expr{
 				&ast.VarRef{
 					Dollar: token.Pos(1),
 					Open:   token.ILLEGAL,
@@ -164,7 +164,7 @@ var _ = Describe("Parser", func() {
 					Close:  token.ILLEGAL,
 				},
 				&ast.Text{Value: "oo", ValuePos: token.Pos(3)},
-			},
+			}}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
 			Recipes:      []*ast.Recipe{},
@@ -180,10 +180,10 @@ var _ = Describe("Parser", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Contents).To(ConsistOf(&ast.Rule{
 			Colon: token.Pos(4),
-			Targets: []ast.Expr{
+			Targets: []ast.Expr{&ast.JuxtaposedExpr{Parts: []ast.Expr{
 				&ast.Text{Value: "$$", ValuePos: token.Pos(1)},
 				&ast.Text{Value: "V", ValuePos: token.Pos(3)},
-			},
+			}}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
 			Recipes:      []*ast.Recipe{},
@@ -203,10 +203,10 @@ var _ = Describe("Parser", func() {
 				Value:    "target",
 				ValuePos: token.Pos(1),
 			}},
-			PreReqs: []ast.Expr{
+			PreReqs: []ast.Expr{&ast.JuxtaposedExpr{Parts: []ast.Expr{
 				&ast.Text{Value: "$$", ValuePos: token.Pos(9)},
 				&ast.Text{Value: "V", ValuePos: token.Pos(11)},
-			},
+			}}},
 			OrderPreReqs: []ast.Expr{},
 			Recipes:      []*ast.Recipe{},
 		}))
@@ -226,10 +226,10 @@ var _ = Describe("Parser", func() {
 			},
 			Op:    token.SIMPLE_ASSIGN,
 			OpPos: token.Pos(5),
-			Value: []ast.Expr{
+			Value: []ast.Expr{&ast.JuxtaposedExpr{Parts: []ast.Expr{
 				&ast.Text{Value: "$$", ValuePos: token.Pos(8)},
 				&ast.Text{Value: "V", ValuePos: token.Pos(10)},
-			},
+			}}},
 		}))
 	})
 
@@ -252,6 +252,213 @@ var _ = Describe("Parser", func() {
 			}},
 			OrderPreReqs: []ast.Expr{},
 			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	It("should Parse an escaped dollar sign followed by a parenthesized name", func() {
+		buf := bytes.NewBufferString("target: $$(notdir x)")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs: []ast.Expr{
+				&ast.JuxtaposedExpr{Parts: []ast.Expr{
+					&ast.Text{Value: "$$", ValuePos: token.Pos(9)},
+					&ast.Text{Value: "(", ValuePos: token.Pos(11)},
+					&ast.Text{Value: "notdir", ValuePos: token.Pos(12)},
+				}},
+				&ast.JuxtaposedExpr{Parts: []ast.Expr{
+					&ast.Text{Value: "x", ValuePos: token.Pos(19)},
+					&ast.Text{Value: ")", ValuePos: token.Pos(20)},
+				}},
+			},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	It("should Parse a reference joined to the text after it", func() {
+		buf := bytes.NewBufferString("target: $(FOO)bar")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs: []ast.Expr{&ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.VarRef{
+					Dollar: token.Pos(9),
+					Open:   token.LPAREN,
+					Name:   "FOO",
+					Close:  token.RPAREN,
+				},
+				&ast.Text{Value: "bar", ValuePos: token.Pos(15)},
+			}}},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	It("should Parse two references written next to each other", func() {
+		buf := bytes.NewBufferString("target: $(FOO)${BAR}")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs: []ast.Expr{&ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.VarRef{
+					Dollar: token.Pos(9),
+					Open:   token.LPAREN,
+					Name:   "FOO",
+					Close:  token.RPAREN,
+				},
+				&ast.VarRef{
+					Dollar: token.Pos(15),
+					Open:   token.LBRACE,
+					Name:   "BAR",
+					Close:  token.RBRACE,
+				},
+			}}},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	It("should Parse a call joined to the reference after it", func() {
+		buf := bytes.NewBufferString("OUT := $(notdir a)$(FOO)")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Variable{
+			Name:  &ast.Text{Value: "OUT", ValuePos: token.Pos(1)},
+			Op:    token.SIMPLE_ASSIGN,
+			OpPos: token.Pos(5),
+			Value: []ast.Expr{&ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.FuncCall{
+					Dollar: token.Pos(8),
+					Open:   token.LPAREN,
+					Name:   &ast.Text{Value: "notdir", ValuePos: token.Pos(10)},
+					Args: []*ast.FuncArg{{
+						From:  token.Pos(17),
+						To:    token.Pos(18),
+						Parts: []ast.Expr{&ast.Text{Value: "a", ValuePos: token.Pos(17)}},
+					}},
+					Close:    token.RPAREN,
+					ClosePos: token.Pos(18),
+				},
+				&ast.VarRef{
+					Dollar: token.Pos(19),
+					Open:   token.LPAREN,
+					Name:   "FOO",
+					Close:  token.RPAREN,
+				},
+			}}},
+		}))
+	})
+
+	It("should Parse a reference joined to a comma", func() {
+		buf := bytes.NewBufferString("LIST := $(FOO),$(BAR)")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Variable{
+			Name:  &ast.Text{Value: "LIST", ValuePos: token.Pos(1)},
+			Op:    token.SIMPLE_ASSIGN,
+			OpPos: token.Pos(6),
+			Value: []ast.Expr{&ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.VarRef{
+					Dollar: token.Pos(9),
+					Open:   token.LPAREN,
+					Name:   "FOO",
+					Close:  token.RPAREN,
+				},
+				&ast.Text{Value: ",", ValuePos: token.Pos(15)},
+				&ast.VarRef{
+					Dollar: token.Pos(16),
+					Open:   token.LPAREN,
+					Name:   "BAR",
+					Close:  token.RPAREN,
+				},
+			}}},
+		}))
+	})
+
+	It("should not join an expression across a blank", func() {
+		buf := bytes.NewBufferString("target: $(FOO) bar")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs: []ast.Expr{
+				&ast.VarRef{
+					Dollar: token.Pos(9),
+					Open:   token.LPAREN,
+					Name:   "FOO",
+					Close:  token.RPAREN,
+				},
+				&ast.Text{Value: "bar", ValuePos: token.Pos(16)},
+			},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	It("should end an ifeq argument at the comma it is joined to", func() {
+		buf := bytes.NewBufferString("ifeq ($(FOO)x,y)\nendif")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.IfBlock{
+			Directive: &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Open:   token.Pos(6),
+				Arg1: &ast.JuxtaposedExpr{Parts: []ast.Expr{
+					&ast.VarRef{
+						Dollar: token.Pos(7),
+						Open:   token.LPAREN,
+						Name:   "FOO",
+						Close:  token.RPAREN,
+					},
+					&ast.Text{Value: "x", ValuePos: token.Pos(13)},
+				}},
+				Comma: token.Pos(14),
+				Arg2:  &ast.Text{Value: "y", ValuePos: token.Pos(15)},
+				Close: token.Pos(16),
+			},
+			Endif: token.Pos(18),
 		}))
 	})
 

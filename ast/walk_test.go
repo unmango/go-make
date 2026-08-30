@@ -86,6 +86,38 @@ var _ = Describe("Walk", func() {
 		Expect(v.nodes).To(HaveExactElements(rule))
 	})
 
+	It("should walk a juxtaposed expression", func() {
+		v := &visitor{}
+		p1 := &ast.Text{}
+		p2 := &ast.VarRef{}
+		e := &ast.JuxtaposedExpr{Parts: []ast.Expr{p1, p2}}
+
+		ast.Walk(v, e)
+
+		Expect(v.nodes).To(HaveExactElements(e, p1, p2))
+	})
+
+	It("should walk an empty juxtaposed expression", func() {
+		v := &visitor{}
+		e := &ast.JuxtaposedExpr{}
+
+		ast.Walk(v, e)
+
+		Expect(v.nodes).To(HaveExactElements(e))
+	})
+
+	It("should walk a rule with a juxtaposed prereq", func() {
+		v := &visitor{}
+		p1 := &ast.Text{}
+		p2 := &ast.VarRef{}
+		e := &ast.JuxtaposedExpr{Parts: []ast.Expr{p1, p2}}
+		rule := &ast.Rule{PreReqs: []ast.Expr{e}}
+
+		ast.Walk(v, rule)
+
+		Expect(v.nodes).To(HaveExactElements(rule, e, p1, p2))
+	})
+
 	It("should walk a rule with targets", func() {
 		v := &visitor{}
 		t1 := &ast.Text{}

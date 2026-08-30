@@ -457,6 +457,60 @@ var _ = Describe("Printer", func() {
 			Expect(n).To(Equal(7))
 		})
 
+		It("should write a juxtaposed expression with nothing between the parts", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.Text{Value: "$$", ValuePos: token.Pos(1)},
+				&ast.Text{Value: "(", ValuePos: token.Pos(3)},
+				&ast.Text{Value: "notdir", ValuePos: token.Pos(4)},
+			}})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("$$(notdir"))
+			Expect(n).To(Equal(9))
+		})
+
+		It("should write a reference joined to the text after it", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.VarRef{
+					Dollar: token.Pos(1),
+					Open:   token.LPAREN,
+					Name:   "FOO",
+					Close:  token.RPAREN,
+				},
+				&ast.Text{Value: "bar", ValuePos: token.Pos(7)},
+			}})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("$(FOO)bar"))
+			Expect(n).To(Equal(9))
+		})
+
+		It("should write a juxtaposed expression with no parts", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.JuxtaposedExpr{})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(BeEmpty())
+		})
+
+		It("should recreate the gap between parts that are out of order", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.JuxtaposedExpr{Parts: []ast.Expr{
+				&ast.Text{Value: "foo", ValuePos: token.Pos(1)},
+				&ast.Text{Value: "bar", ValuePos: token.Pos(6)},
+			}})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("foo  bar"))
+			Expect(n).To(Equal(8))
+		})
+
 		It("should write apostrophe quoted text", func() {
 			buf := &bytes.Buffer{}
 

@@ -45,6 +45,8 @@ func Walk(v Visitor, node Node) {
 		walkList(v, n.Recipes)
 	case *Recipe:
 		Walk(v, &n.Text)
+	case *JuxtaposedExpr:
+		walkList(v, n.Parts)
 	case *QuotedExpr:
 		if n.Value != nil {
 			Walk(v, n.Value)

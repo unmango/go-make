@@ -215,6 +215,56 @@ func (l *QuotedExpr) String() string {
 	return fmt.Sprint(quote, l.Value, quote)
 }
 
+// A JuxtaposedExpr represents expressions written next to each other with
+// nothing between them, as in $$(notdir or prefix$(FOO). make expands whatever
+// is written without a blank separating it as a single value, so the parts
+// belong to one expression rather than to several.
+//
+// Parts render back to back, so the node begins where its first part begins
+// and ends where its last part ends. A juxtaposition of a single part carries
+// no information the part does not, so the parser returns the part itself and
+// only builds this node for two or more.
+type JuxtaposedExpr struct {
+	Parts []Expr // expressions written with no separator between them
+}
+
+func (*JuxtaposedExpr) exprNode() {}
+
+// Pos implements Node.
+//
+// An empty juxtaposition occupies no source, so it has no position.
+func (e *JuxtaposedExpr) Pos() token.Pos {
+	if len(e.Parts) == 0 {
+		return token.NoPos
+	}
+
+	return e.Parts[0].Pos()
+}
+
+// End implements Node
+func (e *JuxtaposedExpr) End() token.Pos {
+	if n := len(e.Parts); n > 0 {
+		return e.Parts[n-1].End()
+	}
+
+	return token.NoPos
+}
+
+// String returns the source text of the juxtaposition.
+//
+// The parts are written with nothing between them, so the text is rebuilt from
+// their positions the same way a [FuncCall] rebuilds its own.
+func (e *JuxtaposedExpr) String() string {
+	b := &textBuilder{pos: e.Pos()}
+	for _, part := range e.Parts {
+		if s, ok := part.(fmt.Stringer); ok {
+			b.write(part.Pos(), s.String())
+		}
+	}
+
+	return b.String()
+}
+
 // VarRef represents a variable reference.
 type VarRef struct {
 	Dollar token.Pos   // position of '$'
