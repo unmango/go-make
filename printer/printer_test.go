@@ -289,6 +289,75 @@ var _ = Describe("Printer", func() {
 		})
 	})
 
+	Describe("bad objects", func() {
+		DescribeTable("should write the source text verbatim",
+			Entry("assignment without spaces", "VAR=x"),
+			Entry("shell assignment without spaces", "VAR!=x"),
+			Entry("include directive", "include foo.mk"),
+			Entry("export directive", "export VAR"),
+			Entry("define directive", "define greeting"),
+			Entry("unattached recipe line", "\tsecond"),
+			func(text string) {
+				buf := &bytes.Buffer{}
+
+				_, err := printer.Fprint(buf, &ast.BadObj{
+					From: token.Pos(1),
+					To:   token.Pos(1 + len(text)),
+					Text: text,
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal(text + "\n"))
+			},
+		)
+
+		It("should write newline separated bad objects", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{
+				Contents: []ast.Obj{
+					&ast.BadObj{
+						From: token.Pos(1),
+						To:   token.Pos(15),
+						Text: "include foo.mk",
+					},
+					&ast.BadObj{
+						From: token.Pos(17),
+						To:   token.Pos(31),
+						Text: "include bar.mk",
+					},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("include foo.mk\n\ninclude bar.mk\n"))
+		})
+
+		It("should write a bad object after a rule", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{
+				Contents: []ast.Obj{
+					&ast.Rule{
+						Targets: []ast.Expr{&ast.Text{
+							Value:    "target",
+							ValuePos: token.Pos(1),
+						}},
+						Colon: token.Pos(7),
+					},
+					&ast.BadObj{
+						From: token.Pos(9),
+						To:   token.Pos(23),
+						Text: "include foo.mk",
+					},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("target:\ninclude foo.mk\n"))
+		})
+	})
+
 	Describe("expressions", func() {
 		It("should write text", func() {
 			buf := &bytes.Buffer{}

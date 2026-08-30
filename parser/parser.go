@@ -91,12 +91,11 @@ func (p *Parser) next() {
 	p.pos, p.tok, p.lit = p.s.Scan()
 }
 
-func (p *Parser) isWhitespace() bool {
-	return p.tok == token.NEWLINE || p.tok == token.TAB
-}
-
-func (p *Parser) skipWhitespace() {
-	for p.tok != token.EOF && p.isWhitespace() {
+// skipNewlines consumes newlines without consuming a recipe prefix.
+// Object parsing starts at the first non-newline token so a leading tab
+// remains part of the object it introduces.
+func (p *Parser) skipNewlines() {
+	for p.tok == token.NEWLINE {
 		p.next()
 	}
 }
@@ -294,7 +293,7 @@ func (p *Parser) parseElseBlock() *ast.ElseBlock {
 	pos := p.expect(token.ELSE)
 	condition := p.parseIfDir()
 
-	p.skipWhitespace()
+	p.skipNewlines()
 	text := p.parseObjList()
 
 	return &ast.ElseBlock{
@@ -306,14 +305,14 @@ func (p *Parser) parseElseBlock() *ast.ElseBlock {
 
 func (p *Parser) parseIfBlock() *ast.IfBlock {
 	ifdir := p.parseIfDir()
-	p.skipWhitespace()
+	p.skipNewlines()
 	text := p.parseObjList()
 
 	var eblocks []*ast.ElseBlock
 	for p.tok == token.ELSE {
 		b := p.parseElseBlock()
 		eblocks = append(eblocks, b)
-		p.skipWhitespace()
+		p.skipNewlines()
 
 		if b.Condition == nil {
 			break
@@ -357,15 +356,61 @@ func (p *Parser) parseObj() ast.Obj {
 		p.error(p.pos, "variable may have only one name")
 		fallthrough
 	default:
-		p.next()   // always progress
-		return nil // TODO: BadObj?
+		return p.parseBadObj(l)
+	}
+}
+
+// exprText reproduces the source text of an expression parsed from a line
+// that turned out to be unsupported.
+func exprText(e ast.Expr) string {
+	if s, ok := e.(fmt.Stringer); ok {
+		return s.String()
+	}
+
+	return ""
+}
+
+// parseBadObj consumes the remainder of the current line and returns a
+// BadObj spanning it, including the expressions already parsed from the
+// line. The line is the recovery boundary because make itself is
+// line-oriented, so the next line is the first point the parser can be
+// confident it is synchronized again.
+func (p *Parser) parseBadObj(parsed []ast.Expr) *ast.BadObj {
+	from := p.pos
+	if len(parsed) > 0 {
+		from = parsed[0].Pos()
+	}
+
+	b := &strings.Builder{}
+	nextPos := from
+	write := func(pos token.Pos, text string) {
+		for range int(pos - nextPos) {
+			b.WriteByte(' ')
+		}
+
+		b.WriteString(text)
+		nextPos = pos + token.Pos(len(text))
+	}
+
+	for _, e := range parsed {
+		write(e.Pos(), exprText(e))
+	}
+	for p.tok != token.NEWLINE && p.tok != token.EOF {
+		write(p.pos, p.recipeTokenText())
+		p.next()
+	}
+
+	return &ast.BadObj{
+		From: from,
+		To:   nextPos,
+		Text: b.String(),
 	}
 }
 
 func (p *Parser) parseObjList() (l []ast.Obj) {
 	for p.tok != token.EOF && p.tok != token.ENDIF && p.tok != token.ELSE {
 		l = append(l, p.parseObj())
-		p.skipWhitespace()
+		p.skipNewlines()
 	}
 
 	return
@@ -468,7 +513,10 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 func (p *Parser) parseFile() *ast.File {
 	var content []ast.Obj
 	for p.tok != token.EOF {
-		p.skipWhitespace()
+		if p.skipNewlines(); p.tok == token.EOF {
+			break
+		}
+
 		content = append(content, p.parseObj())
 	}
 

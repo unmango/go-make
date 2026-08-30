@@ -52,6 +52,28 @@ var _ = Describe("Ast", func() {
 		})
 	})
 
+	Describe("BadObj", func() {
+		It("should return the start of the bad object", func() {
+			o := &ast.BadObj{From: token.Pos(69)}
+
+			Expect(o.Pos()).To(Equal(token.Pos(69)))
+			Expect(o.Pos()).To(Equal(o.From))
+		})
+
+		It("should return the end of the bad object", func() {
+			o := &ast.BadObj{From: token.Pos(69), To: token.Pos(420)}
+
+			Expect(o.End()).To(Equal(token.Pos(420)))
+			Expect(o.End()).To(Equal(o.To))
+		})
+
+		It("should stringify", func() {
+			o := &ast.BadObj{Text: "include foo.mk"}
+
+			Expect(o.String()).To(Equal("include foo.mk"))
+		})
+	})
+
 	Describe("CommentGroup", func() {
 		It("should return the position of the first comment", func() {
 			c := &ast.CommentGroup{[]*ast.Comment{{

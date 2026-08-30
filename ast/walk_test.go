@@ -26,6 +26,25 @@ var _ = Describe("Walk", func() {
 		Expect(v.nodes).To(HaveExactElements(nil))
 	})
 
+	It("should walk a bad object", func() {
+		v := &visitor{}
+		bad := &ast.BadObj{Text: "include foo.mk"}
+
+		ast.Walk(v, bad)
+
+		Expect(v.nodes).To(HaveExactElements(bad))
+	})
+
+	It("should walk a file with a bad object", func() {
+		v := &visitor{}
+		bad := &ast.BadObj{Text: "include foo.mk"}
+		file := &ast.File{Contents: []ast.Obj{bad}}
+
+		ast.Walk(v, file)
+
+		Expect(v.nodes).To(HaveExactElements(file, bad))
+	})
+
 	It("should walk an empty file", func() {
 		v := &visitor{}
 		file := &ast.File{}

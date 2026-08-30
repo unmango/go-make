@@ -263,10 +263,21 @@ func (p *printer) variable(v *ast.Variable) {
 	p.writeLine()
 }
 
+func (p *printer) badObj(o *ast.BadObj) {
+	if o == nil {
+		return
+	}
+
+	p.writeString(p.posFor(o.From), o.Text)
+	p.writeLine()
+}
+
 func (p *printer) obj(o ast.Obj) {
 	switch n := o.(type) {
 	case ast.Dir:
 		p.directive(n)
+	case *ast.BadObj:
+		p.badObj(n)
 	case *ast.CommentGroup:
 		p.commentGroup(n)
 	case *ast.Rule:

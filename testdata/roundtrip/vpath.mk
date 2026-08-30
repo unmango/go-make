@@ -1,0 +1,1 @@
+vpath %.c src

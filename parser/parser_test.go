@@ -965,4 +965,107 @@ endif
 
 		Expect(err).To(MatchError("test:1:13: variable may have only one name"))
 	})
+
+	DescribeTable("should parse an unsupported line as a bad object",
+		Entry(nil, "VAR=x"),
+		Entry(nil, "VAR+=x"),
+		Entry(nil, "VAR!=x"),
+		Entry(nil, "define greeting"),
+		Entry(nil, "endef"),
+		Entry(nil, "undefine VAR"),
+		Entry(nil, "override VAR = x"),
+		Entry(nil, "export VAR"),
+		Entry(nil, "unexport VAR"),
+		Entry(nil, "private VAR = x"),
+		Entry(nil, "include foo.mk"),
+		Entry(nil, "-include foo.mk"),
+		Entry(nil, "sinclude foo.mk"),
+		Entry(nil, "vpath %.c src"),
+		Entry(nil, "load foo.so"),
+		Entry(nil, "|"),
+		func(input string) {
+			buf := bytes.NewBufferString(input)
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(ConsistOf(&ast.BadObj{
+				From: token.Pos(1),
+				To:   token.Pos(1 + len(input)),
+				Text: input,
+			}))
+		},
+	)
+
+	It("should parse an unsupported line without recording an error", func() {
+		buf := bytes.NewBufferString("include foo.mk\ntarget:")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).NotTo(ContainElement(BeNil()))
+		Expect(f.Contents).To(HaveLen(2))
+	})
+
+	It("should stop the bad object at the end of the line", func() {
+		buf := bytes.NewBufferString("include foo.mk\ninclude bar.mk")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveExactElements(
+			&ast.BadObj{
+				From: token.Pos(1),
+				To:   token.Pos(15),
+				Text: "include foo.mk",
+			},
+			&ast.BadObj{
+				From: token.Pos(16),
+				To:   token.Pos(30),
+				Text: "include bar.mk",
+			},
+		))
+	})
+
+	It("should include the recipe prefix of an unattached recipe line", func() {
+		buf := bytes.NewBufferString("target:\n\tfirst\n\n\tsecond")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ContainElement(&ast.BadObj{
+			From: token.Pos(17),
+			To:   token.Pos(24),
+			Text: "\tsecond",
+		}))
+	})
+
+	It("should parse a bad object in a conditional directive", func() {
+		buf := bytes.NewBufferString("ifdef FOO\ninclude foo.mk\nendif")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.IfBlock{
+			Directive: &ast.IfdefDir{
+				Tok:    token.IFDEF,
+				TokPos: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "FOO",
+					ValuePos: token.Pos(7),
+				},
+			},
+			Text: []ast.Obj{&ast.BadObj{
+				From: token.Pos(11),
+				To:   token.Pos(25),
+				Text: "include foo.mk",
+			}},
+			Endif: token.Pos(26),
+		}))
+	})
 })
