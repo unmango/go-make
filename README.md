@@ -211,6 +211,25 @@ Every status is verified by parsing the example, printing it, and comparing the 
 Constructs marked unsupported either report a parse error or append a `nil` element to `ast.File.Contents`.
 A `nil` element is returned with no error and panics when printed, tracked in [#111](https://github.com/unmango/go-make/issues/111).
 
+### Reference Coverage
+
+The names make understands are enumerated by [token](./token/token.go), [ast/target](./ast/target/target.go), and [ast/variable](./ast/variable/variable.go).
+`internal/conformance` compares each enumeration against the summaries published in the GNU Make manual, so syntax added to make cannot go unnoticed.
+
+| Enumeration        | go-make | Manual | Source                                                                                                   |
+| ------------------ | ------: | -----: | -------------------------------------------------------------------------------------------------------- |
+| directives         |      17 |     17 | [Quick Reference](https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html)               |
+| built-in functions |      37 |     37 | [Quick Reference](https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html)               |
+| special variables  |      14 |     14 | [Quick Reference](https://www.gnu.org/software/make/manual/html_node/Quick-Reference.html)               |
+| special targets    |      17 |     17 | [Special Built-in Target Names](https://www.gnu.org/software/make/manual/html_node/Special-Targets.html) |
+
+The comparison runs against `internal/conformance/testdata/quickref.json`, a fixture extracted from those two pages, so the suite needs no network access.
+Run `make sync-quickref` to refresh it.
+The manual pages are pinned by content hash in [flake.nix](./flake.nix) and fetched with `fetchurl`, so a refresh either reproduces the same input or fails with a hash mismatch reporting that the manual changed.
+CI runs the refresh and fails if the fixture is out of date, so drift in the manual surfaces without anyone rerunning it by hand.
+
+Automatic variables (`$@`, `$<`, `$(@D)`, and the rest) are summarized by the manual but are not enumerated here, so they are excluded from the comparison.
+
 ### Will Not Support
 
 Nothing, at this time
@@ -225,16 +244,17 @@ Go toolchain for the version listed in [go.mod](./go.mod)
 
 go-make is itself built using `make`.
 
-|      Targets | Description                                               |
-| -----------: | :-------------------------------------------------------- |
-| default goal | Runs the `build` target                                   |
-|      `build` | Runs `go build` to verify the code compiles               |
-|       `test` | Test changed packages                                     |
-|   `test_all` | Test all packages                                         |
-|      `clean` | Remove `.make` directory and coverage report              |
-|      `cover` | Collect coverage for all tests and print report           |
-|       `tidy` | Runs `go mod tidy`                                        |
-|        `dev` | Setup the [developer environment](#developer-environment) |
+|         Targets | Description                                                                              |
+| --------------: | :--------------------------------------------------------------------------------------- |
+|    default goal | Runs the `build` target                                                                  |
+|         `build` | Runs `go build` to verify the code compiles                                              |
+|          `test` | Test changed packages                                                                    |
+|      `test_all` | Test all packages                                                                        |
+| `sync-quickref` | Refresh the pinned GNU Make manual fixture used by `internal/conformance` (requires nix) |
+|         `clean` | Remove `.make` directory and coverage report                                             |
+|         `cover` | Collect coverage for all tests and print report                                          |
+|          `tidy` | Runs `go mod tidy`                                                                       |
+|           `dev` | Setup the [developer environment](#developer-environment)                                |
 
 ### Developer Environment
 

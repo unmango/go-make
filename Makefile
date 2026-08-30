@@ -23,6 +23,9 @@ dev: .envrc
 test_all:
 	$(GINKGO) run -r ./
 
+sync-quickref:
+	nix run .#sync-quickref
+
 validate_codecov: .make/validate_codecov
 
 cover: cover.profile
