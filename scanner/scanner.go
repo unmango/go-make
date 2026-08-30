@@ -23,6 +23,8 @@ type Scanner struct {
 	offset   int
 	rdOffset int
 
+	lf, crlf int
+
 	done bool
 }
 
@@ -70,6 +72,21 @@ func (s *Scanner) scanComment() string {
 	return b.String()
 }
 
+// LineEnding reports the line ending used by the input scanned so far, "\n"
+// or "\r\n". A file may mix the two, so the ending that terminates the
+// majority of its lines wins and a tie resolves to "\n". Input with no line
+// ending at all reports "\n".
+//
+// The answer is only complete once [Scanner.Scan] has reported [token.EOF],
+// because every newline before that point is still unread.
+func (s *Scanner) LineEnding() string {
+	if s.crlf > s.lf {
+		return "\r\n"
+	}
+
+	return "\n"
+}
+
 func (s *Scanner) Err() error {
 	return s.s.Err()
 }
@@ -96,13 +113,15 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 		return
 	}
 
-	var atNewline bool
+	// newline holds the text of the line ending when the token is one, so the
+	// tally below can tell CRLF from LF after the switch has run.
+	var newline string
 
 	switch txt := s.s.Text(); {
 	case txt == "\r\n":
 		// token.IsLit reports true for a carriage return, so CRLF is
 		// handled before the literal case.
-		atNewline = true
+		newline = txt
 		tok = token.NEWLINE
 		lit = txt
 		s.next()
@@ -144,7 +163,7 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 		case `"`:
 			tok = token.QUOTE
 		case "\n":
-			atNewline = true
+			newline = txt
 			tok = token.NEWLINE
 		case "\t":
 			tok = token.TAB
@@ -173,8 +192,17 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 		}
 	}
 
-	if atNewline && s.done {
-		tok, lit = token.EOF, ""
+	if newline != "" {
+		// The newline that ends the final line is folded into EOF below, so
+		// the tally happens first and counts every line ending in the input.
+		if newline == "\r\n" {
+			s.crlf++
+		} else {
+			s.lf++
+		}
+		if s.done {
+			tok, lit = token.EOF, ""
+		}
 	}
 
 	return

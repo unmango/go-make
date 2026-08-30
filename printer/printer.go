@@ -11,6 +11,7 @@ import (
 
 type printer struct {
 	f   *token.File
+	nl  string
 	out []byte
 	pos token.Position
 }
@@ -43,26 +44,56 @@ func (p *printer) posFor(pos token.Pos) token.Position {
 	return token.PositionFor(p.f, pos)
 }
 
-func (p *printer) writeLine() {
-	p.out = append(p.out, '\n')
-	p.pos.Line++
-	p.pos.Column = 1
-	p.pos.Offset++
+// newline is the line ending the printer writes. It comes from the
+// [ast.File] being printed, and a printer that has not been given one, such as
+// when a single node is printed on its own, writes LF.
+func (p *printer) newline() string {
+	if p.nl == "" {
+		return "\n"
+	}
+
+	return p.nl
 }
 
-func (p *printer) fill(c byte, pos token.Pos) {
-	// pos may precede the current offset when node positions are out of order.
-	// Writing a negative count is a no-op, but it would still rewind the tracked
-	// position and throw off every subsequent fill, so clamp the gap at 0.
-	p.writeChar(c, max(int(pos)-(p.pos.Offset+1), 0))
+func (p *printer) writeLine() {
+	nl := p.newline()
+	p.out = append(p.out, nl...)
+	p.pos.Line++
+	p.pos.Column = 1
+	p.pos.Offset += len(nl)
+}
+
+// gap returns the number of bytes between the position the printer has
+// written up to and pos.
+//
+// pos may precede the current offset when node positions are out of order.
+// Writing a negative count is a no-op, but it would still rewind the tracked
+// position and throw off every subsequent fill, so the gap is clamped at 0.
+func (p *printer) gap(pos token.Pos) int {
+	return max(int(pos)-(p.pos.Offset+1), 0)
 }
 
 func (p *printer) fillSpace(pos token.Pos) {
-	p.fill(' ', pos)
+	p.writeChar(' ', p.gap(pos))
 }
 
+// fillLines writes the blank lines separating the position the printer has
+// written up to from pos.
+//
+// The gap is a byte count and a line ending is not always one byte wide, so
+// the number of blank lines is the gap divided by the width of the ending.
+// Only a file that mixes endings leaves a remainder. The printer skips over
+// it rather than writing it, because the node that follows is padded up to
+// its own position and any byte left unaccounted for would become a space in
+// front of it.
 func (p *printer) fillLines(pos token.Pos) {
-	p.fill('\n', pos)
+	for range p.gap(pos) / len(p.newline()) {
+		p.writeLine()
+	}
+
+	if end := int(pos) - 1; end > p.pos.Offset {
+		p.pos.Offset = end
+	}
 }
 
 func (p *printer) writeChar(r byte, n int) {
@@ -388,6 +419,7 @@ func (p *printer) objList(l []ast.Obj) {
 
 func (p *printer) file(f *ast.File) {
 	if f != nil {
+		p.nl = f.LineEnding
 		p.objList(f.Contents)
 	}
 }

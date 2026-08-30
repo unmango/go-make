@@ -81,6 +81,41 @@ var _ = Describe("E2E", func() {
 		Expect(rule.Recipes[1].Value).To(Equal("second"))
 	})
 
+	// A file records one line ending, so a file that mixes them is normalized
+	// to the one that terminates the majority of its lines instead of round
+	// tripping byte for byte. Blank lines are recreated from the byte gap
+	// between the nodes that surround them rather than from nodes of their
+	// own, so there is nowhere to record the ending of a line the AST does
+	// not represent.
+	DescribeTable("should normalize a file that mixes line endings",
+		func(input, expected string) {
+			p := make.NewParser(bytes.NewBufferString(input), nil)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+
+			buf := &bytes.Buffer{}
+			Expect(printer.Fprint(buf, f)).To(BeNumerically(">", 0))
+			Expect(buf.String()).To(Equal(expected))
+		},
+		Entry("to CRLF when CRLF terminates most lines",
+			"a: b\r\nc: d\r\ne: f\n",
+			"a: b\r\nc: d\r\ne: f\r\n",
+		),
+		Entry("to LF when LF terminates most lines",
+			"a: b\nc: d\ne: f\r\n",
+			"a: b\nc: d\ne: f\n",
+		),
+		// The carriage return of the CRLF line is still a byte of the gap
+		// between the two rules, and with LF chosen for the file that gap is
+		// wide enough for a blank line.
+		Entry("to LF when neither ending has a majority, gaining a blank line",
+			"a: b\r\nc: d\n",
+			"a: b\n\nc: d\n",
+		),
+	)
+
 	DescribeTable("should round-trip", RoundTripEntries(testdata, "testdata/roundtrip"),
 		func(input string) {
 			p := make.NewParser(bytes.NewBufferString(input), nil)

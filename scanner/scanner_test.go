@@ -495,6 +495,44 @@ var _ = Describe("Scanner", func() {
 		})
 	})
 
+	Describe("LineEnding", func() {
+		lineEnding := func(input string) string {
+			s := scanner.New(bytes.NewBufferString(input), file)
+			for {
+				if _, tok, _ := s.Scan(); tok == token.EOF {
+					return s.LineEnding()
+				}
+			}
+		}
+
+		DescribeTable("should report the line ending of the input",
+			func(input, expected string) {
+				Expect(lineEnding(input)).To(Equal(expected))
+			},
+			Entry("LF", "a: b\nc: d\n", "\n"),
+			Entry("CRLF", "a: b\r\nc: d\r\n", "\r\n"),
+			Entry("a single CRLF line", "a: b\r\n", "\r\n"),
+			Entry("no line ending at all", "a: b", "\n"),
+			Entry("mostly CRLF", "a: b\r\nc: d\r\ne: f\n", "\r\n"),
+			Entry("mostly LF", "a: b\nc: d\ne: f\r\n", "\n"),
+			Entry("a tie", "a: b\r\nc: d\n", "\n"),
+		)
+
+		It("should count the line ending folded into EOF", func() {
+			s := scanner.New(bytes.NewBufferString("a: b\r\n"), file)
+
+			// The final newline is reported as EOF rather than as a NEWLINE,
+			// so nothing in the token stream records it.
+			for {
+				if _, tok, _ := s.Scan(); tok == token.EOF {
+					break
+				}
+			}
+
+			Expect(s.LineEnding()).To(Equal("\r\n"))
+		})
+	})
+
 	It("should return IO errors", func() {
 		r := testing.ErrReader("io error")
 		s := scanner.New(r, file)

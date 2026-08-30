@@ -40,6 +40,18 @@ type IfDir interface {
 type File struct {
 	FileStart, FileEnd token.Pos
 
+	// LineEnding is the sequence that terminates every line of the file, "\n"
+	// or "\r\n". The empty string means "\n", so a file built without one
+	// prints with LF line endings.
+	//
+	// The ending is recorded once for the whole file rather than once per
+	// line because a blank line is not a node. The printer recreates blank
+	// lines from the byte gap between the nodes that surround them, so a
+	// per-line record would not cover them. A file that mixes endings is
+	// therefore normalized to the one that terminates the majority of its
+	// lines.
+	LineEnding string
+
 	Contents []Obj // all file content
 }
 
