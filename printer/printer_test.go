@@ -487,6 +487,19 @@ var _ = Describe("Printer", func() {
 			Expect(n).To(Equal(5))
 		})
 
+		It("should write text with an absent quote", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.QuotedExpr{
+				Quote: token.ILLEGAL,
+				Value: &ast.Text{Value: "bar", ValuePos: token.Pos(1)},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("bar"))
+			Expect(n).To(Equal(3))
+		})
+
 		It("should write a function call", func() {
 			buf := &bytes.Buffer{}
 
