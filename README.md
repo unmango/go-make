@@ -226,7 +226,8 @@ The names make understands are enumerated by [token](./token/token.go), [ast/tar
 The comparison runs against `internal/conformance/testdata/quickref.json`, a fixture extracted from those two pages, so the suite needs no network access.
 Run `make sync-quickref` to refresh it.
 The manual pages are pinned by content hash in [flake.nix](./flake.nix) and fetched with `fetchurl`, so a refresh either reproduces the same input or fails with a hash mismatch reporting that the manual changed.
-CI runs the refresh and fails if the fixture is out of date, so drift in the manual surfaces without anyone rerunning it by hand.
+A weekly workflow runs the refresh and fails if the fixture is out of date, so drift in the manual surfaces without anyone rerunning it by hand.
+It is not part of the per-commit checks, because it reaches gnu.org and an outage there is not a reason to block a merge.
 
 Automatic variables (`$@`, `$<`, `$(@D)`, and the rest) are summarized by the manual but are not enumerated here, so they are excluded from the comparison.
 

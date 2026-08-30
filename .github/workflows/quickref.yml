@@ -1,0 +1,28 @@
+name: Manual Fixture
+
+# The GNU Make manual changes only when make releases, so this runs on a
+# schedule rather than per pull request. It reaches gnu.org, and an outage
+# there is not a reason to block the code from merging.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+jobs:
+  quickref:
+    name: Manual Fixture
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: cachix/install-nix-action@v31.10.6
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Realizes the pinned fetchurl derivations, so a stale hash fails here.
+      - run: make sync-quickref
+
+      - name: Fixture is up to date with the manual
+        run: git diff --exit-code internal/conformance/testdata/quickref.json
