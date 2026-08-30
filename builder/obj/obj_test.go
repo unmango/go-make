@@ -83,6 +83,7 @@ var _ = Describe("Obj", func() {
 			Entry("an if block", "ifdef test\ntargetA:\nelse ifeq (a, b)\ntargetB:\nendif\n",
 				ifBlock(),
 			),
+			Entry("a bad object", "include foo.mk\n", &ast.BadObj{Text: "include foo.mk"}),
 		)
 
 		It("should not alias the copied object", func() {
@@ -118,6 +119,9 @@ var _ = Describe("Obj", func() {
 		Entry("a comment group", commentGroup("a comment"), token.Pos(13)),
 		Entry("a variable", variable("FOO", "bar"), token.Pos(12)),
 		Entry("an if block", ifBlock(), token.Pos(53)),
+		Entry("a bad object", &ast.BadObj{Text: "include foo.mk"},
+			token.Pos(16), // len("include foo.mk\n") + 1
+		),
 	)
 
 	Describe("Pos", func() {

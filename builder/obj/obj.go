@@ -38,6 +38,11 @@ func SetPos(pos token.Pos, obj ast.Obj) token.Pos {
 		}
 
 		return pos + 1 // '\n'
+	case *ast.BadObj:
+		n.From = pos
+		n.To = pos + token.Pos(len(n.Text))
+
+		return n.To + 1 // '\n'
 	case *ast.IfBlock:
 		pos = setDirPos(pos, n.Directive) + 1 // '\n'
 		for _, o := range n.Text {
@@ -97,6 +102,8 @@ func End(obj ast.Obj) token.Pos {
 		}
 
 		return n.OpPos + length(n.Op) + 1 // '\n'
+	case *ast.BadObj:
+		return n.To + 1 // '\n'
 	case *ast.IfBlock:
 		return n.Endif + length(token.ENDIF) + 1 // '\n'
 	default:
@@ -156,6 +163,10 @@ func clone(obj ast.Obj) ast.Obj {
 		for _, v := range n.Value {
 			c.Value = append(c.Value, expr.Copy(v.Pos(), v))
 		}
+
+		return &c
+	case *ast.BadObj:
+		c := *n
 
 		return &c
 	case *ast.IfBlock:
