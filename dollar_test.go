@@ -54,6 +54,18 @@ func onlyRule(f *ast.File) *ast.Rule {
 	return rule
 }
 
+// recipeAt returns the i'th recipe line of rule. Rule.Recipes holds an
+// ast.RecipeObj so it can carry the conditionals that select recipe lines, so
+// a spec asserting on a plain recipe has to narrow it.
+func recipeAt(rule *ast.Rule, i int) *ast.Recipe {
+	GinkgoHelper()
+	Expect(len(rule.Recipes)).To(BeNumerically(">", i))
+	r, ok := rule.Recipes[i].(*ast.Recipe)
+	Expect(ok).To(BeTrue(), "expected a *ast.Recipe, got %T", rule.Recipes[i])
+
+	return r
+}
+
 func onlyVariable(f *ast.File) *ast.Variable {
 	GinkgoHelper()
 	Expect(f.Contents).To(HaveLen(1))
@@ -174,7 +186,9 @@ var _ = Describe("Dollar written against text", func() {
 			rule := onlyRule(parseOne("target:\n\t" + body + "\n"))
 
 			Expect(rule.Recipes).To(HaveLen(1))
-			Expect(rule.Recipes[0].Value).To(Equal(body))
+			recipe, ok := rule.Recipes[0].(*ast.Recipe)
+			Expect(ok).To(BeTrue(), "expected a *ast.Recipe, got %T", rule.Recipes[0])
+			Expect(recipe.Value).To(Equal(body))
 		},
 		Entry(nil, "echo $$HOME"),
 		Entry(nil, "echo $(VAR)"),

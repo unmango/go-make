@@ -61,6 +61,26 @@ func ifBlock() *ast.IfBlock {
 	}
 }
 
+// ruleWithConditional returns a rule whose recipe list holds a recipe line and
+// a conditional wrapping another.
+func ruleWithConditional() *ast.Rule {
+	return &ast.Rule{
+		Targets: []ast.Expr{&ast.Text{Value: "target"}},
+		Recipes: []ast.RecipeObj{
+			&ast.Recipe{Prefix: token.TAB, Text: ast.Text{Value: "one"}},
+			&ast.IfBlock{
+				Directive: &ast.IfdefDir{
+					Tok:     token.IFDEF,
+					VarName: &ast.Text{Value: "V"},
+				},
+				Text: []ast.Obj{
+					&ast.Recipe{Prefix: token.TAB, Text: ast.Text{Value: "two"}},
+				},
+			},
+		},
+	}
+}
+
 var _ = Describe("Obj", func() {
 	Describe("Copy", func() {
 		DescribeTable("should print the copied object",
@@ -84,7 +104,32 @@ var _ = Describe("Obj", func() {
 				ifBlock(),
 			),
 			Entry("a bad object", "include foo.mk\n", &ast.BadObj{Text: "include foo.mk"}),
+			Entry("a rule holding a conditional", "target:\n\tone\nifdef V\n\ttwo\nendif\n",
+				ruleWithConditional(),
+			),
 		)
+
+		// A recipe is an expression as well as an object, and the printer
+		// matches an expression first, so a recipe copied on its own is
+		// checked by its layout rather than by what it prints to.
+		It("should lay out a recipe", func() {
+			r := &ast.Recipe{Prefix: token.TAB, Text: ast.Text{Value: "one"}}
+
+			actual := obj.Copy(1, r).(*ast.Recipe)
+
+			Expect(actual.PrefixPos).To(Equal(token.Pos(1)))
+			Expect(actual.ValuePos).To(Equal(token.Pos(2)))
+			Expect(r.PrefixPos).To(Equal(token.NoPos))
+		})
+
+		It("should not alias the conditional in a recipe list", func() {
+			r := ruleWithConditional()
+
+			actual := obj.Copy(1, r).(*ast.Rule)
+
+			Expect(actual.Recipes[0]).NotTo(BeIdenticalTo(r.Recipes[0]))
+			Expect(actual.Recipes[1]).NotTo(BeIdenticalTo(r.Recipes[1]))
+		})
 
 		It("should not alias the copied object", func() {
 			v := variable("FOO", "bar")
@@ -121,6 +166,12 @@ var _ = Describe("Obj", func() {
 		Entry("an if block", ifBlock(), token.Pos(53)),
 		Entry("a bad object", &ast.BadObj{Text: "include foo.mk"},
 			token.Pos(16), // len("include foo.mk\n") + 1
+		),
+		Entry("a rule holding a conditional", ruleWithConditional(),
+			token.Pos(33), // len("target:\n\tone\nifdef V\n\ttwo\nendif\n") + 1
+		),
+		Entry("a recipe", &ast.Recipe{Prefix: token.TAB, Text: ast.Text{Value: "one"}},
+			token.Pos(6), // len("\tone\n") + 1
 		),
 	)
 

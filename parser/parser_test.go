@@ -100,7 +100,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -124,7 +124,7 @@ var _ = Describe("Parser", func() {
 				}},
 				PreReqs:      []ast.Expr{},
 				OrderPreReqs: []ast.Expr{},
-				Recipes:      []*ast.Recipe{},
+				Recipes:      []ast.RecipeObj{},
 			}))
 		},
 	)
@@ -146,7 +146,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -170,7 +170,7 @@ var _ = Describe("Parser", func() {
 			}}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -189,7 +189,7 @@ var _ = Describe("Parser", func() {
 			}}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -211,7 +211,7 @@ var _ = Describe("Parser", func() {
 				&ast.Text{Value: "V", ValuePos: token.Pos(11)},
 			}}},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -254,7 +254,7 @@ var _ = Describe("Parser", func() {
 				ValuePos: token.Pos(9),
 			}},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -283,7 +283,7 @@ var _ = Describe("Parser", func() {
 				}},
 			},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -310,7 +310,7 @@ var _ = Describe("Parser", func() {
 				&ast.Text{Value: "bar", ValuePos: token.Pos(15)},
 			}}},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -342,7 +342,7 @@ var _ = Describe("Parser", func() {
 				},
 			}}},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -432,7 +432,7 @@ var _ = Describe("Parser", func() {
 				&ast.Text{Value: "bar", ValuePos: token.Pos(16)},
 			},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -517,7 +517,7 @@ var _ = Describe("Parser", func() {
 			},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -539,7 +539,7 @@ var _ = Describe("Parser", func() {
 				ValuePos: token.Pos(9),
 			}},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -561,7 +561,7 @@ var _ = Describe("Parser", func() {
 				&ast.Text{Value: "prereq2", ValuePos: token.Pos(16)},
 			},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -585,7 +585,7 @@ var _ = Describe("Parser", func() {
 				Close:  token.RBRACE,
 			}},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes:      []ast.RecipeObj{},
 		}))
 	})
 
@@ -607,7 +607,7 @@ var _ = Describe("Parser", func() {
 			OrderPreReqs: []ast.Expr{
 				&ast.Text{Value: "prereq", ValuePos: token.Pos(11)},
 			},
-			Recipes: []*ast.Recipe{},
+			Recipes: []ast.RecipeObj{},
 		}))
 	})
 
@@ -626,7 +626,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(9),
 				Text: ast.Text{
@@ -652,7 +652,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.SEMI,
 				PrefixPos: token.Pos(9),
 				Text: ast.Text{
@@ -678,7 +678,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.SEMI,
 				PrefixPos: token.Pos(8),
 				Text: ast.Text{
@@ -706,7 +706,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.SEMI,
 				PrefixPos: token.Pos(9),
 				Text: ast.Text{
@@ -735,7 +735,7 @@ var _ = Describe("Parser", func() {
 				ValuePos: token.Pos(9),
 			}},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.SEMI,
 				PrefixPos: token.Pos(16),
 				Text: ast.Text{
@@ -765,7 +765,7 @@ var _ = Describe("Parser", func() {
 				Value:    "prereq",
 				ValuePos: token.Pos(11),
 			}},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.SEMI,
 				PrefixPos: token.Pos(18),
 				Text: ast.Text{
@@ -791,8 +791,8 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{
-				{
+			Recipes: []ast.RecipeObj{
+				&ast.Recipe{
 					Prefix:    token.SEMI,
 					PrefixPos: token.Pos(9),
 					Text: ast.Text{
@@ -800,7 +800,7 @@ var _ = Describe("Parser", func() {
 						ValuePos: token.Pos(10),
 					},
 				},
-				{
+				&ast.Recipe{
 					Prefix:    token.TAB,
 					PrefixPos: token.Pos(18),
 					Text: ast.Text{
@@ -831,7 +831,7 @@ var _ = Describe("Parser", func() {
 				Targets:      []ast.Expr{&ast.Text{Value: "target", ValuePos: token.Pos(19)}},
 				PreReqs:      []ast.Expr{},
 				OrderPreReqs: []ast.Expr{},
-				Recipes: []*ast.Recipe{{
+				Recipes: []ast.RecipeObj{&ast.Recipe{
 					Prefix:    token.TEXT,
 					PrefixLit: ">",
 					PrefixPos: token.Pos(27),
@@ -857,7 +857,7 @@ var _ = Describe("Parser", func() {
 			Targets:      []ast.Expr{&ast.Text{Value: "a", ValuePos: token.Pos(19)}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.TEXT,
 				PrefixLit: ">",
 				PrefixPos: token.Pos(22),
@@ -872,7 +872,7 @@ var _ = Describe("Parser", func() {
 			Targets:      []ast.Expr{&ast.Text{Value: "b", ValuePos: token.Pos(48)}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.TEXT,
 				PrefixLit: "!",
 				PrefixPos: token.Pos(51),
@@ -897,7 +897,7 @@ var _ = Describe("Parser", func() {
 			Targets:      []ast.Expr{&ast.Text{Value: "b", ValuePos: token.Pos(46)}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(49),
 				Text: ast.Text{
@@ -1021,8 +1021,8 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{
-				{
+			Recipes: []ast.RecipeObj{
+				&ast.Recipe{
 					Prefix:    token.TAB,
 					PrefixPos: token.Pos(9),
 					Text: ast.Text{
@@ -1030,7 +1030,7 @@ var _ = Describe("Parser", func() {
 						ValuePos: token.Pos(10),
 					},
 				},
-				{
+				&ast.Recipe{
 					Prefix:    token.TAB,
 					PrefixPos: token.Pos(17),
 					Text: ast.Text{
@@ -1057,8 +1057,8 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{
-				{
+			Recipes: []ast.RecipeObj{
+				&ast.Recipe{
 					Prefix:    token.TAB,
 					PrefixPos: token.Pos(9),
 					Text: ast.Text{
@@ -1066,7 +1066,7 @@ var _ = Describe("Parser", func() {
 						ValuePos: token.Pos(10),
 					},
 				},
-				{
+				&ast.Recipe{
 					Prefix:    token.TAB,
 					PrefixPos: token.Pos(18),
 					Text: ast.Text{
@@ -1093,8 +1093,8 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{
-				{
+			Recipes: []ast.RecipeObj{
+				&ast.Recipe{
 					Prefix:    token.TAB,
 					PrefixPos: token.Pos(9),
 					Text: ast.Text{
@@ -1102,7 +1102,7 @@ var _ = Describe("Parser", func() {
 						ValuePos: token.Pos(10),
 					},
 				},
-				{
+				&ast.Recipe{
 					Prefix:    token.TAB,
 					PrefixPos: token.Pos(19),
 					Text: ast.Text{
@@ -1129,7 +1129,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(10),
 				Text: ast.Text{
@@ -1156,7 +1156,7 @@ var _ = Describe("Parser", func() {
 				}},
 				PreReqs:      []ast.Expr{},
 				OrderPreReqs: []ast.Expr{},
-				Recipes: []*ast.Recipe{{
+				Recipes: []ast.RecipeObj{&ast.Recipe{
 					Prefix:    token.TAB,
 					PrefixPos: token.Pos(9),
 					Text: ast.Text{
@@ -1173,7 +1173,7 @@ var _ = Describe("Parser", func() {
 				}},
 				PreReqs:      []ast.Expr{},
 				OrderPreReqs: []ast.Expr{},
-				Recipes: []*ast.Recipe{{
+				Recipes: []ast.RecipeObj{&ast.Recipe{
 					Prefix:    token.TAB,
 					PrefixPos: token.Pos(25),
 					Text: ast.Text{
@@ -1200,7 +1200,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(9),
 				Text: ast.Text{
@@ -1226,7 +1226,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(9),
 				Text: ast.Text{
@@ -1252,7 +1252,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(9),
 				Text: ast.Text{
@@ -1278,7 +1278,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(9),
 				Text: ast.Text{
@@ -1307,7 +1307,7 @@ var _ = Describe("Parser", func() {
 				ValuePos: token.Pos(9),
 			}},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(16),
 				Text: ast.Text{
@@ -1333,7 +1333,7 @@ var _ = Describe("Parser", func() {
 			}},
 			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes: []*ast.Recipe{{
+			Recipes: []ast.RecipeObj{&ast.Recipe{
 				Prefix:    token.TAB,
 				PrefixPos: token.Pos(9),
 				Text: ast.Text{
@@ -1802,7 +1802,7 @@ var _ = Describe("Parser", func() {
 				Colon:        token.Pos(23),
 				PreReqs:      []ast.Expr{},
 				OrderPreReqs: []ast.Expr{},
-				Recipes:      []*ast.Recipe{},
+				Recipes:      []ast.RecipeObj{},
 			}},
 			Endif: token.Pos(25),
 		}))
@@ -1871,7 +1871,7 @@ var _ = Describe("Parser", func() {
 					Colon:        token.Pos(28),
 					PreReqs:      []ast.Expr{},
 					OrderPreReqs: []ast.Expr{},
-					Recipes:      []*ast.Recipe{},
+					Recipes:      []ast.RecipeObj{},
 				}},
 			}},
 			Endif: token.Pos(30),
@@ -1926,7 +1926,7 @@ var _ = Describe("Parser", func() {
 					Colon:        token.Pos(44),
 					PreReqs:      []ast.Expr{},
 					OrderPreReqs: []ast.Expr{},
-					Recipes:      []*ast.Recipe{},
+					Recipes:      []ast.RecipeObj{},
 				}},
 			}},
 			Endif: token.Pos(46),
@@ -2393,6 +2393,143 @@ endif
 		},
 	)
 
+	Describe("a conditional directive inside a rule body", func() {
+		It("should attach the conditional to the rule", func() {
+			buf := bytes.NewBufferString("target:\nifdef VERBOSE\n\techo building\nendif\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(ConsistOf(&ast.Rule{
+				Targets: []ast.Expr{&ast.Text{
+					Value:    "target",
+					ValuePos: token.Pos(1),
+				}},
+				Colon:        token.Pos(7),
+				PreReqs:      []ast.Expr{},
+				OrderPreReqs: []ast.Expr{},
+				Recipes: []ast.RecipeObj{&ast.IfBlock{
+					Directive: &ast.IfdefDir{
+						Tok:    token.IFDEF,
+						TokPos: token.Pos(9),
+						VarName: &ast.Text{
+							Value:    "VERBOSE",
+							ValuePos: token.Pos(15),
+						},
+					},
+					Text: []ast.Obj{&ast.Recipe{
+						Prefix:    token.TAB,
+						PrefixPos: token.Pos(23),
+						Text: ast.Text{
+							Value:    "echo building",
+							ValuePos: token.Pos(24),
+						},
+					}},
+					Endif: token.Pos(38),
+				}},
+			}))
+		})
+
+		It("should keep the recipes written around the conditional in order", func() {
+			buf := bytes.NewBufferString("target:\n\tone\nifdef V\n\ttwo\nendif\n\tthree\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(HaveLen(1))
+			rule, ok := f.Contents[0].(*ast.Rule)
+			Expect(ok).To(BeTrue(), "expected a *ast.Rule, got %T", f.Contents[0])
+			Expect(rule.Recipes).To(HaveLen(3))
+			Expect(rule.Recipes[0]).To(HaveField("Value", "one"))
+			Expect(rule.Recipes[1]).To(BeAssignableToTypeOf(&ast.IfBlock{}))
+			Expect(rule.Recipes[2]).To(HaveField("Value", "three"))
+		})
+
+		It("should attach the recipes of every branch to the rule", func() {
+			buf := bytes.NewBufferString(
+				"target:\nifdef V\n\tone\nelse ifdef W\n\ttwo\nelse\n\tthree\nendif\n",
+			)
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			block := recipeIfBlock(f, 0, 0)
+			Expect(block.Text).To(HaveLen(1))
+			Expect(block.Text[0]).To(HaveField("Value", "one"))
+			Expect(block.Else).To(HaveLen(2))
+			Expect(block.Else[0].Text[0]).To(HaveField("Value", "two"))
+			Expect(block.Else[1].Text[0]).To(HaveField("Value", "three"))
+		})
+
+		It("should attach a conditional nested in another one", func() {
+			buf := bytes.NewBufferString("target:\nifdef V\nifdef W\n\tone\nendif\nendif\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			outer := recipeIfBlock(f, 0, 0)
+			Expect(outer.Text).To(HaveLen(1))
+			inner, ok := outer.Text[0].(*ast.IfBlock)
+			Expect(ok).To(BeTrue(), "expected a *ast.IfBlock, got %T", outer.Text[0])
+			Expect(inner.Text[0]).To(HaveField("Value", "one"))
+		})
+
+		It("should read a recipe introduced by a custom prefix", func() {
+			buf := bytes.NewBufferString(".RECIPEPREFIX = >\ntarget:\nifdef V\n>one\nendif\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			block := recipeIfBlock(f, 1, 0)
+			Expect(block.Text).To(ConsistOf(&ast.Recipe{
+				Prefix:    token.TEXT,
+				PrefixLit: ">",
+				PrefixPos: token.Pos(35),
+				Text: ast.Text{
+					Value:    "one",
+					ValuePos: token.Pos(36),
+				},
+			}))
+		})
+
+		// A conditional that holds no recipe line wraps ordinary make syntax,
+		// so it stays beside the rule the way it always has.
+		It("should leave a conditional holding a rule at the level it was written", func() {
+			buf := bytes.NewBufferString("first:\nifdef V\nsecond:\nendif\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(HaveLen(2))
+			Expect(f.Contents[0]).To(BeAssignableToTypeOf(&ast.Rule{}))
+			Expect(f.Contents[1]).To(BeAssignableToTypeOf(&ast.IfBlock{}))
+			Expect(f.Contents[0].(*ast.Rule).Recipes).To(BeEmpty())
+		})
+
+		It("should leave a prefixed line written before any target a bad object", func() {
+			buf := bytes.NewBufferString("ifdef V\n\torphan\nendif\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(HaveLen(1))
+			block, ok := f.Contents[0].(*ast.IfBlock)
+			Expect(ok).To(BeTrue(), "expected a *ast.IfBlock, got %T", f.Contents[0])
+			Expect(block.Text).To(ConsistOf(&ast.BadObj{
+				From: token.Pos(9),
+				To:   token.Pos(16),
+				Text: "\torphan",
+			}))
+		})
+	})
+
 	DescribeTable("should record the line ending of the file",
 		func(input, expected string) {
 			p := parser.New(bytes.NewBufferString(input), file)
@@ -2410,6 +2547,20 @@ endif
 		Entry("mostly LF", "a: b\nc: d\ne: f\r\n", "\n"),
 	)
 })
+
+// recipeIfBlock returns the jth entry of the recipe list of the ith object in
+// f, failing the spec when the object is not a rule holding a conditional
+// there.
+func recipeIfBlock(f *ast.File, i, j int) *ast.IfBlock {
+	GinkgoHelper()
+	r, ok := f.Contents[i].(*ast.Rule)
+	Expect(ok).To(BeTrue(), "expected a *ast.Rule, got %T", f.Contents[i])
+	Expect(r.Recipes).To(HaveLen(j + 1))
+	block, ok := r.Recipes[j].(*ast.IfBlock)
+	Expect(ok).To(BeTrue(), "expected a *ast.IfBlock, got %T", r.Recipes[j])
+
+	return block
+}
 
 // funcCall returns the call assigned by the ith object in f, failing the spec
 // when the object is not a variable holding one.

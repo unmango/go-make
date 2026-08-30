@@ -28,6 +28,18 @@ type Expr interface {
 	exprNode()
 }
 
+// All nodes that may appear in the recipe list of a [Rule] implement the
+// RecipeObj interface.
+//
+// A recipe list holds the lines make passes to the shell and the conditional
+// directives that select between them. make reads a conditional at the point
+// the line appears, so a conditional written under a target line wraps the
+// recipes it contains rather than the rule that owns them.
+type RecipeObj interface {
+	Node
+	recipeObjNode()
+}
+
 // All if* conditional directive nodes implement the IfDir interface.
 type IfDir interface {
 	Node
@@ -142,14 +154,19 @@ func (c *Comment) End() token.Pos {
 
 // A Rule represents the Recipes and PreRequisites required to build Targets. [Rule Syntax]
 //
+// Recipes holds the lines of the rule body in the order they were written. An
+// element is a [Recipe] or an [IfBlock], because a conditional directive
+// written under a target line selects which recipe lines the rule runs and so
+// belongs to the rule rather than beside it.
+//
 // [Rule Syntax]: https://www.gnu.org/software/make/manual/html_node/Rule-Syntax.html
 type Rule struct {
-	Targets      []Expr    // rule targets
-	Colon        token.Pos // position of ':' separating targets and prerequisites
-	PreReqs      []Expr    // rule pre-requisites
-	Pipe         token.Pos // position of '|' separating normal and order-only prerequisites
-	OrderPreReqs []Expr    // order-only pre-requisites
-	Recipes      []*Recipe // rule recipe lines
+	Targets      []Expr      // rule targets
+	Colon        token.Pos   // position of ':' separating targets and prerequisites
+	PreReqs      []Expr      // rule pre-requisites
+	Pipe         token.Pos   // position of '|' separating normal and order-only prerequisites
+	OrderPreReqs []Expr      // order-only pre-requisites
+	Recipes      []RecipeObj // recipe lines and the conditionals selecting them
 }
 
 func (*Rule) objNode() {}
@@ -467,6 +484,13 @@ type Recipe struct {
 	PrefixLit string      // source text of a TEXT prefix
 }
 
+// A recipe is an expression because its body is text make hands to the shell,
+// and an object because a conditional directive holds objects and a
+// conditional written inside a rule body holds recipes.
+func (*Recipe) exprNode()      {}
+func (*Recipe) objNode()       {}
+func (*Recipe) recipeObjNode() {}
+
 // PrefixText returns the source text of the prefix introducing the recipe.
 //
 // A recipe introduced by a custom .RECIPEPREFIX begins with an arbitrary
@@ -526,8 +550,9 @@ type IfBlock struct {
 	Endif     token.Pos    // position of ENDIF
 }
 
-func (*IfBlock) objNode() {}
-func (*IfBlock) dirNode() {}
+func (*IfBlock) objNode()       {}
+func (*IfBlock) dirNode()       {}
+func (*IfBlock) recipeObjNode() {}
 
 // Pos implements Node
 func (b *IfBlock) Pos() token.Pos {

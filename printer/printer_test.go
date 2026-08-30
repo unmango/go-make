@@ -112,7 +112,7 @@ var _ = Describe("Printer", func() {
 						Value:    "prereq",
 						ValuePos: token.Pos(9),
 					}},
-					Recipes: []*ast.Recipe{{
+					Recipes: []ast.RecipeObj{&ast.Recipe{
 						Prefix:    token.TAB,
 						PrefixPos: token.Pos(16),
 						Text:      ast.Text{Value: "curl https://example.com"},
@@ -127,7 +127,7 @@ var _ = Describe("Printer", func() {
 						ValuePos: token.Pos(1),
 					}},
 					Colon: token.Pos(7),
-					Recipes: []*ast.Recipe{{
+					Recipes: []ast.RecipeObj{&ast.Recipe{
 						Prefix:    token.SEMI,
 						PrefixPos: token.Pos(9),
 						Text:      ast.Text{Value: " recipe", ValuePos: token.Pos(10)},
@@ -146,7 +146,7 @@ var _ = Describe("Printer", func() {
 						Value:    "prereq",
 						ValuePos: token.Pos(9),
 					}},
-					Recipes: []*ast.Recipe{{
+					Recipes: []ast.RecipeObj{&ast.Recipe{
 						Prefix:    token.SEMI,
 						PrefixPos: token.Pos(16),
 						Text:      ast.Text{Value: " recipe", ValuePos: token.Pos(17)},
@@ -161,13 +161,13 @@ var _ = Describe("Printer", func() {
 						ValuePos: token.Pos(1),
 					}},
 					Colon: token.Pos(7),
-					Recipes: []*ast.Recipe{
-						{
+					Recipes: []ast.RecipeObj{
+						&ast.Recipe{
 							Prefix:    token.SEMI,
 							PrefixPos: token.Pos(9),
 							Text:      ast.Text{Value: " recipe", ValuePos: token.Pos(10)},
 						},
-						{
+						&ast.Recipe{
 							Prefix:    token.TAB,
 							PrefixPos: token.Pos(18),
 							Text:      ast.Text{Value: "recipe2", ValuePos: token.Pos(19)},
@@ -183,7 +183,7 @@ var _ = Describe("Printer", func() {
 						ValuePos: token.Pos(1),
 					}},
 					Colon: token.Pos(7),
-					Recipes: []*ast.Recipe{{
+					Recipes: []ast.RecipeObj{&ast.Recipe{
 						Prefix:    token.TEXT,
 						PrefixLit: ">",
 						PrefixPos: token.Pos(9),
@@ -199,13 +199,13 @@ var _ = Describe("Printer", func() {
 						ValuePos: token.Pos(1),
 					}},
 					Colon: token.Pos(7),
-					Recipes: []*ast.Recipe{
-						{
+					Recipes: []ast.RecipeObj{
+						&ast.Recipe{
 							Prefix:    token.SEMI,
 							PrefixPos: token.Pos(9),
 							Text:      ast.Text{Value: " recipe", ValuePos: token.Pos(10)},
 						},
-						{
+						&ast.Recipe{
 							Prefix:    token.TEXT,
 							PrefixLit: ">",
 							PrefixPos: token.Pos(18),
@@ -218,7 +218,7 @@ var _ = Describe("Printer", func() {
 			Entry("target with recipe",
 				&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{Value: "target"}},
-					Recipes: []*ast.Recipe{{
+					Recipes: []ast.RecipeObj{&ast.Recipe{
 						Prefix: token.TAB,
 						Text:   ast.Text{Value: "curl https://example.com"},
 					}},
@@ -235,6 +235,63 @@ var _ = Describe("Printer", func() {
 				Expect(n).To(Equal(len(expected)))
 			},
 		)
+
+		It("should write a conditional in the recipe list", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.Rule{
+				Targets: []ast.Expr{&ast.Text{Value: "target", ValuePos: token.Pos(1)}},
+				Colon:   token.Pos(7),
+				Recipes: []ast.RecipeObj{&ast.IfBlock{
+					Directive: &ast.IfdefDir{
+						Tok:     token.IFDEF,
+						TokPos:  token.Pos(9),
+						VarName: &ast.Text{Value: "VERBOSE", ValuePos: token.Pos(15)},
+					},
+					Text: []ast.Obj{&ast.Recipe{
+						Prefix:    token.TAB,
+						PrefixPos: token.Pos(23),
+						Text:      ast.Text{Value: "echo building", ValuePos: token.Pos(24)},
+					}},
+					Endif: token.Pos(38),
+				}},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("target:\nifdef VERBOSE\n\techo building\nendif\n"))
+		})
+
+		It("should write a recipe and a conditional in the order they appear", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.Rule{
+				Targets: []ast.Expr{&ast.Text{Value: "target", ValuePos: token.Pos(1)}},
+				Colon:   token.Pos(7),
+				Recipes: []ast.RecipeObj{
+					&ast.Recipe{
+						Prefix:    token.TAB,
+						PrefixPos: token.Pos(9),
+						Text:      ast.Text{Value: "one", ValuePos: token.Pos(10)},
+					},
+					&ast.IfBlock{
+						Directive: &ast.IfdefDir{
+							Tok:     token.IFDEF,
+							TokPos:  token.Pos(14),
+							VarName: &ast.Text{Value: "V", ValuePos: token.Pos(20)},
+						},
+						Text: []ast.Obj{&ast.Recipe{
+							Prefix:    token.TAB,
+							PrefixPos: token.Pos(22),
+							Text:      ast.Text{Value: "two", ValuePos: token.Pos(23)},
+						}},
+						Endif: token.Pos(27),
+					},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("target:\n\tone\nifdef V\n\ttwo\nendif\n"))
+		})
 
 		It("should write multiple rules", func() {
 			buf := &bytes.Buffer{}
@@ -258,7 +315,7 @@ var _ = Describe("Printer", func() {
 			_, err := printer.Fprint(w, &ast.Rule{
 				Targets: []ast.Expr{&ast.Text{Value: "foo"}},
 				PreReqs: []ast.Expr{&ast.Text{Value: "bar"}},
-				Recipes: []*ast.Recipe{{
+				Recipes: []ast.RecipeObj{&ast.Recipe{
 					Prefix: token.TAB,
 					Text:   ast.Text{Value: "baz"},
 				}},
@@ -1384,6 +1441,20 @@ var _ = Describe("Printer", func() {
 			Expect(buf.String()).To(BeEmpty())
 		})
 
+		It("should return an error for an unsupported recipe list entry", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.Rule{
+				Targets: []ast.Expr{&ast.Text{Value: "target", ValuePos: token.Pos(1)}},
+				Colon:   token.Pos(7),
+				Recipes: []ast.RecipeObj{unknownRecipeObj{}},
+			})
+
+			Expect(err).To(MatchError(ContainSubstring("unsupported node:")))
+			Expect(n).To(Equal(0))
+			Expect(buf.String()).To(BeEmpty())
+		})
+
 		It("should return an error for a nested conditional directive", func() {
 			buf := &bytes.Buffer{}
 
@@ -1467,7 +1538,7 @@ var _ = Describe("Printer", func() {
 				Contents: []ast.Obj{&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{Value: "a", ValuePos: token.Pos(1)}},
 					Colon:   token.Pos(2),
-					Recipes: []*ast.Recipe{{
+					Recipes: []ast.RecipeObj{&ast.Recipe{
 						Prefix:    token.TAB,
 						PrefixPos: token.Pos(5),
 						Text:      ast.Text{Value: "echo hi", ValuePos: token.Pos(6)},
@@ -1481,8 +1552,8 @@ var _ = Describe("Printer", func() {
 	})
 })
 
-// ast.Obj, ast.Dir, ast.Expr, and ast.IfDir are sealed by unexported marker
-// methods, so no type outside of package ast can implement them directly.
+// ast.Obj, ast.Dir, ast.Expr, ast.IfDir, and ast.RecipeObj are sealed by
+// unexported marker methods, so no type outside of package ast can implement them directly.
 // Embedding the interface promotes the marker method and yields a node the
 // printer has no case for. Pos is declared explicitly so the embedded nil
 // interface is never called.
@@ -1502,3 +1573,7 @@ func (unknownExpr) Pos() token.Pos { return token.Pos(1) }
 type unknownIfDir struct{ ast.IfDir }
 
 func (unknownIfDir) Pos() token.Pos { return token.Pos(1) }
+
+type unknownRecipeObj struct{ ast.RecipeObj }
+
+func (unknownRecipeObj) Pos() token.Pos { return token.Pos(1) }

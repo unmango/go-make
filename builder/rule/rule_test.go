@@ -185,16 +185,16 @@ var _ = Describe("Rule", func() {
 			}),
 			Entry("recipes", "target:\n\tcat thing\n\ttouch thing\n", &ast.Rule{
 				Targets: []ast.Expr{&ast.Text{Value: "target"}},
-				Recipes: []*ast.Recipe{
-					{Text: ast.Text{Value: "cat thing"}, Prefix: token.TAB},
-					{Text: ast.Text{Value: "touch thing"}, Prefix: token.TAB},
+				Recipes: []ast.RecipeObj{
+					&ast.Recipe{Text: ast.Text{Value: "cat thing"}, Prefix: token.TAB},
+					&ast.Recipe{Text: ast.Text{Value: "touch thing"}, Prefix: token.TAB},
 				},
 			}),
 			Entry("custom prefix recipes", "target:\n>cat thing\n>touch thing\n", &ast.Rule{
 				Targets: []ast.Expr{&ast.Text{Value: "target"}},
-				Recipes: []*ast.Recipe{
-					{Text: ast.Text{Value: "cat thing"}, Prefix: token.TEXT, PrefixLit: ">"},
-					{Text: ast.Text{Value: "touch thing"}, Prefix: token.TEXT, PrefixLit: ">"},
+				Recipes: []ast.RecipeObj{
+					&ast.Recipe{Text: ast.Text{Value: "cat thing"}, Prefix: token.TEXT, PrefixLit: ">"},
+					&ast.Recipe{Text: ast.Text{Value: "touch thing"}, Prefix: token.TEXT, PrefixLit: ">"},
 				},
 			}),
 			Entry("a var ref target", "$(FOO) bar: baz\n", &ast.Rule{

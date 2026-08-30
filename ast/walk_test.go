@@ -190,12 +190,31 @@ var _ = Describe("Walk", func() {
 		r1 := &ast.Recipe{Text: t1}
 		rule := &ast.Rule{
 			Targets: []ast.Expr{t2},
-			Recipes: []*ast.Recipe{r1},
+			Recipes: []ast.RecipeObj{r1},
 		}
 
 		ast.Walk(v, rule)
 
 		Expect(v.nodes).To(HaveExactElements(rule, t2, r1, &t1))
+	})
+
+	It("should walk a conditional in a recipe list", func() {
+		v := &visitor{}
+		name := &ast.Text{Value: "VERBOSE"}
+		dir := &ast.IfdefDir{VarName: name}
+		recipe := &ast.Recipe{Text: ast.Text{Value: "echo building"}}
+		block := &ast.IfBlock{Directive: dir, Text: []ast.Obj{recipe}}
+		target := &ast.Text{Value: "target"}
+		rule := &ast.Rule{
+			Targets: []ast.Expr{target},
+			Recipes: []ast.RecipeObj{block},
+		}
+
+		ast.Walk(v, rule)
+
+		Expect(v.nodes).To(HaveExactElements(
+			rule, target, block, dir, name, recipe, &recipe.Text,
+		))
 	})
 
 	It("should walk a recipe", func() {
@@ -393,7 +412,7 @@ var _ = Describe("Walk", func() {
 			v := &strictVisitor{}
 			rule := &ast.Rule{
 				Targets: []ast.Expr{nil},
-				Recipes: []*ast.Recipe{nil},
+				Recipes: []ast.RecipeObj{nil},
 			}
 			file := &ast.File{Contents: []ast.Obj{nil, rule}}
 
@@ -447,7 +466,7 @@ var _ = Describe("Walk", func() {
 				Targets:      []ast.Expr{target},
 				PreReqs:      []ast.Expr{preReq},
 				OrderPreReqs: []ast.Expr{orderPreReq},
-				Recipes:      []*ast.Recipe{recipe},
+				Recipes:      []ast.RecipeObj{recipe},
 			}
 			comment := &ast.Comment{}
 			group := &ast.CommentGroup{List: []*ast.Comment{comment}}
@@ -605,7 +624,7 @@ var _ = Describe("Walk", func() {
 			r1 := &ast.Recipe{Text: t1}
 			rule := &ast.Rule{
 				Targets: []ast.Expr{t2},
-				Recipes: []*ast.Recipe{r1},
+				Recipes: []ast.RecipeObj{r1},
 			}
 
 			ast.Inspect(rule, func(n ast.Node) bool {
@@ -888,7 +907,7 @@ var _ = Describe("Walk", func() {
 			r1 := &ast.Recipe{Text: t1}
 			rule := &ast.Rule{
 				Targets: []ast.Expr{t2},
-				Recipes: []*ast.Recipe{r1},
+				Recipes: []ast.RecipeObj{r1},
 			}
 
 			nodes := ast.Preorder(rule)

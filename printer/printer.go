@@ -250,19 +250,41 @@ func (p *printer) prereqList(l []ast.Expr) {
 	}
 }
 
-func (p *printer) recipeList(l []*ast.Recipe) {
+func (p *printer) recipeList(l []ast.RecipeObj) {
 	for _, r := range l {
-		// A SEMI recipe shares a line with the target, every other prefix
-		// starts one, so only the latter can be preceded by blank lines. The
-		// semicolon is separated from the prerequisites by spaces instead.
-		if r.Prefix == token.SEMI {
-			p.fillSpace(r.PrefixPos)
-		} else {
-			p.fillLines(r.PrefixPos)
-		}
+		switch n := r.(type) {
+		case *ast.Recipe:
+			// A SEMI recipe shares a line with the target, every other prefix
+			// starts one, so only the latter can be preceded by blank lines.
+			// The semicolon is separated from the prerequisites by spaces
+			// instead.
+			if n.Prefix == token.SEMI {
+				p.fillSpace(n.PrefixPos)
+			} else {
+				p.fillLines(n.PrefixPos)
+			}
 
-		p.recipe(r)
+			p.recipe(n)
+		case *ast.IfBlock:
+			// A conditional starts a line of its own, so the blank lines in
+			// front of it are written the same way they are for a recipe.
+			p.fillLines(n.Pos())
+			p.ifBlock(n)
+		default:
+			p.unsupported(r)
+		}
 	}
+}
+
+// startsOnRuleLine reports whether the first element of a recipe list shares
+// the target line, which only a recipe introduced by a semicolon does.
+func startsOnRuleLine(l []ast.RecipeObj) bool {
+	if len(l) == 0 {
+		return false
+	}
+
+	r, ok := l[0].(*ast.Recipe)
+	return ok && r.Prefix == token.SEMI
 }
 
 func (p *printer) rule(r *ast.Rule) {
@@ -282,7 +304,7 @@ func (p *printer) rule(r *ast.Rule) {
 		p.exprList(r.OrderPreReqs)
 	}
 	if len(r.Recipes) > 0 {
-		if r.Recipes[0].Prefix != token.SEMI {
+		if !startsOnRuleLine(r.Recipes) {
 			p.writeLine()
 		}
 		p.recipeList(r.Recipes)
@@ -437,6 +459,11 @@ func (p *printer) obj(o ast.Obj) {
 	switch n := o.(type) {
 	case ast.Dir:
 		p.directive(n)
+	case *ast.Recipe:
+		// A recipe reaches an object list through the body of a conditional
+		// written inside a rule. It is written with its prefix and its own
+		// line ending, the way the recipe list writes it.
+		p.recipe(n)
 	case *ast.BadObj:
 		p.badObj(n)
 	case *ast.CommentGroup:
@@ -479,6 +506,9 @@ func (p *printer) printNode(node any) (err error) {
 		}
 	}()
 
+	// An [ast.Recipe] is both an expression and an object. Expr is matched
+	// first, so a recipe printed on its own writes the text of its body
+	// without the prefix and the line ending that surround it inside a rule.
 	switch n := node.(type) {
 	case ast.Expr:
 		p.expr(n)
