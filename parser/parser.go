@@ -448,15 +448,20 @@ func (p *Parser) parseVar(name ast.Expr) ast.Obj {
 	}
 }
 
+// recipeTokenText returns the source text of the current token. Tokens such
+// as TEXT and UNSUPPORTED stringify to their name rather than to any source
+// text, and the scanner reports the text it read in the literal, so the
+// literal wins whenever the token carries one. Operators and directives
+// carry no literal and stringify to the syntax they represent.
 func (p *Parser) recipeTokenText() string {
-	switch p.tok {
-	case token.TEXT:
-		return p.lit
-	case token.COMMENT:
+	if p.tok == token.COMMENT {
 		return "#" + p.lit
-	default:
-		return p.tok.String()
 	}
+	if p.lit != "" {
+		return p.lit
+	}
+
+	return p.tok.String()
 }
 
 func (p *Parser) parseRecipe() *ast.Recipe {
