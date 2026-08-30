@@ -1,13 +1,25 @@
 package rule_test
 
 import (
+	"bytes"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/unmango/go-make/ast"
+	"github.com/unmango/go-make/builder"
 	"github.com/unmango/go-make/builder/rule"
+	"github.com/unmango/go-make/printer"
 	"github.com/unmango/go-make/token"
 )
+
+func printed(node any) string {
+	buf := &bytes.Buffer{}
+	_, err := printer.Fprint(buf, node)
+	Expect(err).NotTo(HaveOccurred())
+
+	return buf.String()
+}
 
 var _ = Describe("Rule", func() {
 	Describe("New", func() {
@@ -39,6 +51,47 @@ var _ = Describe("Rule", func() {
 
 			Expect(r.Colon).To(Equal(token.Pos(5)))
 		})
+
+		It("should advance the position for each builder", func() {
+			r := rule.New(1,
+				rule.TextTarget("a"),
+				rule.TextTarget("b"),
+				rule.TextPreReq("c"),
+			)
+
+			Expect(printed(r)).To(Equal("a b: c\n"))
+		})
+
+		DescribeTable("should print the built rule",
+			func(expected string, builder ...builder.Rule) {
+				Expect(printed(rule.New(1, builder...))).To(Equal(expected))
+			},
+			Entry("a single target", "a:\n", rule.TextTarget("a")),
+			Entry("multiple targets", "a b:\n",
+				rule.TextTarget("a"),
+				rule.TextTarget("b"),
+			),
+			Entry("a single pre-requisite", "a: b\n",
+				rule.TextTarget("a"),
+				rule.TextPreReq("b"),
+			),
+			Entry("multiple pre-requisites", "a: b c\n",
+				rule.TextTarget("a"),
+				rule.TextPreReq("b"),
+				rule.TextPreReq("c"),
+			),
+			Entry("a var ref target", "$(FOO): b\n",
+				rule.Target(func(p token.Pos) ast.Expr {
+					return &ast.VarRef{
+						Dollar: p,
+						Open:   token.LPAREN,
+						Name:   "FOO",
+						Close:  token.RPAREN,
+					}
+				}),
+				rule.TextPreReq("b"),
+			),
+		)
 	})
 
 	Describe("Copy", func() {
@@ -93,6 +146,72 @@ var _ = Describe("Rule", func() {
 					&ast.Text{Value: "test", ValuePos: 4},
 				},
 			}))
+		})
+
+		DescribeTable("should print the copied rule",
+			func(expected string, r *ast.Rule) {
+				Expect(printed(rule.Copy(1, r))).To(Equal(expected))
+			},
+			Entry("targets and pre-requisites", "a b: c\n", &ast.Rule{
+				Targets: []ast.Expr{
+					&ast.Text{Value: "a"},
+					&ast.Text{Value: "b"},
+				},
+				PreReqs: []ast.Expr{
+					&ast.Text{Value: "c"},
+				},
+			}),
+			Entry("order-only pre-requisites", "target: | prereq\n", &ast.Rule{
+				Targets:      []ast.Expr{&ast.Text{Value: "target"}},
+				Pipe:         token.Pos(1),
+				OrderPreReqs: []ast.Expr{&ast.Text{Value: "prereq"}},
+			}),
+			Entry("multiple order-only pre-requisites", "target: | a b\n", &ast.Rule{
+				Targets: []ast.Expr{&ast.Text{Value: "target"}},
+				Pipe:    token.Pos(1),
+				OrderPreReqs: []ast.Expr{
+					&ast.Text{Value: "a"},
+					&ast.Text{Value: "b"},
+				},
+			}),
+			Entry("mixed pre-requisites", "target: prereq | a b\n", &ast.Rule{
+				Targets: []ast.Expr{&ast.Text{Value: "target"}},
+				PreReqs: []ast.Expr{&ast.Text{Value: "prereq"}},
+				Pipe:    token.Pos(1),
+				OrderPreReqs: []ast.Expr{
+					&ast.Text{Value: "a"},
+					&ast.Text{Value: "b"},
+				},
+			}),
+			Entry("recipes", "target:\n\tcat thing\n\ttouch thing\n", &ast.Rule{
+				Targets: []ast.Expr{&ast.Text{Value: "target"}},
+				Recipes: []*ast.Recipe{
+					{Text: ast.Text{Value: "cat thing"}, Prefix: token.TAB},
+					{Text: ast.Text{Value: "touch thing"}, Prefix: token.TAB},
+				},
+			}),
+			Entry("a var ref target", "$(FOO) bar: baz\n", &ast.Rule{
+				Targets: []ast.Expr{
+					&ast.VarRef{Open: token.LPAREN, Name: "FOO", Close: token.RPAREN},
+					&ast.Text{Value: "bar"},
+				},
+				PreReqs: []ast.Expr{&ast.Text{Value: "baz"}},
+			}),
+			Entry("a quoted target", "'foo': bar\n", &ast.Rule{
+				Targets: []ast.Expr{
+					&ast.QuotedExpr{Quote: token.APOS, Value: &ast.Text{Value: "foo"}},
+				},
+				PreReqs: []ast.Expr{&ast.Text{Value: "bar"}},
+			}),
+		)
+
+		It("should not alias the copied rule", func() {
+			r := rule.New(1, rule.TextTarget("test"))
+
+			actual := rule.Copy(2, r)
+
+			Expect(actual.Targets[0]).NotTo(BeIdenticalTo(r.Targets[0]))
+			Expect(r.Targets[0].Pos()).To(Equal(token.Pos(1)))
 		})
 
 		It("should copy a rule with multiple pre-requisites", func() {
