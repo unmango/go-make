@@ -13,6 +13,9 @@ import (
 
 type ErrorList = scanner.ErrorList
 
+// space is the single byte token produced by [ScanTokens] for a space.
+var space = []byte{' '}
+
 type Scanner struct {
 	file *token.File
 	s    *bufio.Scanner
@@ -48,8 +51,11 @@ func (s *Scanner) next() {
 	s.rdOffset += len(s.s.Bytes())
 }
 
+// skipWhitespace consumes space tokens. The comparison is exact so that
+// a token which merely contains a space is never discarded along with the
+// text around it.
 func (s *Scanner) skipWhitespace() {
-	for bytes.ContainsAny(s.s.Bytes(), " \r") {
+	for bytes.Equal(s.s.Bytes(), space) {
 		s.next()
 	}
 }
@@ -93,6 +99,19 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 	var atNewline bool
 
 	switch txt := s.s.Text(); {
+	case txt == "\r\n":
+		// token.IsLit reports true for a carriage return, so CRLF is
+		// handled before the literal case.
+		atNewline = true
+		tok = token.NEWLINE
+		lit = txt
+		s.next()
+	case txt == "\r":
+		// A carriage return that does not terminate a line has no meaning
+		// in make syntax, report it rather than dropping it.
+		tok = token.UNSUPPORTED
+		lit = txt
+		s.next()
 	case token.IsLit(txt):
 		lit = txt
 		s.next()
@@ -153,7 +172,7 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 	}
 
 	if atNewline && s.done {
-		tok = token.EOF
+		tok, lit = token.EOF, ""
 	}
 
 	return

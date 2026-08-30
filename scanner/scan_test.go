@@ -29,6 +29,22 @@ var _ = Describe("Scan", func() {
 			Entry("target with a trailing newline",
 				"target:\n", []string{"target", ":", "\n"},
 			),
+			Entry("target with a trailing CRLF newline",
+				"target:\r\n", []string{"target", ":", "\r\n"},
+			),
+			Entry("target with a prereq and a trailing CRLF newline",
+				"target: prereq\r\n", []string{"target", ":", " ", "prereq", "\r\n"},
+			),
+			Entry("recipe with a trailing CRLF newline",
+				"target:\r\n\trecipe\r\n",
+				[]string{"target", ":", "\r\n", "\t", "recipe", "\r\n"},
+			),
+			Entry("carriage return without a newline",
+				"target\rprereq", []string{"target", "\r", "prereq"},
+			),
+			Entry("carriage return at the end of the input",
+				"target\r", []string{"target", "\r"},
+			),
 			Entry("target with a prereq",
 				"target: prereq", []string{"target", ":", " ", "prereq"},
 			),
@@ -126,6 +142,27 @@ var _ = Describe("Scan", func() {
 			Expect(token).To(BeNil())
 			Expect(err).NotTo(HaveOccurred())
 		})
+
+		DescribeTable("CRLF split across reads",
+			Entry("between the carriage return and the newline",
+				"ab\r\ncd\r\n", 3, []string{"ab", "\r\n", "cd", "\r\n"},
+			),
+			Entry("with the carriage return alone in a read",
+				"a\r\nb\r\n", 2, []string{"a", "\r\n", "b", "\r\n"},
+			),
+			func(text string, chunk int, expected []string) {
+				r := testing.NewChunkReader(text, chunk)
+				s := bufio.NewScanner(r)
+				s.Split(scanner.ScanTokens)
+
+				tokens := []string{}
+				for s.Scan() {
+					tokens = append(tokens, s.Text())
+				}
+				Expect(s.Err()).NotTo(HaveOccurred())
+				Expect(tokens).To(Equal(expected))
+			},
+		)
 
 		DescribeTable("assignments split across reads",
 			Entry("immediate variable",

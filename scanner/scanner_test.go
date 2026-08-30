@@ -378,6 +378,121 @@ var _ = Describe("Scanner", func() {
 		},
 	)
 
+	Describe("CRLF input", func() {
+		type scanned struct {
+			Tok token.Token
+			Lit string
+		}
+
+		scanAll := func(input string) []scanned {
+			s := scanner.New(bytes.NewBufferString(input), file)
+
+			toks := []scanned{}
+			for {
+				_, tok, lit := s.Scan()
+				toks = append(toks, scanned{tok, lit})
+				if tok == token.EOF {
+					return toks
+				}
+			}
+		}
+
+		It("should not drop text adjacent to a carriage return", func() {
+			Expect(scanAll("a: b\r\nc: d\n")).To(Equal([]scanned{
+				{token.TEXT, "a"},
+				{token.COLON, ""},
+				{token.TEXT, "b"},
+				{token.NEWLINE, "\r\n"},
+				{token.TEXT, "c"},
+				{token.COLON, ""},
+				{token.TEXT, "d"},
+				{token.EOF, ""},
+			}))
+		})
+
+		It("should scan a CRLF file", func() {
+			Expect(scanAll("VAR := val\r\n# comment\r\ntarget: prereq\r\n\techo hi\r\n")).To(Equal([]scanned{
+				{token.TEXT, "VAR"},
+				{token.SIMPLE_ASSIGN, ""},
+				{token.TEXT, "val"},
+				{token.NEWLINE, "\r\n"},
+				{token.COMMENT, " comment"},
+				{token.NEWLINE, "\r\n"},
+				{token.TEXT, "target"},
+				{token.COLON, ""},
+				{token.TEXT, "prereq"},
+				{token.NEWLINE, "\r\n"},
+				{token.TAB, ""},
+				{token.TEXT, "echo"},
+				{token.TEXT, "hi"},
+				{token.EOF, ""},
+			}))
+		})
+
+		It("should scan a CRLF newline in a recipe body", func() {
+			Expect(scanAll("target:\r\n\techo hi\r\n\techo bye\r\n")).To(Equal([]scanned{
+				{token.TEXT, "target"},
+				{token.COLON, ""},
+				{token.NEWLINE, "\r\n"},
+				{token.TAB, ""},
+				{token.TEXT, "echo"},
+				{token.TEXT, "hi"},
+				{token.NEWLINE, "\r\n"},
+				{token.TAB, ""},
+				{token.TEXT, "echo"},
+				{token.TEXT, "bye"},
+				{token.EOF, ""},
+			}))
+		})
+
+		It("should report a carriage return that does not end a line", func() {
+			Expect(scanAll("a: b\rc\n")).To(Equal([]scanned{
+				{token.TEXT, "a"},
+				{token.COLON, ""},
+				{token.TEXT, "b"},
+				{token.UNSUPPORTED, "\r"},
+				{token.TEXT, "c"},
+				{token.EOF, ""},
+			}))
+		})
+
+		It("should report a trailing carriage return", func() {
+			Expect(scanAll("a\r")).To(Equal([]scanned{
+				{token.TEXT, "a"},
+				{token.UNSUPPORTED, "\r"},
+				{token.EOF, ""},
+			}))
+		})
+
+		It("should track positions across CRLF newlines", func() {
+			s := scanner.New(bytes.NewBufferString("a: b\r\nc: d\n"), file)
+
+			for range 3 {
+				_, _, _ = s.Scan() // a, :, b
+			}
+
+			pos, tok, lit := s.Scan()
+			Expect(tok).To(Equal(token.NEWLINE))
+			Expect(lit).To(Equal("\r\n"))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   4,
+				Line:     1,
+				Column:   5,
+			}))
+
+			pos, tok, lit = s.Scan()
+			Expect(tok).To(Equal(token.TEXT))
+			Expect(lit).To(Equal("c"))
+			Expect(s.Position(pos)).To(Equal(token.Position{
+				Filename: file.Name(),
+				Offset:   6,
+				Line:     2,
+				Column:   1,
+			}))
+		})
+	})
+
 	It("should return IO errors", func() {
 		r := testing.ErrReader("io error")
 		s := scanner.New(r, file)
