@@ -24,7 +24,7 @@ test_all:
 	$(GINKGO) run -r ./
 
 sync-quickref:
-	go run ./internal/conformance/cmd/syncquickref
+	nix run .#sync-quickref
 
 validate_codecov: .make/validate_codecov
 

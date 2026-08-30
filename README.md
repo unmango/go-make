@@ -185,6 +185,7 @@ The names make understands are enumerated by [token](./token/token.go), [ast/tar
 
 The comparison runs against `internal/conformance/testdata/quickref.json`, a fixture extracted from those two pages, so the suite needs no network access.
 Run `make sync-quickref` to refresh it.
+The manual pages are pinned by content hash in [flake.nix](./flake.nix) and fetched with `fetchurl`, so a refresh either reproduces the same input or fails with a hash mismatch reporting that the manual changed.
 
 Automatic variables (`$@`, `$<`, `$(@D)`, and the rest) are summarized by the manual but are not enumerated here, so they are excluded from the comparison.
 
@@ -202,17 +203,17 @@ Go toolchain for the version listed in [go.mod](./go.mod)
 
 go-make is itself built using `make`.
 
-|         Targets | Description                                                        |
-| --------------: | :----------------------------------------------------------------- |
-|    default goal | Runs the `build` target                                            |
-|         `build` | Runs `go build` to verify the code compiles                        |
-|          `test` | Test changed packages                                              |
-|      `test_all` | Test all packages                                                  |
-| `sync-quickref` | Refresh the GNU Make manual fixture used by `internal/conformance` |
-|         `clean` | Remove `.make` directory and coverage report                       |
-|         `cover` | Collect coverage for all tests and print report                    |
-|          `tidy` | Runs `go mod tidy`                                                 |
-|           `dev` | Setup the [developer environment](#developer-environment)          |
+|         Targets | Description                                                                              |
+| --------------: | :--------------------------------------------------------------------------------------- |
+|    default goal | Runs the `build` target                                                                  |
+|         `build` | Runs `go build` to verify the code compiles                                              |
+|          `test` | Test changed packages                                                                    |
+|      `test_all` | Test all packages                                                                        |
+| `sync-quickref` | Refresh the pinned GNU Make manual fixture used by `internal/conformance` (requires nix) |
+|         `clean` | Remove `.make` directory and coverage report                                             |
+|         `cover` | Collect coverage for all tests and print report                                          |
+|          `tidy` | Runs `go mod tidy`                                                                       |
+|           `dev` | Setup the [developer environment](#developer-environment)                                |
 
 ### Developer Environment
 
