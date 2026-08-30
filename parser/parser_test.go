@@ -153,6 +153,106 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should Parse an escaped dollar sign in a target", func() {
+		buf := bytes.NewBufferString("$$V:")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(4),
+			Targets: []ast.Expr{
+				&ast.Text{Value: "$$", ValuePos: token.Pos(1)},
+				&ast.Text{Value: "V", ValuePos: token.Pos(3)},
+			},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	It("should Parse an escaped dollar sign in a prereq", func() {
+		buf := bytes.NewBufferString("target: $$V")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs: []ast.Expr{
+				&ast.Text{Value: "$$", ValuePos: token.Pos(9)},
+				&ast.Text{Value: "V", ValuePos: token.Pos(11)},
+			},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	It("should Parse an escaped dollar sign in a variable value", func() {
+		buf := bytes.NewBufferString("VAR := $$V")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Variable{
+			Name: &ast.Text{
+				Value:    "VAR",
+				ValuePos: token.Pos(1),
+			},
+			Op:    token.SIMPLE_ASSIGN,
+			OpPos: token.Pos(5),
+			Value: []ast.Expr{
+				&ast.Text{Value: "$$", ValuePos: token.Pos(8)},
+				&ast.Text{Value: "V", ValuePos: token.Pos(10)},
+			},
+		}))
+	})
+
+	It("should Parse a lone escaped dollar sign", func() {
+		buf := bytes.NewBufferString("target: $$")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs: []ast.Expr{&ast.Text{
+				Value:    "$$",
+				ValuePos: token.Pos(9),
+			}},
+			OrderPreReqs: []ast.Expr{},
+			Recipes:      []*ast.Recipe{},
+		}))
+	})
+
+	DescribeTable("should error when a dollar sign is followed by an unexpected token",
+		Entry(nil, "target: $:", "':'"),
+		Entry(nil, "target: $)", "')'"),
+		Entry(nil, "target: $", "'EOF'"),
+		func(input, found string) {
+			buf := bytes.NewBufferString(input)
+			p := parser.New(buf, file)
+
+			_, err := p.ParseFile()
+
+			Expect(err).To(MatchError(
+				"test:1:10: expected one of 'TEXT', '$', '(', '{', found " + found,
+			))
+		},
+	)
+
 	DescribeTable("should error when variable reference has no closing token",
 		Entry(nil, "${foo:"),
 		Entry(nil, "$(foo:"),

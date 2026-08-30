@@ -115,7 +115,9 @@ func (p *Parser) parseText() *ast.Text {
 	}
 }
 
-func (p *Parser) parseRef() *ast.VarRef {
+// parseRef parses a variable reference. An escaped '$$' is not a reference, so
+// it returns an ast.Text holding both characters instead of an ast.VarRef.
+func (p *Parser) parseRef() ast.Expr {
 	if p.tok != token.DOLLAR {
 		p.expect(token.DOLLAR)
 		return nil
@@ -126,6 +128,14 @@ func (p *Parser) parseRef() *ast.VarRef {
 
 	open, name := token.ILLEGAL, "_"
 	switch p.tok {
+	case token.DOLLAR:
+		// '$$' escapes a literal '$'. Both characters belong to the value so
+		// the printer writes them back unchanged.
+		p.next()
+		return &ast.Text{
+			ValuePos: dollar,
+			Value:    "$$",
+		}
 	case token.LPAREN, token.LBRACE:
 		open = p.tok
 		p.next()
@@ -145,6 +155,10 @@ func (p *Parser) parseRef() *ast.VarRef {
 			p.lit = p.lit[1:]
 			p.pos++
 		}
+	default:
+		// Without this the "_" placeholder would reach the printer.
+		p.expectOneOf(token.TEXT, token.DOLLAR, token.LPAREN, token.LBRACE)
+		return nil
 	}
 
 	close := token.ILLEGAL
