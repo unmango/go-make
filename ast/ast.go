@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 	"go/ast"
+	"strings"
 
 	"github.com/unmango/go-make/token"
 )
@@ -213,9 +214,9 @@ func (l *QuotedExpr) String() string {
 // VarRef represents a variable reference.
 type VarRef struct {
 	Dollar token.Pos   // position of '$'
-	Open   token.Token // opening token, '(', '{', or ILLEGAL if len(Name) == 1
+	Open   token.Token // opening token, '(', '{', or ILLEGAL when undelimited
 	Name   string      // variable identifier
-	Close  token.Token // closing token, ')', '}', or ILLEGAL if len(Name) == 1
+	Close  token.Token // closing token, ')', '}', or ILLEGAL when undelimited
 }
 
 func (*VarRef) exprNode() {}
@@ -231,13 +232,23 @@ func (v *VarRef) End() token.Pos {
 	return v.Dollar + 1 + tokenLen(v.Open) + token.Pos(len(v.Name)) + tokenLen(v.Close)
 }
 
-// String implements fmt.Stringer
+// String implements fmt.Stringer.
+//
+// Delimiters are written when Open and Close hold them. [token.ILLEGAL] marks
+// an absent delimiter, so a reference records whether it is delimited
+// independently of the length of Name.
 func (v *VarRef) String() string {
-	if len(v.Name) == 1 {
-		return "$" + v.Name
-	} else {
-		return fmt.Sprint("$", v.Open, v.Name, v.Close)
+	var buf strings.Builder
+	buf.WriteString(token.DOLLAR.String())
+	if v.Open != token.ILLEGAL {
+		buf.WriteString(v.Open.String())
 	}
+	buf.WriteString(v.Name)
+	if v.Close != token.ILLEGAL {
+		buf.WriteString(v.Close.String())
+	}
+
+	return buf.String()
 }
 
 // A Recipe represents a line of text to be passed to the shell to build a Target.
