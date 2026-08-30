@@ -186,8 +186,13 @@ func (l *Text) String() string {
 }
 
 // QuotedExpr represents an expression enclosed in quotes.
+//
+// Quote holds ' or ", or [token.ILLEGAL] when the expression carries no quote.
+// An expression without a quote is not valid make, the parser records one when
+// it recovers from a conditional whose argument was not quoted, and both End
+// and String treat the quote as an absent token of zero width.
 type QuotedExpr struct {
-	Quote token.Token // ' or "
+	Quote token.Token // ', ", or ILLEGAL when unquoted
 	Open  token.Pos   // position of the opening quote
 	Value Expr        // position of the inner expression
 	Close token.Pos   // position of the closing quote
@@ -205,14 +210,24 @@ func (l *QuotedExpr) End() token.Pos {
 	return l.Close + tokenLen(l.Quote)
 }
 
-// String returns the quoted expression
+// String returns the quoted expression.
+//
+// Quotes are written when Quote holds one. [token.ILLEGAL] marks an absent
+// quote and writes nothing, so an unquoted expression renders as its value. A
+// nil Value contributes nothing, leaving a pair of quotes.
 func (l *QuotedExpr) String() string {
-	quote := l.Quote.String()
-	if l.Value == nil {
-		return quote + quote
+	var buf strings.Builder
+	if l.Quote != token.ILLEGAL {
+		buf.WriteString(l.Quote.String())
+	}
+	if l.Value != nil {
+		fmt.Fprint(&buf, l.Value)
+	}
+	if l.Quote != token.ILLEGAL {
+		buf.WriteString(l.Quote.String())
 	}
 
-	return fmt.Sprint(quote, l.Value, quote)
+	return buf.String()
 }
 
 // VarRef represents a variable reference.

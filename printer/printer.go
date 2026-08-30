@@ -98,9 +98,13 @@ func (p *printer) text(t *ast.Text) {
 }
 
 func (p *printer) quotedExpr(e *ast.QuotedExpr) {
-	p.tok(p.posFor(e.Open), e.Quote)
+	if e.Quote != token.ILLEGAL {
+		p.tok(p.posFor(e.Open), e.Quote)
+	}
 	p.expr(e.Value)
-	p.tok(p.posFor(e.Close), e.Quote)
+	if e.Quote != token.ILLEGAL {
+		p.tok(p.posFor(e.Close), e.Quote)
+	}
 }
 
 func (p *printer) recipe(r *ast.Recipe) {

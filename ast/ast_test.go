@@ -231,6 +231,63 @@ var _ = Describe("Ast", func() {
 		},
 	)
 
+	Describe("QuotedExpr", func() {
+		It("should stringify an absent quote", func() {
+			c := &ast.QuotedExpr{Value: &ast.Text{Value: "foo"}}
+
+			Expect(c.String()).To(Equal("foo"))
+		})
+
+		It("should stringify an absent quote and an empty value", func() {
+			c := &ast.QuotedExpr{}
+
+			Expect(c.String()).To(BeEmpty())
+		})
+
+		DescribeTable("should stringify what the printer writes",
+			Entry("quotes", &ast.QuotedExpr{
+				Quote: token.QUOTE,
+				Open:  token.Pos(1),
+				Value: &ast.Text{Value: "foo", ValuePos: token.Pos(2)},
+				Close: token.Pos(5),
+			}, `"foo"`),
+			Entry("apostrophes", &ast.QuotedExpr{
+				Quote: token.APOS,
+				Open:  token.Pos(1),
+				Value: &ast.Text{Value: "foo", ValuePos: token.Pos(2)},
+				Close: token.Pos(5),
+			}, "'foo'"),
+			Entry("an empty value", &ast.QuotedExpr{
+				Quote: token.QUOTE,
+				Open:  token.Pos(1),
+				Close: token.Pos(2),
+			}, `""`),
+			Entry("an absent quote", &ast.QuotedExpr{
+				Value: &ast.Text{Value: "foo", ValuePos: token.Pos(1)},
+			}, "foo"),
+			Entry("an absent quote and an empty value", &ast.QuotedExpr{}, ""),
+			Entry("a variable reference", &ast.QuotedExpr{
+				Quote: token.QUOTE,
+				Open:  token.Pos(1),
+				Value: &ast.VarRef{
+					Dollar: token.Pos(2),
+					Open:   token.LPAREN,
+					Name:   "FOO",
+					Close:  token.RPAREN,
+				},
+				Close: token.Pos(8),
+			}, `"$(FOO)"`),
+			func(c *ast.QuotedExpr, expected string) {
+				buf := &bytes.Buffer{}
+				_, err := printer.Fprint(buf, c)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(c.String()).To(Equal(expected))
+				Expect(c.String()).To(Equal(buf.String()))
+			},
+		)
+	})
+
 	Describe("VarRef", func() {
 		It("should return the position of the dollar sign", func() {
 			err := quick.Check(func(p int) bool {
