@@ -31,6 +31,7 @@ var Operators = []TableEntry{
 	Entry(nil, token.IMMEDIATE_ASSIGN),
 	Entry(nil, token.IFNDEF_ASSIGN),
 	Entry(nil, token.SHELL_ASSIGN),
+	Entry(nil, token.APPEND_ASSIGN),
 }
 
 var Directives = []TableEntry{
@@ -205,6 +206,7 @@ var _ = Describe("Token", func() {
 		Entry(nil, token.IMMEDIATE_ASSIGN, ":::="),
 		Entry(nil, token.IFNDEF_ASSIGN, "?="),
 		Entry(nil, token.SHELL_ASSIGN, "!="),
+		Entry(nil, token.APPEND_ASSIGN, "+="),
 		Entry(nil, token.DEFINE, "define"),
 		Entry(nil, token.ENDEF, "endef"),
 		Entry(nil, token.UNDEFINE, "undefine"),
@@ -572,6 +574,7 @@ var _ = Describe("Token", func() {
 			Entry(nil, "\t"),
 			Entry(nil, "?="),
 			Entry(nil, "!="),
+			Entry(nil, "+="),
 			Entry(nil, "|"),
 			Entry(nil, " "),
 			Entry(nil, ""),

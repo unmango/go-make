@@ -135,6 +135,8 @@ func (s *Scanner) Scan() (pos token.Pos, tok token.Token, lit string) {
 			tok = token.IFNDEF_ASSIGN
 		case "!=":
 			tok = token.SHELL_ASSIGN
+		case "+=":
+			tok = token.APPEND_ASSIGN
 		case ",":
 			tok = token.COMMA
 		case "'":
