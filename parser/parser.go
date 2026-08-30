@@ -515,9 +515,19 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 		p.next()
 	}
 
+	// Blank lines do not end a recipe list. make ignores them and keeps
+	// attaching prefixed lines to the rule, so the loop looks past any run of
+	// newlines for another prefix. Newlines consumed here without a recipe
+	// following them are the same newlines the caller would have skipped, and
+	// the blank lines survive a round trip because the printer reconstructs
+	// them from the position of whatever node comes next.
 	recipes := make([]*ast.Recipe, 0)
-	for p.isRecipePrefix() && p.tok != token.EOF {
-		recipes = append(recipes, p.parseRecipe())
+	for p.isRecipePrefix() || p.tok == token.NEWLINE {
+		if p.tok == token.NEWLINE {
+			p.skipNewlines()
+		} else {
+			recipes = append(recipes, p.parseRecipe())
+		}
 	}
 
 	return &ast.Rule{

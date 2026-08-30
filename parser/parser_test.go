@@ -455,6 +455,149 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should Parse recipes separated by a blank line", func() {
+		buf := bytes.NewBufferString("target:\n\trecipe\n\n\trecipe2")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{
+				{
+					Prefix:    token.TAB,
+					PrefixPos: token.Pos(9),
+					Text: ast.Text{
+						Value:    "recipe",
+						ValuePos: token.Pos(10),
+					},
+				},
+				{
+					Prefix:    token.TAB,
+					PrefixPos: token.Pos(18),
+					Text: ast.Text{
+						Value:    "recipe2",
+						ValuePos: token.Pos(19),
+					},
+				},
+			},
+		}))
+	})
+
+	It("should Parse recipes separated by multiple blank lines", func() {
+		buf := bytes.NewBufferString("target:\n\trecipe\n\n\n\trecipe2")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{
+				{
+					Prefix:    token.TAB,
+					PrefixPos: token.Pos(9),
+					Text: ast.Text{
+						Value:    "recipe",
+						ValuePos: token.Pos(10),
+					},
+				},
+				{
+					Prefix:    token.TAB,
+					PrefixPos: token.Pos(19),
+					Text: ast.Text{
+						Value:    "recipe2",
+						ValuePos: token.Pos(20),
+					},
+				},
+			},
+		}))
+	})
+
+	It("should Parse a recipe preceded by a blank line", func() {
+		buf := bytes.NewBufferString("target:\n\n\trecipe")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Rule{
+			Colon: token.Pos(7),
+			Targets: []ast.Expr{&ast.Text{
+				Value:    "target",
+				ValuePos: token.Pos(1),
+			}},
+			PreReqs:      []ast.Expr{},
+			OrderPreReqs: []ast.Expr{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.TAB,
+				PrefixPos: token.Pos(10),
+				Text: ast.Text{
+					Value:    "recipe",
+					ValuePos: token.Pos(11),
+				},
+			}},
+		}))
+	})
+
+	It("should not attach the recipes of the next rule after a blank line", func() {
+		buf := bytes.NewBufferString("target:\n\trecipe\n\nother:\n\trecipe2")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveExactElements(
+			&ast.Rule{
+				Colon: token.Pos(7),
+				Targets: []ast.Expr{&ast.Text{
+					Value:    "target",
+					ValuePos: token.Pos(1),
+				}},
+				PreReqs:      []ast.Expr{},
+				OrderPreReqs: []ast.Expr{},
+				Recipes: []*ast.Recipe{{
+					Prefix:    token.TAB,
+					PrefixPos: token.Pos(9),
+					Text: ast.Text{
+						Value:    "recipe",
+						ValuePos: token.Pos(10),
+					},
+				}},
+			},
+			&ast.Rule{
+				Colon: token.Pos(23),
+				Targets: []ast.Expr{&ast.Text{
+					Value:    "other",
+					ValuePos: token.Pos(18),
+				}},
+				PreReqs:      []ast.Expr{},
+				OrderPreReqs: []ast.Expr{},
+				Recipes: []*ast.Recipe{{
+					Prefix:    token.TAB,
+					PrefixPos: token.Pos(25),
+					Text: ast.Text{
+						Value:    "recipe2",
+						ValuePos: token.Pos(26),
+					},
+				}},
+			},
+		))
+	})
+
 	It("should Parse a target with spaces in the recipe", func() {
 		buf := bytes.NewBufferString("target:\n\trecipe part2")
 		p := parser.New(buf, file)
@@ -1179,15 +1322,15 @@ endif
 	})
 
 	It("should include the recipe prefix of an unattached recipe line", func() {
-		buf := bytes.NewBufferString("target:\n\tfirst\n\n\tsecond")
+		buf := bytes.NewBufferString("FOO := bar\n\tsecond")
 		p := parser.New(buf, file)
 
 		f, err := p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
 		Expect(f.Contents).To(ContainElement(&ast.BadObj{
-			From: token.Pos(17),
-			To:   token.Pos(24),
+			From: token.Pos(12),
+			To:   token.Pos(19),
 			Text: "\tsecond",
 		}))
 	})

@@ -161,6 +161,12 @@ func (p *printer) prereqList(l []ast.Expr) {
 
 func (p *printer) recipeList(l []*ast.Recipe) {
 	for _, r := range l {
+		// A SEMI recipe shares a line with the target, every other prefix
+		// starts one, so only the latter can be preceded by blank lines.
+		if r.Prefix != token.SEMI {
+			p.fillLines(r.PrefixPos)
+		}
+
 		p.recipe(r)
 	}
 }
