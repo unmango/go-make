@@ -1136,6 +1136,88 @@ var _ = Describe("Printer", func() {
 			Expect(buf.String()).To(BeEmpty())
 		})
 	})
+
+	Describe("line endings", func() {
+		// The positions below are the offsets the parser would record for the
+		// same source, so a two byte line ending leaves a two byte gap
+		// between the end of one object and the start of the next.
+
+		It("should default to LF when the file records no line ending", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{Contents: []ast.Obj{
+				&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{Value: "a", ValuePos: token.Pos(1)}},
+					Colon:   token.Pos(2),
+				},
+			}})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("a:\n"))
+		})
+
+		It("should write the line ending the file records", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{
+				LineEnding: "\r\n",
+				Contents: []ast.Obj{
+					&ast.Rule{
+						Targets: []ast.Expr{&ast.Text{Value: "a", ValuePos: token.Pos(1)}},
+						Colon:   token.Pos(2),
+					},
+					&ast.Rule{
+						Targets: []ast.Expr{&ast.Text{Value: "b", ValuePos: token.Pos(6)}},
+						Colon:   token.Pos(7),
+					},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("a:\r\nb:\r\n"))
+		})
+
+		It("should reconstruct a blank line from a two byte gap", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{
+				LineEnding: "\r\n",
+				Contents: []ast.Obj{
+					&ast.Rule{
+						Targets: []ast.Expr{&ast.Text{Value: "a", ValuePos: token.Pos(1)}},
+						Colon:   token.Pos(2),
+					},
+					&ast.Rule{
+						Targets: []ast.Expr{&ast.Text{Value: "b", ValuePos: token.Pos(8)}},
+						Colon:   token.Pos(9),
+					},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("a:\r\n\r\nb:\r\n"))
+		})
+
+		It("should write a recipe with the line ending the file records", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{
+				LineEnding: "\r\n",
+				Contents: []ast.Obj{&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{Value: "a", ValuePos: token.Pos(1)}},
+					Colon:   token.Pos(2),
+					Recipes: []*ast.Recipe{{
+						Prefix:    token.TAB,
+						PrefixPos: token.Pos(5),
+						Text:      ast.Text{Value: "echo hi", ValuePos: token.Pos(6)},
+					}},
+				}},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("a:\r\n\techo hi\r\n"))
+		})
+	})
 })
 
 // ast.Obj, ast.Dir, ast.Expr, and ast.IfDir are sealed by unexported marker

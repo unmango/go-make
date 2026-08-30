@@ -2092,6 +2092,23 @@ endif
 			Expect(err).To(MatchError(msg))
 		},
 	)
+
+	DescribeTable("should record the line ending of the file",
+		func(input, expected string) {
+			p := parser.New(bytes.NewBufferString(input), file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.LineEnding).To(Equal(expected))
+		},
+		Entry("LF", "a: b\nc: d\n", "\n"),
+		Entry("CRLF", "a: b\r\nc: d\r\n", "\r\n"),
+		Entry("a single CRLF line", "a: b\r\n", "\r\n"),
+		Entry("no line ending at all", "a: b", "\n"),
+		Entry("mostly CRLF", "a: b\r\nc: d\r\ne: f\n", "\r\n"),
+		Entry("mostly LF", "a: b\nc: d\ne: f\r\n", "\n"),
+	)
 })
 
 // funcCall returns the call assigned by the ith object in f, failing the spec

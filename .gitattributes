@@ -2,3 +2,9 @@
 # keeps git from classifying the file as text and rewriting its line endings on
 # checkout, which would change the bytes the round-trip test compares against.
 testdata/roundtrip/unsupported-carriage-return.mk -text
+
+# The CRLF fixtures exist to prove a CRLF file round-trips byte for byte, so
+# they carry the same mark. Without it a checkout configured to normalize line
+# endings would rewrite them to LF and the round-trip spec would compare the
+# wrong bytes.
+testdata/roundtrip/crlf-*.mk -text

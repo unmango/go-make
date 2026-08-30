@@ -807,9 +807,10 @@ func (p *Parser) parseFile() *ast.File {
 	}
 
 	return &ast.File{
-		Contents:  content,
-		FileStart: token.Pos(p.file.Base()),
-		FileEnd:   token.Pos(p.file.Base() + p.file.Size()),
+		Contents:   content,
+		FileStart:  token.Pos(p.file.Base()),
+		FileEnd:    token.Pos(p.file.Base() + p.file.Size()),
+		LineEnding: p.s.LineEnding(),
 	}
 }
 
