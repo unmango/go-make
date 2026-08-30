@@ -120,6 +120,62 @@ var _ = Describe("Printer", func() {
 				},
 				"target: prereq\n\tcurl https://example.com\n",
 			),
+			Entry("target and semicolon recipe",
+				&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+					Recipes: []*ast.Recipe{{
+						Prefix:    token.SEMI,
+						PrefixPos: token.Pos(9),
+						Text:      ast.Text{Value: " recipe", ValuePos: token.Pos(10)},
+					}},
+				},
+				"target: ; recipe\n",
+			),
+			Entry("target, prereq, and semicolon recipe",
+				&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+					PreReqs: []ast.Expr{&ast.Text{
+						Value:    "prereq",
+						ValuePos: token.Pos(9),
+					}},
+					Recipes: []*ast.Recipe{{
+						Prefix:    token.SEMI,
+						PrefixPos: token.Pos(16),
+						Text:      ast.Text{Value: " recipe", ValuePos: token.Pos(17)},
+					}},
+				},
+				"target: prereq ; recipe\n",
+			),
+			Entry("target, semicolon recipe, and tab recipe",
+				&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(1),
+					}},
+					Colon: token.Pos(7),
+					Recipes: []*ast.Recipe{
+						{
+							Prefix:    token.SEMI,
+							PrefixPos: token.Pos(9),
+							Text:      ast.Text{Value: " recipe", ValuePos: token.Pos(10)},
+						},
+						{
+							Prefix:    token.TAB,
+							PrefixPos: token.Pos(18),
+							Text:      ast.Text{Value: "recipe2", ValuePos: token.Pos(19)},
+						},
+					},
+				},
+				"target: ; recipe\n\trecipe2\n",
+			),
 			Entry("target with recipe",
 				&ast.Rule{
 					Targets: []ast.Expr{&ast.Text{Value: "target"}},

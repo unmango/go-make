@@ -44,7 +44,7 @@ func ScanTokens(data []byte, atEOF bool) (advance int, token []byte, err error) 
 		fallthrough
 	case '#':
 		fallthrough
-	case '\n', '\t', '$', '(', ')', '{', '}', ',', '\'', '"':
+	case '\n', '\t', '$', '(', ')', '{', '}', ',', ';', '\'', '"':
 		return 1, data[:1], nil
 	}
 
