@@ -1682,6 +1682,23 @@ var _ = Describe("Parser", func() {
 		},
 	)
 
+	DescribeTable("should error once when a quoted argument is not quoted",
+		Entry(nil, "ifeq \"baz\" bin\nendif", "test:1:12: expected one of ''', '\"', found bin"),
+		Entry(nil, "ifeq 'baz' bin\nendif", "test:1:12: expected one of ''', '\"', found bin"),
+		Entry(nil, "ifeq \"\" bin\nendif", "test:1:9: expected one of ''', '\"', found bin"),
+		func(input, msg string) {
+			buf := bytes.NewBufferString(input)
+			p := parser.New(buf, file)
+
+			_, err := p.ParseFile()
+
+			// The argument is left absent rather than recovered into a node
+			// with no quote and no position to record, so the single error
+			// naming the unquoted token is the only one reported.
+			Expect(err).To(MatchError(msg))
+		},
+	)
+
 	DescribeTable("should error on unexpected tokens",
 		Entry(nil, "ifeq )baz\" \"bin\"\nendif"),
 		Entry(nil, "ifeq {baz' \"bin\"\nendif"),

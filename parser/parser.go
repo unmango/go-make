@@ -181,14 +181,17 @@ func (p *Parser) skipNewlines() {
 	}
 }
 
+// parseText parses the text a value was written with. Text that is not there
+// is not invented: a token that is not text records an error and yields no
+// node, so no placeholder reaches a caller or the printer.
 func (p *Parser) parseText() *ast.Text {
-	pos, name := p.pos, "_"
-	if p.tok == token.TEXT {
-		name = p.lit
-		p.next()
-	} else {
+	if p.tok != token.TEXT {
 		p.expect(token.TEXT)
+		return nil
 	}
+
+	pos, name := p.pos, p.lit
+	p.next()
 
 	return &ast.Text{
 		ValuePos: pos,
@@ -417,7 +420,10 @@ func (p *Parser) parseCallArgPart() ast.Expr {
 	case token.DOLLAR:
 		return p.parseRef()
 	case token.TEXT:
-		return p.parseText()
+		if text := p.parseText(); text != nil {
+			return text
+		}
+		return nil
 	default:
 		text := &ast.Text{ValuePos: p.pos, Value: p.recipeTokenText()}
 		p.next()
@@ -495,7 +501,10 @@ func (p *Parser) parseExpression(stop ...token.Token) ast.Expr {
 func (p *Parser) parseExprPart() ast.Expr {
 	switch p.tok {
 	case token.TEXT:
-		return p.parseText()
+		if text := p.parseText(); text != nil {
+			return text
+		}
+		return nil
 	case token.DOLLAR:
 		return p.parseRef()
 	default:
@@ -542,28 +551,34 @@ func (p *Parser) parseIfdefDir() *ast.IfdefDir {
 	}
 }
 
-func (p *Parser) parseQuotedExpr() *ast.QuotedExpr {
-	var (
-		quote token.Token
-		open  token.Pos
-	)
-
+// parseQuotedExpr parses one quoted argument of an [ast.IfeqDir].
+//
+// A token that is not a quote yields no node. There is no quote to record and
+// no position to report, so a node built there would claim to start at offset
+// zero and print its value without the quotes it never had. The return type is
+// [ast.Expr] so that the absent argument reaches the caller as a nil
+// interface rather than a nil *[ast.QuotedExpr], which [ast.Walk] would
+// dereference.
+func (p *Parser) parseQuotedExpr() ast.Expr {
+	var quote token.Token
 	switch p.tok {
-	case token.APOS:
-		quote = token.APOS
-		open = p.expect(token.APOS)
-	case token.QUOTE:
-		quote = token.QUOTE
-		open = p.expect(token.QUOTE)
+	case token.APOS, token.QUOTE:
+		quote = p.tok
 	default:
 		p.expectOneOf(token.APOS, token.QUOTE)
+		return nil
 	}
 
+	open := p.expect(quote)
+
 	// `ifeq "" "b"` quotes an empty argument. The closing quote immediately
-	// follows the opening one, and a nil Value records it.
+	// follows the opening one, and a nil Value records it. Text that fails to
+	// parse is absent for the same reason.
 	var value ast.Expr
 	if p.tok != quote {
-		value = p.parseText()
+		if text := p.parseText(); text != nil {
+			value = text
+		}
 	}
 
 	close := p.expect(quote)
