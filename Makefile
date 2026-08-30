@@ -5,8 +5,22 @@ LOCALBIN    := ${WORKING_DIR}/bin
 
 export GOBIN := ${LOCALBIN}
 
-DEVCTL := go tool devctl
 GINKGO := go tool ginkgo
+
+# Every Go source file in the repo, relative to the repo root.
+GO_SOURCES := $(shell find . \( -path ./.git -o -path ./.direnv -o -path ./bin \) -prune -o -name '*.go' -print | sed 's|^\./||')
+# The same list without test files.
+GO_NON_TEST_SOURCES := $(filter-out %_test.go,$(GO_SOURCES))
+
+ifeq ($(strip $(GO_SOURCES)),)
+$(error no Go sources found, source discovery is broken and prerequisites would be empty)
+endif
+
+DPRINT_VERSION := $(shell cat .versions/dprint)
+
+ifeq ($(strip $(DPRINT_VERSION)),)
+$(error could not read the pinned dprint version from .versions/dprint)
+endif
 
 ifeq ($(CI),)
 TEST_FLAGS := --label-filter !E2E
@@ -37,10 +51,10 @@ clean:
 	rm -rf .make
 	rm -f cover.profile
 
-cover.profile: $(shell $(DEVCTL) list --go)
+cover.profile: $(GO_SOURCES)
 	$(GINKGO) run --coverprofile=cover.profile -r ./
 
-go.sum: go.mod $(shell $(DEVCTL) list --go)
+go.sum: go.mod $(GO_SOURCES)
 	go mod tidy
 
 %_suite_test.go:
@@ -50,7 +64,7 @@ go.sum: go.mod $(shell $(DEVCTL) list --go)
 	cd $(dir $@) && $(GINKGO) generate $(notdir $*)
 
 bin/dprint: .versions/dprint | .make/dprint/install.sh
-	DPRINT_INSTALL=${WORKING_DIR} .make/dprint/install.sh $(shell $(DEVCTL) v dprint)
+	DPRINT_INSTALL=${WORKING_DIR} .make/dprint/install.sh ${DPRINT_VERSION}
 	@touch $@
 
 .envrc: hack/example.envrc
@@ -59,11 +73,11 @@ bin/dprint: .versions/dprint | .make/dprint/install.sh
 .make:
 	mkdir -p $@
 
-.make/build: $(shell $(DEVCTL) list --go --exclude-tests) | .make
+.make/build: $(GO_NON_TEST_SOURCES) | .make
 	go build ./...
 	@touch $@
 
-.make/test: $(shell $(DEVCTL) list --go) $(wildcard testdata/*) | .make
+.make/test: $(GO_SOURCES) $(wildcard testdata/*) | .make
 	$(GINKGO) run ${TEST_FLAGS} $(sort $(dir $(filter-out testdata/%,$?)))
 	@touch $@
 
@@ -71,7 +85,7 @@ bin/dprint: .versions/dprint | .make/dprint/install.sh
 	curl -X POST --data-binary @codecov.yml https://codecov.io/validate
 	@touch $@
 
-.make/go-fmt: $(shell $(DEVCTL) list --go)
+.make/go-fmt: $(GO_SOURCES)
 	go fmt ./...
 	@touch $@
 
