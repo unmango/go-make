@@ -1,13 +1,17 @@
 package ast_test
 
 import (
+	"bytes"
 	"fmt"
+	"strings"
 	"testing/quick"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/unmango/go-make/ast"
+	"github.com/unmango/go-make/parser"
+	"github.com/unmango/go-make/printer"
 	"github.com/unmango/go-make/token"
 )
 
@@ -83,13 +87,13 @@ var _ = Describe("Ast", func() {
 			Expect(c.Pos()).To(Equal(token.Pos(69)))
 		})
 
-		It("should return the position of the last comment", func() {
+		It("should return the position after the last comment", func() {
 			c := &ast.CommentGroup{[]*ast.Comment{
 				{Pound: token.Pos(69), Text: "foo"},
 				{Pound: token.Pos(420), Text: "Some comment text"},
 			}}
 
-			Expect(c.End()).To(Equal(token.Pos(437)))
+			Expect(c.End()).To(Equal(token.Pos(439)))
 		})
 	})
 
@@ -107,7 +111,8 @@ var _ = Describe("Ast", func() {
 				Text:  "Some comment text",
 			}
 
-			Expect(c.End()).To(Equal(token.Pos(437)))
+			// '#' + ' ' + len("Some comment text")
+			Expect(c.End()).To(Equal(token.Pos(439)))
 		})
 	})
 
@@ -187,10 +192,10 @@ var _ = Describe("Ast", func() {
 				Expect(c.Pos()).To(Equal(token.Pos(69)))
 			})
 
-			It("should return the position of the closing quote", func() {
+			It("should return the position after the closing quote", func() {
 				c := &ast.QuotedExpr{Quote: quote, Close: token.Pos(423)}
 
-				Expect(c.End()).To(Equal(token.Pos(423)))
+				Expect(c.End()).To(Equal(token.Pos(424)))
 			})
 
 			It("should stringify", func() {
@@ -222,7 +227,8 @@ var _ = Describe("Ast", func() {
 				Close:  token.RPAREN,
 			}
 
-			Expect(c.End()).To(Equal(token.Pos(425)))
+			// '$' + '(' + len("bar") + ')'
+			Expect(c.End()).To(Equal(token.Pos(426)))
 		})
 
 		It("should return the position after the character", func() {
@@ -233,7 +239,20 @@ var _ = Describe("Ast", func() {
 				Close:  token.ILLEGAL,
 			}
 
-			Expect(c.End()).To(Equal(token.Pos(421)))
+			// '$' + len("b")
+			Expect(c.End()).To(Equal(token.Pos(422)))
+		})
+
+		It("should return the position after a delimited single character", func() {
+			c := &ast.VarRef{
+				Dollar: token.Pos(420),
+				Open:   token.LBRACE,
+				Name:   "b",
+				Close:  token.RBRACE,
+			}
+
+			// '$' + '{' + len("b") + '}'
+			Expect(c.End()).To(Equal(token.Pos(424)))
 		})
 
 		It("should stringify with parens", func() {
@@ -286,7 +305,8 @@ var _ = Describe("Ast", func() {
 				Text:      ast.Text{Value: "foo"},
 			}
 
-			Expect(c.End()).To(Equal(token.Pos(423)))
+			// '\t' + len("foo")
+			Expect(c.End()).To(Equal(token.Pos(424)))
 		})
 	})
 
@@ -465,6 +485,62 @@ var _ = Describe("Ast", func() {
 			}, nil)
 
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+})
+
+var _ = Describe("End", func() {
+	// assertSpans parses src, prints the resulting file back out, and asserts
+	// that the node selected by pick covers exactly the bytes of snippet.
+	// Positions are 1-based, so End is the position immediately after the last
+	// character the printer writes for the node.
+	assertSpans := func(src, snippet string, pick func(*ast.File) ast.Node) {
+		GinkgoHelper()
+
+		f, err := parser.New(bytes.NewBufferString(src), nil).ParseFile()
+		Expect(err).NotTo(HaveOccurred())
+
+		buf := &bytes.Buffer{}
+		_, err = printer.Fprint(buf, f)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(buf.String()).To(Equal(src), "source did not round-trip")
+
+		offset := strings.Index(src, snippet)
+		Expect(offset).To(BeNumerically(">=", 0), "snippet is not present in the source")
+
+		node := pick(f)
+		Expect(node.Pos()).To(Equal(token.Pos(offset + 1)))
+		Expect(node.End()).To(Equal(token.Pos(offset + 1 + len(snippet))))
+		Expect(src[node.Pos()-1 : node.End()-1]).To(Equal(snippet))
+	}
+
+	It("should span the comment including the pound", func() {
+		assertSpans("# a comment\n", "# a comment", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.CommentGroup).List[0]
+		})
+	})
+
+	It("should span the variable reference including the closing token", func() {
+		assertSpans("target: $(FOO)\n", "$(FOO)", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.Rule).PreReqs[0]
+		})
+	})
+
+	It("should span the single character variable reference", func() {
+		assertSpans("target: $b\n", "$b", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.Rule).PreReqs[0]
+		})
+	})
+
+	It("should span the quoted expression including the closing quote", func() {
+		assertSpans("ifeq \"a\" \"bcd\"\ntarget:\nendif\n", `"bcd"`, func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.IfBlock).Directive.(*ast.IfeqDir).Arg2
+		})
+	})
+
+	It("should span the recipe including the prefix", func() {
+		assertSpans("target: dep\n\techo hi\n", "\techo hi", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.Rule).Recipes[0]
 		})
 	})
 })

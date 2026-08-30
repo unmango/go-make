@@ -113,9 +113,14 @@ func (c *Comment) Pos() token.Pos {
 	return c.Pound
 }
 
-// End implements Node
+// End implements Node.
+//
+// The printer renders a comment as '#', a single space, and Text, so End
+// accounts for both leading characters. Text never includes the '#', and the
+// parser normalizes away the space that follows it, so the two characters
+// cannot be recovered from Text alone.
 func (c *Comment) End() token.Pos {
-	return token.Pos(int(c.Pound) + len(c.Text))
+	return c.Pound + 2 + token.Pos(len(c.Text)) // '#' + ' ' + Text
 }
 
 // A Rule represents the Recipes and PreRequisites required to build Targets. [Rule Syntax]
@@ -192,7 +197,7 @@ func (l *QuotedExpr) Pos() token.Pos {
 
 // End implements Node
 func (l *QuotedExpr) End() token.Pos {
-	return l.Close
+	return l.Close + tokenLen(l.Quote)
 }
 
 // String returns the quoted expression
@@ -218,12 +223,8 @@ func (v *VarRef) Pos() token.Pos {
 
 // End implements Node
 func (v *VarRef) End() token.Pos {
-	if n := len(v.Name); n == 1 {
-		return v.Dollar + 1
-	} else {
-		// '$' + '{' + len(v.Name) + '}'
-		return token.Pos(int(v.Dollar) + 2 + len(v.Name))
-	}
+	// '$' + Open + Name + Close
+	return v.Dollar + 1 + tokenLen(v.Open) + token.Pos(len(v.Name)) + tokenLen(v.Close)
 }
 
 // String implements fmt.Stringer
@@ -249,7 +250,7 @@ func (r *Recipe) Pos() token.Pos {
 
 // End implements Node
 func (r *Recipe) End() token.Pos {
-	return token.Pos(int(r.PrefixPos) + len(r.Value))
+	return r.PrefixPos + tokenLen(r.Prefix) + token.Pos(len(r.Value)) // Prefix + Value
 }
 
 // An Variable represents a make variable.
@@ -364,4 +365,14 @@ func (d *IfdefDir) Pos() token.Pos {
 // End implements node
 func (d *IfdefDir) End() token.Pos {
 	return d.VarName.End()
+}
+
+// tokenLen is the width of tok as the printer writes it. [token.ILLEGAL] marks
+// an absent token rather than a literal, so it has no width.
+func tokenLen(tok token.Token) token.Pos {
+	if tok == token.ILLEGAL {
+		return 0
+	}
+
+	return token.Pos(len(tok.String()))
 }
