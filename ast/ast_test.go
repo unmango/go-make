@@ -271,38 +271,47 @@ var _ = Describe("Ast", func() {
 			Expect(c.End()).To(Equal(token.Pos(424)))
 		})
 
-		It("should stringify with parens", func() {
-			c := &ast.VarRef{
-				Dollar: token.Pos(1),
-				Open:   token.LPAREN,
-				Name:   "foo",
-				Close:  token.RPAREN,
-			}
+		DescribeTable("should stringify",
+			Entry("parens", token.LPAREN, "FOO", token.RPAREN, "$(FOO)"),
+			Entry("braces", token.LBRACE, "FOO", token.RBRACE, "${FOO}"),
+			Entry("a delimited single character", token.LPAREN, "F", token.RPAREN, "$(F)"),
+			Entry("a brace delimited single character", token.LBRACE, "F", token.RBRACE, "${F}"),
+			Entry("a single character", token.ILLEGAL, "F", token.ILLEGAL, "$F"),
+			Entry("an undelimited name", token.ILLEGAL, "FOO", token.ILLEGAL, "$FOO"),
+			func(open token.Token, name string, closed token.Token, expected string) {
+				c := &ast.VarRef{
+					Dollar: token.Pos(1),
+					Open:   open,
+					Name:   name,
+					Close:  closed,
+				}
 
-			Expect(c.String()).To(Equal("$(foo)"))
-		})
+				Expect(c.String()).To(Equal(expected))
+			},
+		)
 
-		It("should stringify with braces", func() {
-			c := &ast.VarRef{
-				Dollar: token.Pos(1),
-				Open:   token.LBRACE,
-				Name:   "foo",
-				Close:  token.RBRACE,
-			}
+		DescribeTable("should stringify what the printer writes",
+			Entry("parens", token.LPAREN, "FOO", token.RPAREN),
+			Entry("braces", token.LBRACE, "FOO", token.RBRACE),
+			Entry("a delimited single character", token.LPAREN, "F", token.RPAREN),
+			Entry("a brace delimited single character", token.LBRACE, "F", token.RBRACE),
+			Entry("a single character", token.ILLEGAL, "F", token.ILLEGAL),
+			Entry("an undelimited name", token.ILLEGAL, "FOO", token.ILLEGAL),
+			func(open token.Token, name string, closed token.Token) {
+				c := &ast.VarRef{
+					Dollar: token.Pos(1),
+					Open:   open,
+					Name:   name,
+					Close:  closed,
+				}
 
-			Expect(c.String()).To(Equal("${foo}"))
-		})
+				buf := &bytes.Buffer{}
+				_, err := printer.Fprint(buf, c)
 
-		It("should stringify single characters", func() {
-			c := &ast.VarRef{
-				Dollar: token.Pos(1),
-				Open:   token.ILLEGAL,
-				Name:   "f",
-				Close:  token.ILLEGAL,
-			}
-
-			Expect(c.String()).To(Equal("$f"))
-		})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(c.String()).To(Equal(buf.String()))
+			},
+		)
 	})
 
 	Describe("Recipe", func() {
