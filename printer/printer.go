@@ -17,6 +17,22 @@ type printer struct {
 
 type Op func(*printer)
 
+// unsupportedNode reports a node the printer has no case for. It travels as a
+// panic value so the mutually recursive print helpers keep their simple
+// signatures, and is recovered in printNode.
+type unsupportedNode struct {
+	node any
+}
+
+func (e unsupportedNode) Error() string {
+	return fmt.Sprintf("unsupported node: %#v", e.node)
+}
+
+// unsupported aborts printing and reports node as unsupported.
+func (p *printer) unsupported(node any) {
+	panic(unsupportedNode{node})
+}
+
 func WithFile(f *token.File) Op {
 	return func(p *printer) {
 		p.f = f
@@ -106,6 +122,10 @@ func (p *printer) varRef(v *ast.VarRef) {
 }
 
 func (p *printer) expr(expr ast.Expr) {
+	if expr == nil {
+		return
+	}
+
 	switch n := expr.(type) {
 	case *ast.Text:
 		p.text(n)
@@ -115,6 +135,8 @@ func (p *printer) expr(expr ast.Expr) {
 		p.text(&n.Text)
 	case *ast.VarRef:
 		p.varRef(n)
+	default:
+		p.unsupported(expr)
 	}
 }
 
@@ -214,11 +236,17 @@ func (p *printer) ifdefDir(d *ast.IfdefDir) {
 }
 
 func (p *printer) ifDir(d ast.IfDir) {
+	if d == nil {
+		return
+	}
+
 	switch n := d.(type) {
 	case *ast.IfeqDir:
 		p.ifeqDir(n)
 	case *ast.IfdefDir:
 		p.ifdefDir(n)
+	default:
+		p.unsupported(d)
 	}
 }
 
@@ -243,9 +271,15 @@ func (p *printer) ifBlock(b *ast.IfBlock) {
 }
 
 func (p *printer) directive(d ast.Dir) {
+	if d == nil {
+		return
+	}
+
 	switch n := d.(type) {
 	case *ast.IfBlock:
 		p.ifBlock(n)
+	default:
+		p.unsupported(d)
 	}
 }
 
@@ -273,6 +307,10 @@ func (p *printer) badObj(o *ast.BadObj) {
 }
 
 func (p *printer) obj(o ast.Obj) {
+	if o == nil {
+		return
+	}
+
 	switch n := o.(type) {
 	case ast.Dir:
 		p.directive(n)
@@ -284,6 +322,8 @@ func (p *printer) obj(o ast.Obj) {
 		p.rule(n)
 	case *ast.Variable:
 		p.variable(n)
+	default:
+		p.unsupported(o)
 	}
 }
 
@@ -300,10 +340,20 @@ func (p *printer) file(f *ast.File) {
 	}
 }
 
-func (p *printer) printNode(node any) error {
+func (p *printer) printNode(node any) (err error) {
 	if node == nil {
 		return nil
 	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			if u, ok := r.(unsupportedNode); ok {
+				err = u
+			} else {
+				panic(r)
+			}
+		}
+	}()
 
 	switch n := node.(type) {
 	case ast.Expr:
@@ -319,7 +369,7 @@ func (p *printer) printNode(node any) error {
 	case *ast.File:
 		p.file(n)
 	default:
-		return fmt.Errorf("unsupported node: %#v", node)
+		p.unsupported(node)
 	}
 
 	return nil

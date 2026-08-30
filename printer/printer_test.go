@@ -734,5 +734,87 @@ var _ = Describe("Printer", func() {
 
 			Expect(err).To(MatchError(`unsupported node: "blah"`))
 		})
+
+		It("should return an error for a top-level object", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, unknownObj{})
+
+			Expect(err).To(MatchError(ContainSubstring("unsupported node:")))
+			Expect(n).To(Equal(0))
+			Expect(buf.String()).To(BeEmpty())
+		})
+
+		It("should return an error for a nested object", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.File{Contents: []ast.Obj{
+				unknownObj{},
+			}})
+
+			Expect(err).To(MatchError(ContainSubstring("unsupported node:")))
+			Expect(n).To(Equal(0))
+			Expect(buf.String()).To(BeEmpty())
+		})
+
+		It("should return an error for a nested directive", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.File{Contents: []ast.Obj{
+				unknownDir{},
+			}})
+
+			Expect(err).To(MatchError(ContainSubstring("unsupported node:")))
+			Expect(n).To(Equal(0))
+			Expect(buf.String()).To(BeEmpty())
+		})
+
+		It("should return an error for a nested expression", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.Rule{
+				Targets: []ast.Expr{unknownExpr{}},
+				Colon:   token.Pos(7),
+			})
+
+			Expect(err).To(MatchError(ContainSubstring("unsupported node:")))
+			Expect(n).To(Equal(0))
+			Expect(buf.String()).To(BeEmpty())
+		})
+
+		It("should return an error for a nested conditional directive", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfBlock{
+				Directive: unknownIfDir{},
+				Endif:     token.Pos(2),
+			})
+
+			Expect(err).To(MatchError(ContainSubstring("unsupported node:")))
+			Expect(n).To(Equal(0))
+			Expect(buf.String()).To(BeEmpty())
+		})
 	})
 })
+
+// ast.Obj, ast.Dir, ast.Expr, and ast.IfDir are sealed by unexported marker
+// methods, so no type outside of package ast can implement them directly.
+// Embedding the interface promotes the marker method and yields a node the
+// printer has no case for. Pos is declared explicitly so the embedded nil
+// interface is never called.
+
+type unknownObj struct{ ast.Obj }
+
+func (unknownObj) Pos() token.Pos { return token.Pos(1) }
+
+type unknownDir struct{ ast.Dir }
+
+func (unknownDir) Pos() token.Pos { return token.Pos(1) }
+
+type unknownExpr struct{ ast.Expr }
+
+func (unknownExpr) Pos() token.Pos { return token.Pos(1) }
+
+type unknownIfDir struct{ ast.IfDir }
+
+func (unknownIfDir) Pos() token.Pos { return token.Pos(1) }
