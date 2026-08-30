@@ -32,6 +32,8 @@ func SetPos(pos token.Pos, expr ast.Expr) token.Pos {
 		}
 	case *ast.VarRef:
 		n.Dollar = pos
+	case *ast.FuncCall:
+		setCallPos(pos, n)
 	case *ast.Recipe:
 		n.PrefixPos = pos
 		n.ValuePos = pos + length(n.Prefix)
@@ -63,6 +65,8 @@ func End(expr ast.Expr) token.Pos {
 			end += length(n.Close)
 		}
 		return end
+	case *ast.FuncCall:
+		return n.ClosePos + length(n.Close)
 	case *ast.Recipe:
 		return n.ValuePos + token.Pos(len(n.Value))
 	default:
@@ -84,12 +88,64 @@ func clone(expr ast.Expr) ast.Expr {
 	case *ast.VarRef:
 		c := *n
 		return &c
+	case *ast.FuncCall:
+		c := *n
+		if n.Name != nil {
+			name := *n.Name
+			c.Name = &name
+		}
+		c.Args = make([]*ast.FuncArg, len(n.Args))
+		for i, a := range n.Args {
+			arg := *a
+			arg.Parts = make([]ast.Expr, len(a.Parts))
+			for j, part := range a.Parts {
+				arg.Parts[j] = clone(part)
+			}
+			c.Args[i] = &arg
+		}
+		c.Commas = append([]token.Pos(nil), n.Commas...)
+		return &c
 	case *ast.Recipe:
 		c := *n
 		return &c
 	default:
 		panic(fmt.Sprintf("builder/expr: Copy: unsupported expression type %T", expr))
 	}
+}
+
+// setCallPos lays a function call out beginning at pos. The source layout of a
+// call is not recoverable from the call alone, so the builder writes the
+// canonical one: a single space between the name and the first argument, and
+// between the parts of an argument, and nothing around the commas.
+func setCallPos(pos token.Pos, call *ast.FuncCall) {
+	call.Dollar = pos
+	pos += 1 + length(call.Open) // '$' + Open
+	if call.Name != nil {
+		call.Name.ValuePos = pos
+		pos += token.Pos(len(call.Name.Value))
+	}
+	if n := len(call.Args); n > 0 && len(call.Commas) != n-1 {
+		call.Commas = make([]token.Pos, n-1)
+	}
+	for i, arg := range call.Args {
+		if i == 0 {
+			pos++ // ' '
+		} else {
+			call.Commas[i-1] = pos
+			pos += length(token.COMMA)
+		}
+
+		arg.From = pos
+		for j, part := range arg.Parts {
+			if j > 0 {
+				pos++ // ' '
+			}
+
+			pos = SetPos(pos, part)
+		}
+		arg.To = pos
+	}
+	call.ClosePos = pos
 }
 
 // quoteLen is the width of the quote characters surrounding a [ast.QuotedExpr].

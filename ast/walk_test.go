@@ -194,6 +194,40 @@ var _ = Describe("Walk", func() {
 		Expect(v.nodes).To(HaveExactElements(v1))
 	})
 
+	It("should walk a function call", func() {
+		v := &visitor{}
+		name := &ast.Text{Value: "shell"}
+		part := &ast.Text{Value: "pwd"}
+		arg := &ast.FuncArg{Parts: []ast.Expr{part}}
+		call := &ast.FuncCall{Name: name, Args: []*ast.FuncArg{arg}}
+
+		ast.Walk(v, call)
+
+		Expect(v.nodes).To(HaveExactElements(call, name, arg, part))
+	})
+
+	It("should walk a nested function call", func() {
+		v := &strictVisitor{}
+		inner := &ast.FuncCall{Name: &ast.Text{Value: "wildcard"}}
+		outer := &ast.FuncCall{
+			Name: &ast.Text{Value: "dir"},
+			Args: []*ast.FuncArg{{Parts: []ast.Expr{inner}}},
+		}
+
+		ast.Walk(v, outer)
+
+		Expect(v.nodes).To(ContainElement(inner))
+	})
+
+	It("should walk a function call without a name", func() {
+		v := &strictVisitor{}
+		call := &ast.FuncCall{}
+
+		ast.Walk(v, call)
+
+		Expect(v.nodes).To(HaveExactElements(call))
+	})
+
 	It("should walk a comment group", func() {
 		v := &visitor{}
 		c := &ast.Comment{}

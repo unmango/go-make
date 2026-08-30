@@ -121,6 +121,38 @@ func (p *printer) varRef(v *ast.VarRef) {
 	}
 }
 
+func (p *printer) funcCall(c *ast.FuncCall) {
+	p.tok(p.posFor(c.Dollar), token.DOLLAR)
+	p.tok(p.pos, c.Open)
+	if c.Name != nil {
+		p.writeString(p.pos, c.Name.Value)
+	}
+	for i, a := range c.Args {
+		if i > 0 && i <= len(c.Commas) {
+			p.fillSpace(c.Commas[i-1])
+			p.tok(p.posFor(c.Commas[i-1]), token.COMMA)
+		}
+
+		p.funcArg(a)
+	}
+	p.fillSpace(c.ClosePos)
+	p.tok(p.posFor(c.ClosePos), c.Close)
+}
+
+// funcArg writes the parts of an argument. The whitespace around them is
+// significant to make, and it is recreated from their positions the same way
+// the printer recreates every other gap.
+func (p *printer) funcArg(a *ast.FuncArg) {
+	if a == nil {
+		return
+	}
+
+	for _, e := range a.Parts {
+		p.fillSpace(e.Pos())
+		p.expr(e)
+	}
+}
+
 func (p *printer) expr(expr ast.Expr) {
 	if expr == nil {
 		return
@@ -135,6 +167,8 @@ func (p *printer) expr(expr ast.Expr) {
 		p.text(&n.Text)
 	case *ast.VarRef:
 		p.varRef(n)
+	case *ast.FuncCall:
+		p.funcCall(n)
 	default:
 		p.unsupported(expr)
 	}
@@ -380,6 +414,8 @@ func (p *printer) printNode(node any) (err error) {
 		p.obj(n)
 	case ast.IfDir:
 		p.ifDir(n)
+	case *ast.FuncArg:
+		p.funcArg(n)
 	case []ast.Expr:
 		p.exprList(n)
 	case []ast.Obj:

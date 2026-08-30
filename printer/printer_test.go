@@ -486,6 +486,122 @@ var _ = Describe("Printer", func() {
 			Expect(buf.String()).To(Equal(`"bar"`))
 			Expect(n).To(Equal(5))
 		})
+
+		It("should write a function call", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.FuncCall{
+				Dollar: token.Pos(1),
+				Open:   token.LPAREN,
+				Name:   &ast.Text{Value: "shell", ValuePos: token.Pos(3)},
+				Args: []*ast.FuncArg{{
+					From:  token.Pos(9),
+					To:    token.Pos(12),
+					Parts: []ast.Expr{&ast.Text{Value: "pwd", ValuePos: token.Pos(9)}},
+				}},
+				Close:    token.RPAREN,
+				ClosePos: token.Pos(12),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("$(shell pwd)"))
+			Expect(n).To(Equal(12))
+		})
+
+		It("should write a function call with no arguments", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.FuncCall{
+				Dollar:   token.Pos(1),
+				Open:     token.LBRACE,
+				Name:     &ast.Text{Value: "shell", ValuePos: token.Pos(3)},
+				Close:    token.RBRACE,
+				ClosePos: token.Pos(8),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("${shell}"))
+			Expect(n).To(Equal(8))
+		})
+
+		It("should write the whitespace inside an argument", func() {
+			buf := &bytes.Buffer{}
+
+			// "$(subst a, b,c)"
+			n, err := printer.Fprint(buf, &ast.FuncCall{
+				Dollar: token.Pos(1),
+				Open:   token.LPAREN,
+				Name:   &ast.Text{Value: "subst", ValuePos: token.Pos(3)},
+				Args: []*ast.FuncArg{
+					{From: token.Pos(9), To: token.Pos(10), Parts: []ast.Expr{
+						&ast.Text{Value: "a", ValuePos: token.Pos(9)},
+					}},
+					{From: token.Pos(11), To: token.Pos(13), Parts: []ast.Expr{
+						&ast.Text{Value: "b", ValuePos: token.Pos(12)},
+					}},
+					{From: token.Pos(14), To: token.Pos(15), Parts: []ast.Expr{
+						&ast.Text{Value: "c", ValuePos: token.Pos(14)},
+					}},
+				},
+				Commas:   []token.Pos{token.Pos(10), token.Pos(13)},
+				Close:    token.RPAREN,
+				ClosePos: token.Pos(15),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("$(subst a, b,c)"))
+			Expect(n).To(Equal(15))
+		})
+
+		It("should write a nested function call", func() {
+			buf := &bytes.Buffer{}
+			inner := &ast.FuncCall{
+				Dollar: token.Pos(7),
+				Open:   token.LPAREN,
+				Name:   &ast.Text{Value: "shell", ValuePos: token.Pos(9)},
+				Args: []*ast.FuncArg{{
+					From:  token.Pos(15),
+					To:    token.Pos(18),
+					Parts: []ast.Expr{&ast.Text{Value: "pwd", ValuePos: token.Pos(15)}},
+				}},
+				Close:    token.RPAREN,
+				ClosePos: token.Pos(18),
+			}
+
+			n, err := printer.Fprint(buf, &ast.FuncCall{
+				Dollar: token.Pos(1),
+				Open:   token.LPAREN,
+				Name:   &ast.Text{Value: "dir", ValuePos: token.Pos(3)},
+				Args: []*ast.FuncArg{{
+					From:  token.Pos(7),
+					To:    token.Pos(19),
+					Parts: []ast.Expr{inner},
+				}},
+				Close:    token.RPAREN,
+				ClosePos: token.Pos(19),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("$(dir $(shell pwd))"))
+			Expect(n).To(Equal(19))
+		})
+
+		It("should write a function argument", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.FuncArg{
+				From: token.Pos(1),
+				To:   token.Pos(6),
+				Parts: []ast.Expr{
+					&ast.Text{Value: "a", ValuePos: token.Pos(1)},
+					&ast.Text{Value: "b", ValuePos: token.Pos(5)},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("a   b"))
+			Expect(n).To(Equal(5))
+		})
 	})
 
 	Describe("variables", func() {

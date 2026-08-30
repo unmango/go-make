@@ -61,7 +61,51 @@ var _ = Describe("Expr", func() {
 				&ast.Recipe{Text: ast.Text{Value: "test", ValuePos: 2}, Prefix: token.TAB, PrefixPos: 1},
 				&ast.Recipe{Text: ast.Text{Value: "test", ValuePos: 3}, Prefix: token.TAB, PrefixPos: 2},
 			),
+			Entry("a function call",
+				// "$(shell pwd)"
+				&ast.FuncCall{
+					Dollar: 1,
+					Open:   token.LPAREN,
+					Name:   &ast.Text{Value: "shell", ValuePos: 3},
+					Args: []*ast.FuncArg{{
+						From:  9,
+						To:    12,
+						Parts: []ast.Expr{&ast.Text{Value: "pwd", ValuePos: 9}},
+					}},
+					Close:    token.RPAREN,
+					ClosePos: 12,
+				},
+				&ast.FuncCall{
+					Dollar: 2,
+					Open:   token.LPAREN,
+					Name:   &ast.Text{Value: "shell", ValuePos: 4},
+					Args: []*ast.FuncArg{{
+						From:  10,
+						To:    13,
+						Parts: []ast.Expr{&ast.Text{Value: "pwd", ValuePos: 10}},
+					}},
+					Close:    token.RPAREN,
+					ClosePos: 13,
+				},
+			),
 		)
+
+		It("should not alias the arguments of a function call", func() {
+			part := &ast.Text{Value: "pwd"}
+			e := &ast.FuncCall{
+				Open:  token.LPAREN,
+				Name:  &ast.Text{Value: "shell"},
+				Args:  []*ast.FuncArg{{Parts: []ast.Expr{part}}},
+				Close: token.RPAREN,
+			}
+
+			actual := expr.Copy(1, e).(*ast.FuncCall)
+
+			Expect(actual.Name).NotTo(BeIdenticalTo(e.Name))
+			Expect(actual.Args[0]).NotTo(BeIdenticalTo(e.Args[0]))
+			Expect(actual.Args[0].Parts[0]).NotTo(BeIdenticalTo(part))
+			Expect(part.Pos()).To(Equal(token.NoPos))
+		})
 
 		It("should not alias the value of a quoted expression", func() {
 			e := &ast.QuotedExpr{Quote: token.APOS, Value: &ast.Text{Value: "test"}}
@@ -103,6 +147,10 @@ var _ = Describe("Expr", func() {
 			&ast.Recipe{Text: ast.Text{Value: "test", ValuePos: 2}, Prefix: token.TAB, PrefixPos: 1},
 			token.Pos(6),
 		),
+		Entry("a function call",
+			&ast.FuncCall{Close: token.RPAREN, ClosePos: 12},
+			token.Pos(13), // $(shell pwd)
+		),
 	)
 
 	Describe("SetPos", func() {
@@ -113,6 +161,28 @@ var _ = Describe("Expr", func() {
 
 			Expect(e.ValuePos).To(Equal(token.Pos(4)))
 			Expect(end).To(Equal(token.Pos(8)))
+		})
+
+		It("should lay a function call out canonically", func() {
+			e := &ast.FuncCall{
+				Open: token.LPAREN,
+				Name: &ast.Text{Value: "subst"},
+				Args: []*ast.FuncArg{
+					{Parts: []ast.Expr{&ast.Text{Value: "a"}}},
+					{Parts: []ast.Expr{&ast.Text{Value: "b"}}},
+					{Parts: []ast.Expr{&ast.Text{Value: "c"}}},
+				},
+				Close: token.RPAREN,
+			}
+
+			end := expr.SetPos(1, e)
+
+			// "$(subst a,b,c)"
+			Expect(e.Name.ValuePos).To(Equal(token.Pos(3)))
+			Expect(e.Commas).To(HaveExactElements(token.Pos(10), token.Pos(12)))
+			Expect(e.Args[1].From).To(Equal(token.Pos(11)))
+			Expect(e.ClosePos).To(Equal(token.Pos(14)))
+			Expect(end).To(Equal(token.Pos(15)))
 		})
 	})
 })

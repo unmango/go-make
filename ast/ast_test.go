@@ -320,6 +320,121 @@ var _ = Describe("Ast", func() {
 		)
 	})
 
+	Describe("FuncCall", func() {
+		It("should return the position of the dollar sign", func() {
+			err := quick.Check(func(p int) bool {
+				c := &ast.FuncCall{Dollar: token.Pos(p)}
+				return c.Pos() == token.Pos(p)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the closing delimiter", func() {
+			c := &ast.FuncCall{
+				Dollar:   token.Pos(420),
+				Open:     token.LPAREN,
+				Name:     &ast.Text{ValuePos: token.Pos(422), Value: "shell"},
+				Close:    token.RPAREN,
+				ClosePos: token.Pos(431),
+			}
+
+			// ')' + len(")")
+			Expect(c.End()).To(Equal(token.Pos(432)))
+		})
+
+		It("should return the position of the name", func() {
+			c := &ast.FuncCall{Dollar: token.Pos(420), Open: token.LPAREN}
+
+			// '$' + '('
+			Expect(c.NamePos()).To(Equal(token.Pos(422)))
+		})
+
+		DescribeTable("should stringify",
+			Entry("a call with no arguments", "A := $(shell)\n", "$(shell)"),
+			Entry("a call with one argument", "A := $(shell pwd)\n", "$(shell pwd)"),
+			Entry("a brace delimited call", "A := ${shell pwd}\n", "${shell pwd}"),
+			Entry("a call with several arguments", "A := $(subst a,b,c)\n", "$(subst a,b,c)"),
+			Entry("an argument with leading space", "A := $(subst a, b,c)\n", "$(subst a, b,c)"),
+			Entry("a nested call", "A := $(dir $(shell pwd))\n", "$(dir $(shell pwd))"),
+			func(input, expected string) {
+				p := parser.New(strings.NewReader(input), nil)
+
+				f, err := p.ParseFile()
+
+				Expect(err).NotTo(HaveOccurred())
+				v, ok := f.Contents[0].(*ast.Variable)
+				Expect(ok).To(BeTrue(), "expected a *ast.Variable, got %T", f.Contents[0])
+				c, ok := v.Value[0].(*ast.FuncCall)
+				Expect(ok).To(BeTrue(), "expected a *ast.FuncCall, got %T", v.Value[0])
+				Expect(c.String()).To(Equal(expected))
+			},
+		)
+
+		It("should stringify what the printer writes", func() {
+			// "$(subst a, b,c)" laid out from the first position in the file.
+			c := &ast.FuncCall{
+				Dollar: token.Pos(1),
+				Open:   token.LPAREN,
+				Name:   &ast.Text{ValuePos: token.Pos(3), Value: "subst"},
+				Args: []*ast.FuncArg{
+					{From: token.Pos(9), To: token.Pos(10), Parts: []ast.Expr{
+						&ast.Text{ValuePos: token.Pos(9), Value: "a"},
+					}},
+					{From: token.Pos(11), To: token.Pos(13), Parts: []ast.Expr{
+						&ast.Text{ValuePos: token.Pos(12), Value: "b"},
+					}},
+					{From: token.Pos(14), To: token.Pos(15), Parts: []ast.Expr{
+						&ast.Text{ValuePos: token.Pos(14), Value: "c"},
+					}},
+				},
+				Commas:   []token.Pos{token.Pos(10), token.Pos(13)},
+				Close:    token.RPAREN,
+				ClosePos: token.Pos(15),
+			}
+
+			buf := &bytes.Buffer{}
+			_, err := printer.Fprint(buf, c)
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("$(subst a, b,c)"))
+			Expect(c.String()).To(Equal(buf.String()))
+		})
+	})
+
+	Describe("FuncArg", func() {
+		It("should return the start of the argument", func() {
+			err := quick.Check(func(p int) bool {
+				a := &ast.FuncArg{From: token.Pos(p)}
+				return a.Pos() == token.Pos(p)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the end of the argument", func() {
+			err := quick.Check(func(p int) bool {
+				a := &ast.FuncArg{To: token.Pos(p)}
+				return a.End() == token.Pos(p)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should stringify the whitespace it contains", func() {
+			a := &ast.FuncArg{
+				From: token.Pos(1),
+				To:   token.Pos(6),
+				Parts: []ast.Expr{
+					&ast.Text{ValuePos: token.Pos(2), Value: "a"},
+					&ast.Text{ValuePos: token.Pos(5), Value: "b"},
+				},
+			}
+
+			Expect(a.String()).To(Equal(" a  b"))
+		})
+	})
+
 	Describe("Recipe", func() {
 		It("should return the position of the tab", func() {
 			c := &ast.Recipe{
