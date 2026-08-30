@@ -1703,4 +1703,199 @@ endif
 			Endif: token.Pos(26),
 		}))
 	})
+
+	It("should Parse a function call", func() {
+		buf := bytes.NewBufferString("A := $(shell pwd)")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Variable{
+			Name:  &ast.Text{Value: "A", ValuePos: token.Pos(1)},
+			Op:    token.SIMPLE_ASSIGN,
+			OpPos: token.Pos(3),
+			Value: []ast.Expr{&ast.FuncCall{
+				Dollar: token.Pos(6),
+				Open:   token.LPAREN,
+				Name:   &ast.Text{Value: "shell", ValuePos: token.Pos(8)},
+				Args: []*ast.FuncArg{{
+					From:  token.Pos(14),
+					To:    token.Pos(17),
+					Parts: []ast.Expr{&ast.Text{Value: "pwd", ValuePos: token.Pos(14)}},
+				}},
+				Close:    token.RPAREN,
+				ClosePos: token.Pos(17),
+			}},
+		}))
+	})
+
+	It("should Parse a brace delimited function call", func() {
+		buf := bytes.NewBufferString("A := ${shell pwd}")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		v, ok := f.Contents[0].(*ast.Variable)
+		Expect(ok).To(BeTrue(), "expected a *ast.Variable, got %T", f.Contents[0])
+		Expect(v.Value).To(ConsistOf(&ast.FuncCall{
+			Dollar: token.Pos(6),
+			Open:   token.LBRACE,
+			Name:   &ast.Text{Value: "shell", ValuePos: token.Pos(8)},
+			Args: []*ast.FuncArg{{
+				From:  token.Pos(14),
+				To:    token.Pos(17),
+				Parts: []ast.Expr{&ast.Text{Value: "pwd", ValuePos: token.Pos(14)}},
+			}},
+			Close:    token.RBRACE,
+			ClosePos: token.Pos(17),
+		}))
+	})
+
+	DescribeTable("should Parse a call to every built-in function",
+		Entry(nil, "subst"), Entry(nil, "patsubst"), Entry(nil, "strip"),
+		Entry(nil, "findstring"), Entry(nil, "filter"), Entry(nil, "filter-out"),
+		Entry(nil, "sort"), Entry(nil, "word"), Entry(nil, "words"),
+		Entry(nil, "wordlist"), Entry(nil, "firstword"), Entry(nil, "lastword"),
+		Entry(nil, "dir"), Entry(nil, "notdir"), Entry(nil, "suffix"),
+		Entry(nil, "basename"), Entry(nil, "addsuffix"), Entry(nil, "addprefix"),
+		Entry(nil, "join"), Entry(nil, "wildcard"), Entry(nil, "realpath"),
+		Entry(nil, "abspath"), Entry(nil, "error"), Entry(nil, "warning"),
+		Entry(nil, "shell"), Entry(nil, "origin"), Entry(nil, "flavor"),
+		Entry(nil, "let"), Entry(nil, "foreach"), Entry(nil, "if"),
+		Entry(nil, "or"), Entry(nil, "and"), Entry(nil, "intcmp"),
+		Entry(nil, "call"), Entry(nil, "eval"), Entry(nil, "file"),
+		Entry(nil, "value"),
+		func(name string) {
+			buf := bytes.NewBufferString("A := $(" + name + " x)")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			call := funcCall(f, 0)
+			Expect(call.Name.Value).To(Equal(name))
+			Expect(call.Args).To(HaveLen(1))
+			Expect(call.Args[0].String()).To(Equal("x"))
+		},
+	)
+
+	It("should Parse a nested function call", func() {
+		buf := bytes.NewBufferString("A := $(patsubst %.c,%.o,$(wildcard *.c))")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		call := funcCall(f, 0)
+		Expect(call.Name.Value).To(Equal("patsubst"))
+		Expect(call.Commas).To(HaveExactElements(token.Pos(20), token.Pos(24)))
+		Expect(call.Args).To(HaveLen(3))
+		Expect(call.Args[2].Parts).To(ConsistOf(&ast.FuncCall{
+			Dollar: token.Pos(25),
+			Open:   token.LPAREN,
+			Name:   &ast.Text{Value: "wildcard", ValuePos: token.Pos(27)},
+			Args: []*ast.FuncArg{{
+				From:  token.Pos(36),
+				To:    token.Pos(39),
+				Parts: []ast.Expr{&ast.Text{Value: "*.c", ValuePos: token.Pos(36)}},
+			}},
+			Close:    token.RPAREN,
+			ClosePos: token.Pos(39),
+		}))
+	})
+
+	DescribeTable("should Parse the arguments of a function call",
+		Entry("a call with no arguments", "$(shell)", []string{}),
+		Entry("a call with only whitespace", "$(shell )", []string{}),
+		Entry("one argument", "$(shell pwd)", []string{"pwd"}),
+		Entry("several arguments", "$(subst a,b,text)", []string{"a", "b", "text"}),
+		Entry("an empty argument", "$(subst a,,text)", []string{"a", "", "text"}),
+		Entry("a leading empty argument", "$(if ,x)", []string{"", "x"}),
+		Entry("significant whitespace", "$(subst a, b,text)", []string{"a", " b", "text"}),
+		Entry("trailing whitespace", "$(strip a b )", []string{"a b "}),
+		Entry("a nested call holding a comma", "$(if $(findstring a,b),x,y)",
+			[]string{"$(findstring a,b)", "x", "y"}),
+		Entry("a comma nested in parentheses", "$(shell echo (a,b))", []string{"echo (a,b)"}),
+		Entry("a comma past the argument count", "$(subst a,b,c,d)", []string{"a", "b", "c,d"}),
+		Entry("a comma in a single argument function", "$(shell echo a,b)", []string{"echo a,b"}),
+		Entry("any number of arguments", "$(call f,a,b,c)", []string{"f", "a", "b", "c"}),
+		func(input string, args []string) {
+			buf := bytes.NewBufferString("A := " + input)
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			call := funcCall(f, 0)
+			Expect(call.Args).To(HaveLen(len(args)))
+			for i, arg := range args {
+				Expect(call.Args[i].String()).To(Equal(arg), "argument %d", i)
+			}
+			Expect(call.Commas).To(HaveLen(max(len(args)-1, 0)))
+		},
+	)
+
+	DescribeTable("should Parse an expansion that is not a call as a reference",
+		Entry("an ordinary name", "$(FOO)", "FOO"),
+		Entry("a braced name", "${FOO}", "FOO"),
+		Entry("a name matching a built-in followed by text", "$(shellfoo)", "shellfoo"),
+		func(input, name string) {
+			buf := bytes.NewBufferString("A := " + input)
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			v, ok := f.Contents[0].(*ast.Variable)
+			Expect(ok).To(BeTrue(), "expected a *ast.Variable, got %T", f.Contents[0])
+			ref, ok := v.Value[0].(*ast.VarRef)
+			Expect(ok).To(BeTrue(), "expected a *ast.VarRef, got %T", v.Value[0])
+			Expect(ref.Name).To(Equal(name))
+		},
+	)
+
+	DescribeTable("should Parse a name make does not know as a call",
+		Entry("a name separated from its arguments", "$(foo bar)", "foo"),
+		Entry("a built-in with no arguments", "$(dir)", "dir"),
+		Entry("a logging function", "$(info msg)", "info"),
+		func(input, name string) {
+			buf := bytes.NewBufferString("A := " + input)
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(funcCall(f, 0).Name.Value).To(Equal(name))
+		},
+	)
+
+	DescribeTable("should error when a function call has no closing delimiter",
+		Entry(nil, "A := $(shell pwd", "test:1:17: expected ')', found 'EOF'"),
+		Entry(nil, "A := ${shell pwd", "test:1:17: expected '}', found 'EOF'"),
+		Entry("a mismatched closing delimiter", "A := $(shell pwd}",
+			"test:1:18: expected ')', found 'EOF'"),
+		func(input, msg string) {
+			buf := bytes.NewBufferString(input)
+			p := parser.New(buf, file)
+
+			_, err := p.ParseFile()
+
+			Expect(err).To(MatchError(msg))
+		},
+	)
 })
+
+// funcCall returns the call assigned by the ith object in f, failing the spec
+// when the object is not a variable holding one.
+func funcCall(f *ast.File, i int) *ast.FuncCall {
+	GinkgoHelper()
+	v, ok := f.Contents[i].(*ast.Variable)
+	Expect(ok).To(BeTrue(), "expected a *ast.Variable, got %T", f.Contents[i])
+	Expect(v.Value).NotTo(BeEmpty())
+	call, ok := v.Value[0].(*ast.FuncCall)
+	Expect(ok).To(BeTrue(), "expected a *ast.FuncCall, got %T", v.Value[0])
+
+	return call
+}

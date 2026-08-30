@@ -49,6 +49,13 @@ func Walk(v Visitor, node Node) {
 		if n.Value != nil {
 			Walk(v, n.Value)
 		}
+	case *FuncCall:
+		if n.Name != nil {
+			Walk(v, n.Name)
+		}
+		walkList(v, n.Args)
+	case *FuncArg:
+		walkList(v, n.Parts)
 	case *Variable:
 		if n.Name != nil {
 			Walk(v, n.Name)

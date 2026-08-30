@@ -40,17 +40,29 @@ var _ = Describe("E2E", func() {
 		}, "5s", "1ms").Should(Equal(token.EOF))
 	})
 
-	It("should parse this repo's Makefile", Pending, func() {
-		f, err := os.Open("Makefile")
+	It("should parse this repo's Makefile", func() {
+		src, err := os.ReadFile("Makefile")
 		Expect(err).NotTo(HaveOccurred())
-		fi, err := f.Stat()
-		Expect(err).NotTo(HaveOccurred())
-		file := token.NewFileSet().AddFile(f.Name(), 1, int(fi.Size()))
-		p := make.NewParser(f, file)
+		file := token.NewFileSet().AddFile("Makefile", 1, len(src))
+		p := make.NewParser(bytes.NewReader(src), file)
 
 		_, err = p.ParseFile()
 
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should round-trip this repo's Makefile", func() {
+		src, err := os.ReadFile("Makefile")
+		Expect(err).NotTo(HaveOccurred())
+		file := token.NewFileSet().AddFile("Makefile", 1, len(src))
+		p := make.NewParser(bytes.NewReader(src), file)
+
+		f, err := p.ParseFile()
+		Expect(err).NotTo(HaveOccurred())
+
+		buf := &bytes.Buffer{}
+		Expect(printer.Fprint(buf, f)).To(BeNumerically(">", 0))
+		Expect(buf.String()).To(Equal(string(src)))
 	})
 
 	It("should attach recipes separated by a blank line to their rule", func() {

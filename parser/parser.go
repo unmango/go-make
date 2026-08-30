@@ -115,8 +115,61 @@ func (p *Parser) parseText() *ast.Text {
 	}
 }
 
-// parseRef parses a variable reference. An escaped '$$' is not a reference, so
-// it returns an ast.Text holding both characters instead of an ast.VarRef.
+// maxCallArgs is the number of arguments make passes to each built-in
+// function. Once a call has that many arguments make stops splitting, so any
+// further comma belongs to the final argument: $(subst a,b,c,d) substitutes
+// into the text "c,d". A function that takes any number of arguments, and a
+// name that is not a built-in, are absent from the map and split on every
+// top-level comma.
+var maxCallArgs = map[token.Token]int{
+	token.SUBST:      3,
+	token.PATSUBST:   3,
+	token.STRIP:      1,
+	token.FINDSTRING: 2,
+	token.FILTER:     2,
+	token.FILTER_OUT: 2,
+	token.SORT:       1,
+	token.WORD:       2,
+	token.WORDS:      1,
+	token.WORDLIST:   3,
+	token.FIRSTWORD:  1,
+	token.LASTWORD:   1,
+	token.DIR:        1,
+	token.NOTDIR:     1,
+	token.SUFFIX:     1,
+	token.BASENAME:   1,
+	token.ADDSUFFIX:  2,
+	token.ADDPREFIX:  2,
+	token.JOIN:       2,
+	token.WILDCARD:   1,
+	token.REALPATH:   1,
+	token.ABSPATH:    1,
+	token.ERROR:      1,
+	token.WARNING:    1,
+	token.SHELL:      1,
+	token.ORIGIN:     1,
+	token.FLAVOR:     1,
+	token.LET:        3,
+	token.FOREACH:    3,
+	token.IF:         3,
+	token.INTCMP:     5,
+	token.EVAL:       1,
+	token.FILE:       2,
+	token.VALUE:      1,
+}
+
+// closeDelim is the delimiter that terminates an expansion opened by open.
+func closeDelim(open token.Token) token.Token {
+	if open == token.LBRACE {
+		return token.RBRACE
+	}
+
+	return token.RPAREN
+}
+
+// parseRef parses a variable reference or a function call. An escaped '$$' is
+// not a reference, so it returns an ast.Text holding both characters instead of
+// an ast.VarRef.
 func (p *Parser) parseRef() ast.Expr {
 	if p.tok != token.DOLLAR {
 		p.expect(token.DOLLAR)
@@ -139,9 +192,16 @@ func (p *Parser) parseRef() ast.Expr {
 	case token.LPAREN, token.LBRACE:
 		open = p.tok
 		p.next()
-		if p.tok == token.TEXT {
+		if p.tok == token.TEXT || p.tok.IsBuiltinFunction() {
+			builtin, namePos := p.tok.IsBuiltinFunction(), p.pos
 			name = p.lit
 			p.next()
+			if p.startsCallArgs(namePos+token.Pos(len(name)), open, builtin) {
+				return p.parseFuncCall(dollar, open, &ast.Text{
+					ValuePos: namePos,
+					Value:    name,
+				})
+			}
 		} else {
 			p.expect(token.TEXT)
 		}
@@ -177,6 +237,110 @@ func (p *Parser) parseRef() ast.Expr {
 		Open:   open,
 		Name:   name,
 		Close:  close,
+	}
+}
+
+// startsCallArgs reports whether the token following a name inside an
+// expansion begins an argument list. make reads an expansion as a call when
+// the name is separated from what follows it by a blank, and reads a built-in
+// name as a call when it is followed by a blank, a comma, or the closing
+// delimiter. So $(dir) calls dir with no arguments, $(info text) calls a name
+// make does not know, and $(dir:x) is a reference to a variable named "dir:x".
+func (p *Parser) startsCallArgs(nameEnd token.Pos, open token.Token, builtin bool) bool {
+	// The scanner drops the spaces between tokens, so a gap in the positions
+	// is what reports one. A tab survives as a token of its own.
+	if p.pos > nameEnd || p.tok == token.TAB {
+		return true
+	}
+
+	return builtin && (p.tok == token.COMMA || p.tok == closeDelim(open))
+}
+
+// parseFuncCall parses the arguments and closing delimiter of a function call.
+// The '$', the opening delimiter, and the name have already been consumed.
+func (p *Parser) parseFuncCall(dollar token.Pos, open token.Token, name *ast.Text) *ast.FuncCall {
+	call := &ast.FuncCall{
+		Dollar: dollar,
+		Open:   open,
+		Name:   name,
+		Close:  closeDelim(open),
+	}
+	if p.tok != call.Close && p.tok != token.NEWLINE && p.tok != token.EOF {
+		p.parseCallArgs(call)
+	}
+
+	call.ClosePos = p.pos
+	if p.tok == call.Close {
+		p.next()
+	} else {
+		// A call is not a recovery boundary, the line is. Leaving the token
+		// that ended the arguments unconsumed lets the caller resynchronize on
+		// the newline the way it does for every other unfinished construct.
+		p.errorExpected(p.pos, "'"+call.Close.String()+"'")
+	}
+
+	return call
+}
+
+// parseCallArgs parses the comma separated arguments of call, stopping at the
+// closing delimiter that matches the one the call was opened with.
+//
+// A comma only separates arguments at the top level of the call. Commas nested
+// in parentheses belong to the argument that contains them, so $(if
+// $(findstring a,b),x,y) has three arguments rather than four. Nesting through
+// another expansion needs no counting, because parsing it consumes its
+// delimiters, but a parenthesis written as ordinary text does, so the depth is
+// tracked as well.
+func (p *Parser) parseCallArgs(call *ast.FuncCall) {
+	maxArgs := maxCallArgs[token.Lookup(call.Name.Value)]
+	arg, depth := &ast.FuncArg{From: p.pos}, 0
+
+	for p.tok != token.NEWLINE && p.tok != token.EOF {
+		switch p.tok {
+		case call.Close:
+			if depth == 0 {
+				arg.To = p.pos
+				call.Args = append(call.Args, arg)
+				return
+			}
+			depth--
+		case call.Open:
+			depth++
+		case token.COMMA:
+			// make stops splitting once a function has all the arguments it
+			// takes, so a comma past that count is part of the last argument.
+			if depth == 0 && (maxArgs == 0 || len(call.Args) < maxArgs-1) {
+				arg.To = p.pos
+				call.Args = append(call.Args, arg)
+				call.Commas = append(call.Commas, p.pos)
+				arg = &ast.FuncArg{From: p.pos + 1}
+				p.next()
+				continue
+			}
+		}
+
+		if part := p.parseCallArgPart(); part != nil {
+			arg.Parts = append(arg.Parts, part)
+		}
+	}
+
+	arg.To = p.pos
+	call.Args = append(call.Args, arg)
+}
+
+// parseCallArgPart parses one piece of a function argument. Only '$' has a
+// meaning to make inside a call, so every other token is kept as the text it
+// was written with and reaches the printer unchanged.
+func (p *Parser) parseCallArgPart() ast.Expr {
+	switch p.tok {
+	case token.DOLLAR:
+		return p.parseRef()
+	case token.TEXT:
+		return p.parseText()
+	default:
+		text := &ast.Text{ValuePos: p.pos, Value: p.recipeTokenText()}
+		p.next()
+		return text
 	}
 }
 

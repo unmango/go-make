@@ -255,6 +255,133 @@ func (v *VarRef) String() string {
 	return buf.String()
 }
 
+// A FuncCall represents an expansion that calls a function, such as
+// $(shell date) or $(patsubst %.c,%.o,$(SOURCES)). It is modeled on
+// [go/ast.CallExpr]: Name is the callee and Args are the arguments, with the
+// positions of the delimiters and of every separating ',' recorded so the
+// printer can reproduce the source.
+//
+// Name is an [ast.Text] rather than a [token.Token] because make also accepts
+// call syntax for a name it does not know, as in $(info text). Use
+// [token.IsBuiltinFunction] on Name.Value to tell the two apart.
+//
+// Commas holds one position per separator, so it has len(Args)-1 entries when
+// Args is not empty. A call written without arguments, $(shell), has no Args
+// and no Commas.
+type FuncCall struct {
+	Dollar   token.Pos   // position of '$'
+	Open     token.Token // opening delimiter, '(' or '{'
+	Name     *Text       // function name
+	Args     []*FuncArg  // call arguments
+	Commas   []token.Pos // positions of the ',' separating Args
+	Close    token.Token // closing delimiter, ')' or '}'
+	ClosePos token.Pos   // position of Close
+}
+
+func (*FuncCall) exprNode() {}
+
+// Pos implements Node
+func (c *FuncCall) Pos() token.Pos {
+	return c.Dollar
+}
+
+// End implements Node
+func (c *FuncCall) End() token.Pos {
+	return c.ClosePos + tokenLen(c.Close)
+}
+
+// NamePos returns the position of the function name. A name always follows the
+// opening delimiter immediately, so it is derived the same way [VarRef] derives
+// the position of its own name.
+func (c *FuncCall) NamePos() token.Pos {
+	return c.Dollar + 1 + tokenLen(c.Open) // '$' + Open
+}
+
+// String returns the source text of the call.
+//
+// Arguments are whitespace significant, so the text is rebuilt from the
+// positions of the nodes it contains rather than from a fixed layout.
+func (c *FuncCall) String() string {
+	b := &textBuilder{pos: c.Dollar}
+	b.write(c.Dollar, token.DOLLAR.String())
+	b.write(c.Dollar+1, c.Open.String())
+	if c.Name != nil {
+		b.write(c.Name.ValuePos, c.Name.Value)
+	}
+	for i, a := range c.Args {
+		if i > 0 && i <= len(c.Commas) {
+			b.write(c.Commas[i-1], token.COMMA.String())
+		}
+		a.writeTo(b)
+	}
+	b.write(c.ClosePos, c.Close.String())
+
+	return b.String()
+}
+
+// A FuncArg represents a single argument of a [FuncCall].
+//
+// An argument is the run of source between two of the call's top-level commas,
+// From through To. make does not strip the whitespace inside an argument, so
+// the range covers the whitespace that surrounds Parts and an argument that
+// holds no parts at all is still a distinct, empty argument.
+type FuncArg struct {
+	From, To token.Pos // position range of the argument
+	Parts    []Expr    // expressions the argument is composed of
+}
+
+// Pos implements Node
+func (a *FuncArg) Pos() token.Pos {
+	return a.From
+}
+
+// End implements Node
+func (a *FuncArg) End() token.Pos {
+	return a.To
+}
+
+// String returns the source text of the argument, whitespace included.
+func (a *FuncArg) String() string {
+	b := &textBuilder{pos: a.From}
+	a.writeTo(b)
+
+	return b.String()
+}
+
+func (a *FuncArg) writeTo(b *textBuilder) {
+	for _, p := range a.Parts {
+		if s, ok := p.(fmt.Stringer); ok {
+			b.write(p.Pos(), s.String())
+		}
+	}
+
+	// The argument runs to To, so the whitespace that trails its last part is
+	// part of it just as the whitespace between parts is.
+	b.write(a.To, "")
+}
+
+// textBuilder rebuilds source text from nodes and their positions, padding the
+// gaps between them with spaces.
+type textBuilder struct {
+	buf strings.Builder
+	pos token.Pos
+}
+
+func (b *textBuilder) write(pos token.Pos, text string) {
+	// A gap is negative only when positions are out of order, which a
+	// hand-built node can do. Padding is skipped rather than panicking.
+	for range max(int(pos-b.pos), 0) {
+		b.buf.WriteByte(' ')
+	}
+
+	b.buf.WriteString(text)
+	b.pos = pos + token.Pos(len(text))
+}
+
+func (b *textBuilder) String() string {
+	return b.buf.String()
+}
+
 // A Recipe represents a line of text to be passed to the shell to build a Target.
 type Recipe struct {
 	Text                  // recipe text excluding '\n'
