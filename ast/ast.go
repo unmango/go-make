@@ -66,11 +66,12 @@ func (f *File) Pos() token.Pos {
 
 // End implements Node
 func (f *File) End() token.Pos {
-	if n := len(f.Contents); n > 0 {
-		return f.Contents[n-1].End()
-	} else {
-		return f.FileEnd
+	for i := len(f.Contents) - 1; i >= 0; i-- {
+		if f.Contents[i] != nil {
+			return f.Contents[i].End()
+		}
 	}
+	return f.FileEnd
 }
 
 // A BadObj represents a line containing syntax the parser does not
@@ -161,14 +162,20 @@ func (r *Rule) Pos() token.Pos {
 
 // End implements Node
 func (r *Rule) End() token.Pos {
-	if n := len(r.Recipes); n > 0 {
-		return r.Recipes[n-1].End()
+	for i := len(r.Recipes) - 1; i >= 0; i-- {
+		if r.Recipes[i] != nil {
+			return r.Recipes[i].End()
+		}
 	}
-	if n := len(r.OrderPreReqs); n > 0 {
-		return r.OrderPreReqs[n-1].End()
+	for i := len(r.OrderPreReqs) - 1; i >= 0; i-- {
+		if r.OrderPreReqs[i] != nil {
+			return r.OrderPreReqs[i].End()
+		}
 	}
-	if n := len(r.PreReqs); n > 0 {
-		return r.PreReqs[n-1].End()
+	for i := len(r.PreReqs) - 1; i >= 0; i-- {
+		if r.PreReqs[i] != nil {
+			return r.PreReqs[i].End()
+		}
 	}
 
 	return r.Colon + 1
@@ -511,11 +518,12 @@ func (s *Variable) Pos() token.Pos {
 
 // End implements Node
 func (s *Variable) End() token.Pos {
-	if len(s.Value) > 0 {
-		return s.Value[len(s.Value)-1].End()
-	} else {
-		return token.Pos(int(s.OpPos) + len(s.Op.String()))
+	for i := len(s.Value) - 1; i >= 0; i-- {
+		if s.Value[i] != nil {
+			return s.Value[i].End()
+		}
 	}
+	return token.Pos(int(s.OpPos) + len(s.Op.String()))
 }
 
 // IfBlock represents a conditional directive and its parts.
