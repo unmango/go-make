@@ -7,6 +7,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	"github.com/unmango/go-make/internal/testing"
 	"github.com/unmango/go-make/scanner"
 )
 
@@ -101,6 +102,44 @@ var _ = Describe("Scan", func() {
 			func(text string, expected []string) {
 				buf := bytes.NewBufferString(text)
 				s := bufio.NewScanner(buf)
+				s.Split(scanner.ScanTokens)
+
+				tokens := []string{}
+				for s.Scan() {
+					tokens = append(tokens, s.Text())
+				}
+				Expect(s.Err()).NotTo(HaveOccurred())
+				Expect(tokens).To(Equal(expected))
+			},
+		)
+
+		It("should not panic when data is empty and atEOF is false", func() {
+			var advance int
+			var token []byte
+			var err error
+
+			Expect(func() {
+				advance, token, err = scanner.ScanTokens(nil, false)
+			}).NotTo(Panic())
+
+			Expect(advance).To(Equal(0))
+			Expect(token).To(BeNil())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		DescribeTable("assignments split across reads",
+			Entry("immediate variable",
+				"A:::=b\n", []string{"A", ":::=", "b", "\n"},
+			),
+			Entry("posix variable",
+				"A::=b\n", []string{"A", "::=", "b", "\n"},
+			),
+			Entry("simple variable",
+				"A:=b\n", []string{"A", ":=", "b", "\n"},
+			),
+			func(text string, expected []string) {
+				r := testing.NewChunkReader(text, 3)
+				s := bufio.NewScanner(r)
 				s.Split(scanner.ScanTokens)
 
 				tokens := []string{}
