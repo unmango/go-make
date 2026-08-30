@@ -180,6 +180,11 @@ var _ = Describe("Ast", func() {
 
 			Expect(c.End()).To(Equal(r.End()))
 		})
+
+		It("should skip nil list entries when finding the end", func() {
+			r := &ast.Rule{Colon: 5, PreReqs: []ast.Expr{&ast.Text{ValuePos: 10}, nil}}
+			Expect(r.End()).To(Equal(token.Pos(10)))
+		})
 	})
 
 	Describe("Text", func() {
