@@ -267,6 +267,10 @@ func opensExpansion(tok token.Token) bool {
 // neither is text: an escaped '$$' returns an ast.Text holding both characters,
 // and a '$' with no expansion after it returns one holding the character
 // itself.
+//
+// A name that is not there is not invented. An expansion whose delimiter is
+// followed by no name records an error and yields no node, so no placeholder
+// reaches a caller or the printer.
 func (p *Parser) parseRef() ast.Expr {
 	if p.tok != token.DOLLAR {
 		p.expect(token.DOLLAR)
@@ -287,7 +291,7 @@ func (p *Parser) parseRef() ast.Expr {
 		}
 	}
 
-	open, name := token.ILLEGAL, "_"
+	open, name := token.ILLEGAL, ""
 	switch p.tok {
 	case token.DOLLAR:
 		// '$$' escapes a literal '$'. Both characters belong to the value so
@@ -311,7 +315,12 @@ func (p *Parser) parseRef() ast.Expr {
 				})
 			}
 		} else {
-			p.expect(token.TEXT)
+			// A delimiter with no name after it names no variable, so the
+			// error is recorded and no node is built rather than one carrying
+			// a name that was never written.
+			p.errorExpected(p.pos, "'"+token.TEXT.String()+"'")
+			p.skipRef(open)
+			return nil
 		}
 	case token.TEXT:
 		if len(p.lit) == 1 {
@@ -324,7 +333,8 @@ func (p *Parser) parseRef() ast.Expr {
 			p.pos++
 		}
 	default:
-		// Without this the "_" placeholder would reach the printer.
+		// A token that opens no expansion names no variable, so the error is
+		// recorded and no node is built.
 		p.expectOneOf(token.TEXT, token.DOLLAR, token.LPAREN, token.LBRACE)
 		return nil
 	}
@@ -345,6 +355,20 @@ func (p *Parser) parseRef() ast.Expr {
 		Open:   open,
 		Name:   name,
 		Close:  close,
+	}
+}
+
+// skipRef consumes what is left of an expansion whose name could not be
+// parsed, up to and including the delimiter that closes it, so the caller
+// resumes after the expansion rather than inside it. An expansion left
+// unterminated ends at the line it was written on.
+func (p *Parser) skipRef(open token.Token) {
+	close := closeDelim(open)
+	for p.tok != close && p.tok != token.NEWLINE && p.tok != token.EOF {
+		p.next()
+	}
+	if p.tok == close {
+		p.next()
 	}
 }
 

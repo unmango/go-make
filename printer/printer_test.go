@@ -739,6 +739,21 @@ var _ = Describe("Printer", func() {
 				Expect(buf.String()).To(Equal("TEST :=\n"))
 				Expect(n).To(Equal(8))
 			})
+
+			It("should write a variable whose value is absent", func() {
+				buf := &bytes.Buffer{}
+
+				n, err := printer.Fprint(buf, &ast.Variable{
+					Name:  &ast.Text{Value: "TEST", ValuePos: token.Pos(1)},
+					Op:    token.SIMPLE_ASSIGN,
+					OpPos: token.Pos(5),
+					Value: []ast.Expr{nil},
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(buf.String()).To(Equal("TEST:=\n"))
+				Expect(n).To(Equal(7))
+			})
 		})
 
 		When("Value is defined", func() {
@@ -950,6 +965,19 @@ var _ = Describe("Printer", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(buf.String()).To(Equal("ifdef foo"))
 			Expect(n).To(Equal(9))
+		})
+
+		It("should print an ifdef directive with no variable name", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfdefDir{
+				Tok:    token.IFDEF,
+				TokPos: token.Pos(1),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifdef"))
+			Expect(n).To(Equal(5))
 		})
 
 		It("should print an if block", func() {

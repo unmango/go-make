@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	gotoken "go/token"
+	"io"
 	"math"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/parser"
+	"github.com/unmango/go-make/printer"
 	"github.com/unmango/go-make/token"
 )
 
@@ -2280,6 +2282,78 @@ endif
 			ref, ok := v.Value[0].(*ast.VarRef)
 			Expect(ok).To(BeTrue(), "expected a *ast.VarRef, got %T", v.Value[0])
 			Expect(ref.Name).To(Equal(name))
+		},
+	)
+
+	DescribeTable("should error when an expansion has no name",
+		Entry(nil, "A := $()", "test:1:8: expected 'TEXT', found ')'"),
+		Entry(nil, "A := ${}", "test:1:8: expected 'TEXT', found '}'"),
+		Entry("a name that is only a comma", "A := $(,)",
+			"test:1:8: expected 'TEXT', found ','"),
+		Entry("a name that is only a blank", "A := $( )",
+			"test:1:9: expected 'TEXT', found ')'"),
+		func(input, msg string) {
+			buf := bytes.NewBufferString(input)
+			p := parser.New(buf, file)
+
+			_, err := p.ParseFile()
+
+			Expect(err).To(MatchError(msg))
+		},
+	)
+
+	DescribeTable("should build no reference for an expansion with no name",
+		Entry(nil, "A := $()"),
+		Entry(nil, "A := ${}"),
+		Entry("a name that is only a comma", "A := $(,)"),
+		Entry("a name that is only a blank", "A := $( )"),
+		func(input string) {
+			buf := bytes.NewBufferString(input)
+			p := parser.New(buf, file)
+
+			f, _ := p.ParsePartial()
+
+			v, ok := f.Contents[0].(*ast.Variable)
+			Expect(ok).To(BeTrue(), "expected a *ast.Variable, got %T", f.Contents[0])
+			Expect(v.Value).To(Equal([]ast.Expr{nil}))
+			for n := range ast.Preorder(f) {
+				Expect(n).NotTo(BeAssignableToTypeOf(&ast.VarRef{}))
+			}
+		},
+	)
+
+	DescribeTable("should recover from a malformed file without a fabricated node",
+		Entry(nil, "a: $()"),
+		Entry(nil, "A := $()"),
+		Entry(nil, "A := ${}"),
+		Entry(nil, "A := $(,)"),
+		Entry(nil, "A := $( )"),
+		Entry(nil, "A := $()x"),
+		Entry(nil, "A := $(shell pwd"),
+		Entry(nil, "A := ${shell pwd"),
+		Entry(nil, "A := $"),
+		Entry(nil, "foo = $"),
+		Entry(nil, "$"),
+		Entry(nil, "ifdef"),
+		Entry(nil, "ifdef\n"),
+		Entry(nil, "ifdef foo"),
+		Entry(nil, "ifeq \"a\" b"),
+		Entry(nil, "ifeq a \"b\""),
+		Entry(nil, "ifeq"),
+		func(input string) {
+			buf := bytes.NewBufferString(input)
+			p := parser.New(buf, file)
+
+			f, _ := p.ParsePartial()
+
+			Expect(f).NotTo(BeNil())
+			for n := range ast.Preorder(f) {
+				Expect(n.Pos().IsValid()).To(BeTrue(),
+					"%T has an invalid Pos()", n)
+			}
+			Expect(func() {
+				_, _ = printer.Fprint(io.Discard, f)
+			}).NotTo(Panic())
 		},
 	)
 

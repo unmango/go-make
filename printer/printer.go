@@ -226,6 +226,13 @@ func (p *printer) expr(expr ast.Expr) {
 
 func (p *printer) exprList(l []ast.Expr) {
 	for _, e := range l {
+		// An expression a recovering parser left out is absent, not written
+		// as anything, so it contributes neither text nor the space that
+		// would separate it from the expression before it.
+		if e == nil {
+			continue
+		}
+
 		p.fillSpace(e.Pos())
 		p.expr(e)
 	}
@@ -333,6 +340,12 @@ func (p *printer) ifeqDir(d *ast.IfeqDir) {
 
 func (p *printer) ifdefDir(d *ast.IfdefDir) {
 	p.tok(p.posFor(d.TokPos), d.Tok)
+	// VarName is optional, so a directive without one prints as the directive
+	// alone rather than as a directive followed by a space leading nowhere.
+	if d.VarName == nil {
+		return
+	}
+
 	p.fillSpace(d.VarName.Pos())
 	p.expr(d.VarName)
 }
