@@ -53,6 +53,10 @@ var _ = Describe("Expr", func() {
 					Close: 7,
 				},
 			),
+			Entry("an empty quoted expression",
+				&ast.QuotedExpr{Quote: token.QUOTE, Open: 1, Close: 2},
+				&ast.QuotedExpr{Quote: token.QUOTE, Open: 2, Close: 3},
+			),
 			Entry("a recipe",
 				&ast.Recipe{Text: ast.Text{Value: "test", ValuePos: 2}, Prefix: token.TAB, PrefixPos: 1},
 				&ast.Recipe{Text: ast.Text{Value: "test", ValuePos: 3}, Prefix: token.TAB, PrefixPos: 2},
@@ -90,6 +94,10 @@ var _ = Describe("Expr", func() {
 				Close: 3,
 			},
 			token.Pos(4), // 'a'
+		),
+		Entry("an empty quoted expression",
+			&ast.QuotedExpr{Quote: token.APOS, Open: 1, Close: 2},
+			token.Pos(3), // ''
 		),
 		Entry("a recipe",
 			&ast.Recipe{Text: ast.Text{Value: "test", ValuePos: 2}, Prefix: token.TAB, PrefixPos: 1},

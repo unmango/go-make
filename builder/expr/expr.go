@@ -21,9 +21,15 @@ func SetPos(pos token.Pos, expr ast.Expr) token.Pos {
 	case *ast.Text:
 		n.ValuePos = pos
 	case *ast.QuotedExpr:
+		// A nil Value is an empty quoted expression, `""`, so the closing quote
+		// follows the opening one.
 		q := quoteLen(n.Quote)
 		n.Open = pos
-		n.Close = SetPos(pos+q, n.Value)
+		if n.Value == nil {
+			n.Close = pos + q
+		} else {
+			n.Close = SetPos(pos+q, n.Value)
+		}
 	case *ast.VarRef:
 		n.Dollar = pos
 	case *ast.Recipe:
@@ -71,7 +77,9 @@ func clone(expr ast.Expr) ast.Expr {
 		return &c
 	case *ast.QuotedExpr:
 		c := *n
-		c.Value = clone(n.Value)
+		if n.Value != nil {
+			c.Value = clone(n.Value)
+		}
 		return &c
 	case *ast.VarRef:
 		c := *n

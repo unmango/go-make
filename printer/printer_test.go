@@ -574,6 +574,89 @@ var _ = Describe("Printer", func() {
 			Expect(n).To(Equal(16))
 		})
 
+		It("should print an ifeq directive with an empty first argument", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Open:   token.Pos(6),
+				Comma:  token.Pos(7),
+				Arg2: &ast.Text{
+					Value:    "bar",
+					ValuePos: token.Pos(9),
+				},
+				Close: token.Pos(12),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifeq (, bar)"))
+			Expect(n).To(Equal(12))
+		})
+
+		It("should print an ifeq directive with an empty second argument", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Open:   token.Pos(6),
+				Arg1: &ast.Text{
+					Value:    "foo",
+					ValuePos: token.Pos(7),
+				},
+				Comma: token.Pos(10),
+				Close: token.Pos(11),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifeq (foo,)"))
+			Expect(n).To(Equal(11))
+		})
+
+		It("should print an ifeq directive with two empty arguments", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Open:   token.Pos(6),
+				Comma:  token.Pos(7),
+				Close:  token.Pos(8),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifeq (,)"))
+			Expect(n).To(Equal(8))
+		})
+
+		It("should print an ifeq directive with empty quotes", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Arg1: &ast.QuotedExpr{
+					Quote: token.APOS,
+					Open:  token.Pos(6),
+					Close: token.Pos(7),
+				},
+				Arg2: &ast.QuotedExpr{
+					Quote: token.QUOTE,
+					Open:  token.Pos(9),
+					Value: &ast.Text{
+						Value:    "bar",
+						ValuePos: token.Pos(10),
+					},
+					Close: token.Pos(13),
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifeq '' \"bar\""))
+			Expect(n).To(Equal(13))
+		})
+
 		It("should print an ifdef directive", func() {
 			buf := &bytes.Buffer{}
 
