@@ -251,9 +251,22 @@ func closeDelim(open token.Token) token.Token {
 	return token.RPAREN
 }
 
-// parseRef parses a variable reference or a function call. An escaped '$$' is
-// not a reference, so it returns an ast.Text holding both characters instead of
-// an ast.VarRef.
+// opensExpansion reports whether tok begins the expansion a '$' introduces:
+// the '$' of an escaped '$$', a delimited '$(name)' or '${name}', or the name
+// of an undelimited '$name'.
+func opensExpansion(tok token.Token) bool {
+	switch tok {
+	case token.TEXT, token.DOLLAR, token.LPAREN, token.LBRACE:
+		return true
+	default:
+		return false
+	}
+}
+
+// parseRef parses a variable reference or a function call. A '$' that opens
+// neither is text: an escaped '$$' returns an ast.Text holding both characters,
+// and a '$' with no expansion after it returns one holding the character
+// itself.
 func (p *Parser) parseRef() ast.Expr {
 	if p.tok != token.DOLLAR {
 		p.expect(token.DOLLAR)
@@ -262,6 +275,17 @@ func (p *Parser) parseRef() ast.Expr {
 
 	dollar := p.pos
 	p.next()
+
+	// A '$' opens an expansion only when an expansion follows it immediately.
+	// Anywhere else the character stands for itself, so "a$" at the end of a
+	// line and the "$" of "a$ b" reach the printer as the text they were
+	// written with.
+	if p.pos != dollar+1 || !opensExpansion(p.tok) {
+		return &ast.Text{
+			ValuePos: dollar,
+			Value:    token.DOLLAR.String(),
+		}
+	}
 
 	open, name := token.ILLEGAL, "_"
 	switch p.tok {
