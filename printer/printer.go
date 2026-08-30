@@ -213,24 +213,34 @@ func (p *printer) commentGroup(g *ast.CommentGroup) {
 	}
 }
 
+// arg writes an argument of an [ast.IfeqDir], padding up to its position. A nil
+// argument is empty and occupies no space.
+func (p *printer) arg(e ast.Expr) {
+	if e == nil {
+		return
+	}
+
+	p.fillSpace(e.Pos())
+	p.expr(e)
+}
+
 func (p *printer) ifeqDir(d *ast.IfeqDir) {
 	p.tok(p.posFor(d.TokPos), d.Tok)
+	// An argument is nil when it is empty, as in `ifeq ($(CI),)`. The
+	// surrounding punctuation still carries its own position, so the spacing
+	// around the missing argument comes out of the delimiters.
 	if d.Open.IsValid() {
 		p.fillSpace(d.Open)
 		p.tok(p.posFor(d.Open), token.LPAREN)
-		p.fillSpace(d.Arg1.Pos())
-		p.expr(d.Arg1)
+		p.arg(d.Arg1)
 		p.fillSpace(d.Comma)
 		p.tok(p.posFor(d.Comma), token.COMMA)
-		p.fillSpace(d.Arg2.Pos())
-		p.expr(d.Arg2)
+		p.arg(d.Arg2)
 		p.fillSpace(d.Close)
 		p.tok(p.posFor(d.Close), token.RPAREN)
 	} else {
-		p.fillSpace(d.Arg1.Pos())
-		p.expr(d.Arg1)
-		p.fillSpace(d.Arg2.Pos())
-		p.expr(d.Arg2)
+		p.arg(d.Arg1)
+		p.arg(d.Arg2)
 	}
 }
 

@@ -1,0 +1,3 @@
+ifeq (,$(CI))
+target:
+endif

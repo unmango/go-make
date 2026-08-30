@@ -208,6 +208,10 @@ func (l *QuotedExpr) End() token.Pos {
 // String returns the quoted expression
 func (l *QuotedExpr) String() string {
 	quote := l.Quote.String()
+	if l.Value == nil {
+		return quote + quote
+	}
+
 	return fmt.Sprint(quote, l.Value, quote)
 }
 
@@ -356,10 +360,17 @@ func (d *IfeqDir) Pos() token.Pos {
 
 // End implements node
 func (d *IfeqDir) End() token.Pos {
-	if d.Close.IsValid() {
+	switch {
+	case d.Close.IsValid():
 		return d.Close + 1 // pos + len(')')
-	} else {
+	case d.Arg2 != nil:
 		return d.Arg2.End()
+	case d.Arg1 != nil:
+		// An empty second argument, as in `ifeq "a" ""`, leaves the directive
+		// ending after the first one.
+		return d.Arg1.End()
+	default:
+		return d.TokPos + tokenLen(d.Tok)
 	}
 }
 

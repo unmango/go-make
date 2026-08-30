@@ -922,6 +922,131 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
+	It("should Parse an ifeq conditional directive with an empty first argument", func() {
+		buf := bytes.NewBufferString("ifeq (,bin)\nendif")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.IfBlock{
+			Directive: &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Open:   token.Pos(6),
+				Comma:  token.Pos(7),
+				Arg2: &ast.Text{
+					Value:    "bin",
+					ValuePos: token.Pos(8),
+				},
+				Close: token.Pos(11),
+			},
+			Endif: token.Pos(13),
+		}))
+	})
+
+	It("should Parse an ifeq conditional directive with an empty second argument", func() {
+		buf := bytes.NewBufferString("ifeq (baz,)\nendif")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.IfBlock{
+			Directive: &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Open:   token.Pos(6),
+				Arg1: &ast.Text{
+					Value:    "baz",
+					ValuePos: token.Pos(7),
+				},
+				Comma: token.Pos(10),
+				Close: token.Pos(11),
+			},
+			Endif: token.Pos(13),
+		}))
+	})
+
+	It("should Parse an ifeq conditional directive with two empty arguments", func() {
+		buf := bytes.NewBufferString("ifeq (,)\nendif")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.IfBlock{
+			Directive: &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Open:   token.Pos(6),
+				Comma:  token.Pos(7),
+				Close:  token.Pos(8),
+			},
+			Endif: token.Pos(10),
+		}))
+	})
+
+	It("should Parse an ifeq conditional directive with an empty quoted first argument", func() {
+		buf := bytes.NewBufferString("ifeq '' \"bin\"\nendif")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.IfBlock{
+			Directive: &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Arg1: &ast.QuotedExpr{
+					Quote: token.APOS,
+					Open:  token.Pos(6),
+					Close: token.Pos(7),
+				},
+				Arg2: &ast.QuotedExpr{
+					Quote: token.QUOTE,
+					Open:  token.Pos(9),
+					Value: &ast.Text{
+						Value:    "bin",
+						ValuePos: token.Pos(10),
+					},
+					Close: token.Pos(13),
+				},
+			},
+			Endif: token.Pos(15),
+		}))
+	})
+
+	It("should Parse an ifeq conditional directive with an empty quoted second argument", func() {
+		buf := bytes.NewBufferString("ifeq 'baz' \"\"\nendif")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.IfBlock{
+			Directive: &ast.IfeqDir{
+				Tok:    token.IFEQ,
+				TokPos: token.Pos(1),
+				Arg1: &ast.QuotedExpr{
+					Quote: token.APOS,
+					Open:  token.Pos(6),
+					Value: &ast.Text{
+						Value:    "baz",
+						ValuePos: token.Pos(7),
+					},
+					Close: token.Pos(10),
+				},
+				Arg2: &ast.QuotedExpr{
+					Quote: token.QUOTE,
+					Open:  token.Pos(12),
+					Close: token.Pos(13),
+				},
+			},
+			Endif: token.Pos(15),
+		}))
+	})
+
 	DescribeTable("should error when quotes are mismatched",
 		Entry(nil, "ifeq 'baz\" \"bin\"\nendif", "test:1:10: expected ''', found '\"'"),
 		Entry(nil, "ifeq \"baz' \"bin\"\nendif", "test:1:10: expected '\"', found '''"),

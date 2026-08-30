@@ -246,7 +246,13 @@ func (p *Parser) parseQuotedExpr() *ast.QuotedExpr {
 		p.expectOneOf(token.APOS, token.QUOTE)
 	}
 
-	value := p.parseText()
+	// `ifeq "" "b"` quotes an empty argument. The closing quote immediately
+	// follows the opening one, and a nil Value records it.
+	var value ast.Expr
+	if p.tok != quote {
+		value = p.parseText()
+	}
+
 	close := p.expect(quote)
 
 	return &ast.QuotedExpr{
@@ -270,9 +276,16 @@ func (p *Parser) parseIfeqDir() *ast.IfeqDir {
 	switch p.tok {
 	case token.LPAREN:
 		lparen = p.expect(token.LPAREN)
-		arg1 = p.parseExpression()
+		// An argument may be empty, `ifeq ($(CI),)` compares against the empty
+		// string. The delimiter that follows marks the absence, and a nil Arg
+		// records it.
+		if p.tok != token.COMMA {
+			arg1 = p.parseExpression()
+		}
 		comma = p.expect(token.COMMA)
-		arg2 = p.parseExpression()
+		if p.tok != token.RPAREN {
+			arg2 = p.parseExpression()
+		}
 		rparen = p.expect(token.RPAREN)
 	case token.APOS, token.QUOTE:
 		arg1 = p.parseQuotedExpr()

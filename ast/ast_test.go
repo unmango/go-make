@@ -222,6 +222,12 @@ var _ = Describe("Ast", func() {
 
 				Expect(c.String()).To(Equal(fmt.Sprint(quote, "foo", quote)))
 			})
+
+			It("should stringify an empty value", func() {
+				c := &ast.QuotedExpr{Quote: quote}
+
+				Expect(c.String()).To(Equal(quote.String() + quote.String()))
+			})
 		},
 	)
 
@@ -416,6 +422,22 @@ var _ = Describe("Ast", func() {
 			}, nil)
 
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the first arg when the second is empty", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.IfeqDir{Arg1: &ast.Text{ValuePos: token.Pos(n)}}
+
+				return d.End() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the directive token when both args are empty", func() {
+			d := &ast.IfeqDir{Tok: token.IFEQ, TokPos: token.Pos(1)}
+
+			Expect(d.End()).To(Equal(token.Pos(5)))
 		})
 	})
 

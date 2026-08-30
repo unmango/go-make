@@ -1,0 +1,3 @@
+ifeq "" "b"
+target:
+endif
