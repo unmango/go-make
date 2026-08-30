@@ -52,7 +52,7 @@ var _ = Describe("Write", func() {
 						Value:    "prereq",
 						ValuePos: token.Pos(9),
 					}},
-					Recipes: []*ast.Recipe{{
+					Recipes: []ast.RecipeObj{&ast.Recipe{
 						Prefix:    token.TAB,
 						PrefixPos: token.Pos(16),
 						Text: ast.Text{
@@ -70,7 +70,7 @@ var _ = Describe("Write", func() {
 						ValuePos: token.Pos(1),
 					}},
 					Colon: token.Pos(7),
-					Recipes: []*ast.Recipe{{
+					Recipes: []ast.RecipeObj{&ast.Recipe{
 						Prefix:    token.TAB,
 						PrefixPos: token.Pos(9),
 						Text: ast.Text{
@@ -120,7 +120,7 @@ var _ = Describe("Write", func() {
 			_, err := writer.WriteRule(w, &ast.Rule{
 				Targets: []ast.Expr{&ast.Text{Value: "foo"}},
 				PreReqs: []ast.Expr{&ast.Text{Value: "bar"}},
-				Recipes: []*ast.Recipe{{
+				Recipes: []ast.RecipeObj{&ast.Recipe{
 					Prefix: token.TAB,
 					Text:   ast.Text{Value: "baz"},
 				}},

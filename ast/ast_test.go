@@ -164,12 +164,19 @@ var _ = Describe("Ast", func() {
 			Expect(r.End()).To(Equal(p.End()))
 		})
 
+		It("should return the position after a conditional in the recipe list", func() {
+			b := &ast.IfBlock{Endif: token.Pos(420)}
+			c := &ast.Rule{Recipes: []ast.RecipeObj{b}}
+
+			Expect(c.End()).To(Equal(b.End()))
+		})
+
 		It("should return the position after the final recipe", func() {
 			r := &ast.Recipe{
 				PrefixPos: token.Pos(420),
 				Text:      ast.Text{Value: "some text"},
 			}
-			c := &ast.Rule{Recipes: []*ast.Recipe{r}}
+			c := &ast.Rule{Recipes: []ast.RecipeObj{r}}
 
 			Expect(c.End()).To(Equal(r.End()))
 		})
@@ -581,6 +588,18 @@ var _ = Describe("Ast", func() {
 			Expect(c.End()).To(Equal(token.Pos(424)))
 		})
 
+		It("should be an object a conditional directive can hold", func() {
+			var o ast.Obj = &ast.Recipe{}
+
+			Expect(o).To(BeAssignableToTypeOf(&ast.Recipe{}))
+		})
+
+		It("should be an entry a recipe list can hold", func() {
+			var r ast.RecipeObj = &ast.Recipe{}
+
+			Expect(r).To(BeAssignableToTypeOf(&ast.Recipe{}))
+		})
+
 		DescribeTable("should return the prefix text",
 			Entry("tab", &ast.Recipe{Prefix: token.TAB}, "\t"),
 			Entry("semicolon", &ast.Recipe{Prefix: token.SEMI}, ";"),
@@ -764,6 +783,12 @@ var _ = Describe("Ast", func() {
 	})
 
 	Describe("IfBlock", func() {
+		It("should be an entry a recipe list can hold", func() {
+			var r ast.RecipeObj = &ast.IfBlock{}
+
+			Expect(r).To(BeAssignableToTypeOf(&ast.IfBlock{}))
+		})
+
 		It("should return the position of the directive token", func() {
 			err := quick.Check(func(n int) bool {
 				d := &ast.IfBlock{

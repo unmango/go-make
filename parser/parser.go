@@ -24,6 +24,12 @@ type Parser struct {
 	// recipePrefix is the source text of the character introducing a recipe
 	// line, rebound by an assignment to .RECIPEPREFIX.
 	recipePrefix string
+
+	// inRule reports whether the line about to be parsed follows a target
+	// line, where a prefixed line is a recipe of that rule. make reports a
+	// prefixed line written anywhere else as a recipe commencing before a
+	// target, so the prefix only introduces a recipe here.
+	inRule bool
 }
 
 // defaultRecipePrefix introduces a recipe line when .RECIPEPREFIX is empty.
@@ -761,11 +767,17 @@ func (p *Parser) parseElseBlock() *ast.ElseBlock {
 
 func (p *Parser) parseIfBlock() *ast.IfBlock {
 	ifdir := p.parseIfDir()
+
+	// Every branch of the block begins in the context the block itself began
+	// in, so a rule opened before the block owns the prefixed lines of each
+	// branch rather than only those of the first.
+	inRule := p.inRule
 	p.skipNewlines()
 	text := p.parseObjList()
 
 	var eblocks []*ast.ElseBlock
 	for p.tok == token.ELSE {
+		p.inRule = inRule
 		b := p.parseElseBlock()
 		eblocks = append(eblocks, b)
 		p.skipNewlines()
@@ -786,6 +798,13 @@ func (p *Parser) parseIfBlock() *ast.IfBlock {
 }
 
 func (p *Parser) parseObj() ast.Obj {
+	// A conditional directive inside a rule body holds recipe lines, and the
+	// body of the directive is an object list like any other, so a prefixed
+	// line reached while the parser is inside a rule is read as a recipe.
+	if p.inRule && p.isRecipePrefix() {
+		return p.parseRecipe(p.recipePrefix)
+	}
+
 	switch p.tok {
 	case token.COMMENT:
 		return p.parseCommentGroup()
@@ -866,11 +885,102 @@ func (p *Parser) parseBadObj(parsed []ast.Expr) *ast.BadObj {
 
 func (p *Parser) parseObjList() (l []ast.Obj) {
 	for p.tok != token.EOF && p.tok != token.ENDIF && p.tok != token.ELSE {
-		l = append(l, p.parseObj())
+		o := p.parseObj()
+		l = appendObj(l, o)
+		p.trackRule(o)
 		p.skipNewlines()
 	}
 
 	return
+}
+
+// appendObj adds o to l, moving into the preceding rule what belongs to its
+// body.
+//
+// make reads a conditional at the point its line appears, so a conditional
+// written under a target line and holding prefixed lines selects which recipes
+// that rule runs. The conditional belongs in the recipe list rather than
+// beside the rule, and so does a prefixed line that follows one. A conditional
+// holding no recipe line wraps ordinary make syntax and is left where it was
+// written.
+//
+// A conditional holding both recipe lines and a target line of its own is
+// attached in full to the rule that precedes it. make would end the rule at
+// the target line, but a block cannot be split between a recipe list and the
+// object list around it, and the whole block still prints back unchanged.
+//
+// A recipe with no rule directly in front of it, such as one written after a
+// conditional that stayed where it was, is left as an object of its own. It
+// prints the line it was written as, and the rule it belongs to is not in
+// reach.
+func appendObj(l []ast.Obj, o ast.Obj) []ast.Obj {
+	if len(l) == 0 {
+		return append(l, o)
+	}
+
+	r, ok := l[len(l)-1].(*ast.Rule)
+	if !ok {
+		return append(l, o)
+	}
+
+	switch n := o.(type) {
+	case *ast.Recipe:
+		r.Recipes = append(r.Recipes, n)
+		return l
+	case *ast.IfBlock:
+		if holdsRecipe(n) {
+			r.Recipes = append(r.Recipes, n)
+			return l
+		}
+	}
+
+	return append(l, o)
+}
+
+// holdsRecipe reports whether any branch of b holds a recipe line, directly or
+// through a conditional nested in one of them.
+func holdsRecipe(b *ast.IfBlock) bool {
+	if objsHoldRecipe(b.Text) {
+		return true
+	}
+	for _, e := range b.Else {
+		if objsHoldRecipe(e.Text) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func objsHoldRecipe(l []ast.Obj) bool {
+	for _, o := range l {
+		switch n := o.(type) {
+		case *ast.Recipe:
+			return true
+		case *ast.IfBlock:
+			if holdsRecipe(n) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// trackRule records whether o leaves the parser inside a rule. A target line
+// opens a rule body and a recipe keeps it open. A comment is ignored by make
+// and leaves the context alone, and a conditional leaves the context its own
+// contents left. Every other object is written without a prefix and closes the
+// body.
+func (p *Parser) trackRule(o ast.Obj) {
+	switch o.(type) {
+	case *ast.Rule, *ast.Recipe:
+		p.inRule = true
+	case *ast.CommentGroup, *ast.IfBlock:
+		// leave the context as the object found it
+	default:
+		p.inRule = false
+	}
 }
 
 func (p *Parser) parseVar(name ast.Expr) ast.Obj {
@@ -988,7 +1098,7 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	// target line itself, so it is read before the prefixed recipes on the
 	// lines below. It consumes the rest of the line, the newline included,
 	// which is otherwise skipped here.
-	recipes := make([]*ast.Recipe, 0)
+	recipes := make([]ast.RecipeObj, 0)
 	if p.tok == token.SEMI {
 		recipes = append(recipes, p.parseRecipe(token.SEMI, token.SEMI.String()))
 	} else if p.tok == token.NEWLINE {
@@ -1026,7 +1136,9 @@ func (p *Parser) parseFile() *ast.File {
 			break
 		}
 
-		content = append(content, p.parseObj())
+		o := p.parseObj()
+		content = appendObj(content, o)
+		p.trackRule(o)
 	}
 
 	return &ast.File{

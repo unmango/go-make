@@ -77,8 +77,8 @@ var _ = Describe("E2E", func() {
 		rule, ok := f.Contents[0].(*ast.Rule)
 		Expect(ok).To(BeTrue(), "expected a *ast.Rule, got %T", f.Contents[0])
 		Expect(rule.Recipes).To(HaveLen(2))
-		Expect(rule.Recipes[0].Value).To(Equal("first"))
-		Expect(rule.Recipes[1].Value).To(Equal("second"))
+		Expect(rule.Recipes[0]).To(HaveField("Value", "first"))
+		Expect(rule.Recipes[1]).To(HaveField("Value", "second"))
 	})
 
 	// A file records one line ending, so a file that mixes them is normalized

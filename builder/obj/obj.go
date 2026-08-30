@@ -5,7 +5,6 @@ import (
 
 	"github.com/unmango/go-make/ast"
 	"github.com/unmango/go-make/builder/expr"
-	"github.com/unmango/go-make/builder/rule"
 	"github.com/unmango/go-make/token"
 )
 
@@ -21,7 +20,13 @@ func Copy(pos token.Pos, obj ast.Obj) ast.Obj {
 func SetPos(pos token.Pos, obj ast.Obj) token.Pos {
 	switch n := obj.(type) {
 	case *ast.Rule:
-		return rule.SetPos(pos, n)
+		return setRulePos(pos, n)
+	case *ast.Recipe:
+		// A recipe reaches an object list through the body of a conditional
+		// written inside a rule.
+		expr.SetPos(pos, n)
+
+		return End(n)
 	case *ast.CommentGroup:
 		for _, c := range n.List {
 			c.Pound = pos
@@ -89,7 +94,9 @@ func Pos(obj ast.Obj) token.Pos {
 func End(obj ast.Obj) token.Pos {
 	switch n := obj.(type) {
 	case *ast.Rule:
-		return rule.End(n)
+		return ruleEnd(n)
+	case *ast.Recipe:
+		return expr.End(n) + 1 // '\n'
 	case *ast.CommentGroup:
 		if len(n.List) == 0 {
 			return token.NoPos
@@ -138,9 +145,11 @@ func setDirPos(pos token.Pos, dir ast.IfDir) token.Pos {
 func clone(obj ast.Obj) ast.Obj {
 	switch n := obj.(type) {
 	case *ast.Rule:
-		// The layout is assigned by SetPos, so any position will do here, and
-		// ast.Rule.Pos panics when the rule has no targets.
-		return rule.Copy(n.Colon, n)
+		return cloneRule(n)
+	case *ast.Recipe:
+		c := *n
+
+		return &c
 	case *ast.CommentGroup:
 		c := &ast.CommentGroup{}
 		for _, comment := range n.List {
@@ -199,6 +208,105 @@ func cloneDir(dir ast.IfDir) ast.IfDir {
 	default:
 		panic(fmt.Sprintf("builder/obj: Copy: unsupported directive type %T", dir))
 	}
+}
+
+// setRulePos lays r out beginning at pos, assigning every position the printer
+// reads when it writes r. It returns [End] of the moved rule.
+//
+// Targets and prerequisites are separated by a single space, the colon
+// immediately follows the last target, and a single space separates the colon
+// from the first prerequisite.
+func setRulePos(pos token.Pos, r *ast.Rule) token.Pos {
+	for _, t := range r.Targets {
+		pos = expr.SetPos(pos, t) + 1 // ' '
+	}
+
+	if len(r.Targets) > 0 {
+		r.Colon = pos - 1 // the colon follows the last target directly
+	} else {
+		r.Colon = pos
+	}
+
+	pos = r.Colon + 2 // ':' and ' '
+	for _, p := range r.PreReqs {
+		pos = expr.SetPos(pos, p) + 1 // ' '
+	}
+
+	if r.Pipe.IsValid() {
+		r.Pipe = pos
+		pos = r.Pipe + 2 // '|' and ' '
+	}
+	for _, p := range r.OrderPreReqs {
+		pos = expr.SetPos(pos, p) + 1 // ' '
+	}
+
+	for i, recipe := range r.Recipes {
+		switch n := recipe.(type) {
+		case *ast.Recipe:
+			if i == 0 && n.Prefix == token.SEMI {
+				pos-- // a semicolon recipe follows the rule on the same line
+			}
+
+			pos = expr.SetPos(pos, n) + 1 // '\n'
+		case *ast.IfBlock:
+			pos = SetPos(pos, n)
+		default:
+			panic(fmt.Sprintf("builder/obj: SetPos: unsupported recipe type %T", recipe))
+		}
+	}
+
+	return pos
+}
+
+// ruleEnd returns the position of the first character following the newline
+// that terminates r.
+func ruleEnd(r *ast.Rule) token.Pos {
+	if n := len(r.Recipes); n > 0 {
+		switch last := r.Recipes[n-1].(type) {
+		case *ast.Recipe:
+			return expr.End(last) + 1 // '\n'
+		case *ast.IfBlock:
+			return End(last)
+		default:
+			panic(fmt.Sprintf("builder/obj: End: unsupported recipe type %T", last))
+		}
+	}
+	if n := len(r.OrderPreReqs); n > 0 {
+		return expr.End(r.OrderPreReqs[n-1]) + 1
+	}
+	if n := len(r.PreReqs); n > 0 {
+		return expr.End(r.PreReqs[n-1]) + 1
+	}
+	if r.Pipe.IsValid() {
+		return r.Pipe + 2
+	}
+
+	return r.Colon + 2
+}
+
+func cloneRule(r *ast.Rule) *ast.Rule {
+	c := &ast.Rule{Colon: r.Colon, Pipe: r.Pipe}
+	for _, t := range r.Targets {
+		c.Targets = append(c.Targets, expr.Copy(t.Pos(), t))
+	}
+	for _, p := range r.PreReqs {
+		c.PreReqs = append(c.PreReqs, expr.Copy(p.Pos(), p))
+	}
+	for _, p := range r.OrderPreReqs {
+		c.OrderPreReqs = append(c.OrderPreReqs, expr.Copy(p.Pos(), p))
+	}
+	for _, recipe := range r.Recipes {
+		switch n := recipe.(type) {
+		case *ast.Recipe:
+			c.Recipes = append(c.Recipes, expr.Copy(n.Pos(), n).(*ast.Recipe))
+		case *ast.IfBlock:
+			c.Recipes = append(c.Recipes, clone(n).(*ast.IfBlock))
+		default:
+			panic(fmt.Sprintf("builder/obj: Copy: unsupported recipe type %T", recipe))
+		}
+	}
+
+	return c
 }
 
 func length(tok token.Token) token.Pos {

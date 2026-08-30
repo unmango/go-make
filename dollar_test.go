@@ -174,7 +174,9 @@ var _ = Describe("Dollar written against text", func() {
 			rule := onlyRule(parseOne("target:\n\t" + body + "\n"))
 
 			Expect(rule.Recipes).To(HaveLen(1))
-			Expect(rule.Recipes[0].Value).To(Equal(body))
+			recipe, ok := rule.Recipes[0].(*ast.Recipe)
+			Expect(ok).To(BeTrue(), "expected a *ast.Recipe, got %T", rule.Recipes[0])
+			Expect(recipe.Value).To(Equal(body))
 		},
 		Entry(nil, "echo $$HOME"),
 		Entry(nil, "echo $(VAR)"),
