@@ -49,6 +49,7 @@ const (
 	IMMEDIATE_ASSIGN // :::=
 	IFNDEF_ASSIGN    // ?=
 	SHELL_ASSIGN     // !=
+	APPEND_ASSIGN    // +=
 	operator_end
 
 	directive_beg
@@ -141,6 +142,7 @@ var tokens = [...]string{
 	IMMEDIATE_ASSIGN: ":::=",
 	IFNDEF_ASSIGN:    "?=",
 	SHELL_ASSIGN:     "!=",
+	APPEND_ASSIGN:    "+=",
 
 	DEFINE:       "define",
 	ENDEF:        "endef",
@@ -287,7 +289,7 @@ func IsLit(text string) bool {
 	}
 	switch text {
 	case "(", ")", "{", "}", "$", ":", ";", ",", "'", `"`, "\n", "\t", "|", "#", " ", "",
-		"=", ":=", "::=", ":::=", "?=", "!=":
+		"=", ":=", "::=", ":::=", "?=", "!=", "+=":
 		return false
 	}
 

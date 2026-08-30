@@ -349,7 +349,8 @@ func (p *Parser) parseObj() ast.Obj {
 	case token.COLON:
 		return p.parseRule(l)
 	case token.SIMPLE_ASSIGN, token.POSIX_ASSIGN, token.IMMEDIATE_ASSIGN,
-		token.IFNDEF_ASSIGN, token.RECURSIVE_ASSIGN, token.SHELL_ASSIGN:
+		token.IFNDEF_ASSIGN, token.RECURSIVE_ASSIGN, token.SHELL_ASSIGN,
+		token.APPEND_ASSIGN:
 		if len(l) == 1 {
 			return p.parseVar(l[0])
 		}

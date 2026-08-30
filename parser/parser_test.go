@@ -479,6 +479,7 @@ var _ = Describe("Parser", func() {
 		Entry(nil, "VAR ::= test", token.POSIX_ASSIGN, 9),
 		Entry(nil, "VAR :::= test", token.IMMEDIATE_ASSIGN, 10),
 		Entry(nil, "VAR != test", token.SHELL_ASSIGN, 8),
+		Entry(nil, "VAR += test", token.APPEND_ASSIGN, 8),
 		Entry(nil, "VAR ?= test", token.IFNDEF_ASSIGN, 8),
 		Entry(nil, "VAR = test", token.RECURSIVE_ASSIGN, 7),
 	)
@@ -514,6 +515,7 @@ var _ = Describe("Parser", func() {
 		Entry(nil, "VAR ::= test test2", token.POSIX_ASSIGN, 9),
 		Entry(nil, "VAR :::= test test2", token.IMMEDIATE_ASSIGN, 10),
 		Entry(nil, "VAR != test test2", token.SHELL_ASSIGN, 8),
+		Entry(nil, "VAR += test test2", token.APPEND_ASSIGN, 8),
 		Entry(nil, "VAR ?= test test2", token.IFNDEF_ASSIGN, 8),
 		Entry(nil, "VAR = test test2", token.RECURSIVE_ASSIGN, 7),
 	)
@@ -540,6 +542,7 @@ var _ = Describe("Parser", func() {
 		Entry(nil, "VAR ::=", token.POSIX_ASSIGN),
 		Entry(nil, "VAR :::=", token.IMMEDIATE_ASSIGN),
 		Entry(nil, "VAR !=", token.SHELL_ASSIGN),
+		Entry(nil, "VAR +=", token.APPEND_ASSIGN),
 		Entry(nil, "VAR ?=", token.IFNDEF_ASSIGN),
 		Entry(nil, "VAR =", token.RECURSIVE_ASSIGN),
 	)

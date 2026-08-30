@@ -342,6 +342,7 @@ var _ = Describe("Ast", func() {
 				Entry(":::=", token.IMMEDIATE_ASSIGN, 4),
 				Entry("?=", token.IFNDEF_ASSIGN, 2),
 				Entry("!=", token.SHELL_ASSIGN, 2),
+				Entry("+=", token.APPEND_ASSIGN, 2),
 				func(tok token.Token, l int) {
 					err := quick.Check(func(n int) bool {
 						v := &ast.Variable{
