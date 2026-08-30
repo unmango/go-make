@@ -689,10 +689,9 @@ var _ = Describe("Parser", func() {
 		}))
 	})
 
-	// A semicolon is only its own token when whitespace terminates it, so
-	// ";recipe" is scanned as one TEXT token and read as a pre-requisite.
-	// See https://github.com/unmango/go-make/issues/112.
-	It("should Parse an unseparated semicolon as a pre-requisite", func() {
+	// A semicolon is its own token wherever it is written, so ";recipe"
+	// introduces a recipe rather than naming a pre-requisite.
+	It("should Parse an unseparated semicolon as a recipe", func() {
 		buf := bytes.NewBufferString("target: ;recipe")
 		p := parser.New(buf, file)
 
@@ -705,12 +704,16 @@ var _ = Describe("Parser", func() {
 				Value:    "target",
 				ValuePos: token.Pos(1),
 			}},
-			PreReqs: []ast.Expr{&ast.Text{
-				Value:    ";recipe",
-				ValuePos: token.Pos(9),
-			}},
+			PreReqs:      []ast.Expr{},
 			OrderPreReqs: []ast.Expr{},
-			Recipes:      []*ast.Recipe{},
+			Recipes: []*ast.Recipe{{
+				Prefix:    token.SEMI,
+				PrefixPos: token.Pos(9),
+				Text: ast.Text{
+					Value:    "recipe",
+					ValuePos: token.Pos(10),
+				},
+			}},
 		}))
 	})
 
@@ -1356,7 +1359,10 @@ var _ = Describe("Parser", func() {
 			Op:    token.RECURSIVE_ASSIGN,
 			OpPos: token.Pos(5),
 			Value: []ast.Expr{
-				&ast.Text{Value: "a;", ValuePos: token.Pos(7)},
+				&ast.JuxtaposedExpr{Parts: []ast.Expr{
+					&ast.Text{Value: "a", ValuePos: token.Pos(7)},
+					&ast.Text{Value: ";", ValuePos: token.Pos(8)},
+				}},
 				&ast.Text{Value: "b", ValuePos: token.Pos(10)},
 			},
 		}))

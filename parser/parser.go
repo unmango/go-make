@@ -199,6 +199,34 @@ func (p *Parser) parseText() *ast.Text {
 	}
 }
 
+// joinDelimited extends value with the ';' and '|' characters written against
+// it, and with the text written against those.
+//
+// Both characters are tokens of their own wherever they appear, and make gives
+// them a meaning on a target line only, so text that holds one elsewhere is
+// reassembled from the pieces the scanner split it into: $(a;b) refers to the
+// variable named "a;b" and `ifeq 'a|b' 'c'` compares against "a|b".
+//
+// pos is where value was written, and the scanner drops the blanks between
+// tokens, so a gap in the positions is what reports one. A piece written apart
+// from value belongs to whatever the caller reads next.
+func (p *Parser) joinDelimited(pos token.Pos, value string) string {
+	end := pos + token.Pos(len(value))
+	for p.pos == end && (p.tok == token.SEMI || p.tok == token.PIPE) {
+		value += p.tok.String()
+		end = p.pos + 1
+		p.next()
+
+		if p.pos == end && p.tok == token.TEXT {
+			value += p.lit
+			end = p.pos + token.Pos(len(p.lit))
+			p.next()
+		}
+	}
+
+	return value
+}
+
 // maxCallArgs is the number of arguments make passes to each built-in
 // function. Once a call has that many arguments make stops splitting, so any
 // further comma belongs to the final argument: $(subst a,b,c,d) substitutes
@@ -314,6 +342,8 @@ func (p *Parser) parseRef() ast.Expr {
 					Value:    name,
 				})
 			}
+
+			name = p.joinDelimited(namePos, name)
 		} else {
 			// A delimiter with no name after it names no variable, so the
 			// error is recorded and no node is built rather than one carrying
@@ -485,20 +515,39 @@ func (p *Parser) parseCallArgPart() ast.Expr {
 // that only means something inside an expansion is ordinary text out here:
 // $$(notdir is the escape '$$' joined to the text '(notdir'.
 //
-// The tokens that end a construct are absent, so ':', '|', ';', and the
-// assignment operators still terminate what they terminated before.
+// A ';' and a '|' mean something on a target line only, where the caller
+// names them in stop, so out here they join the run the way every other
+// delimiter does: "a;b" is one value and "a|b" is one variable value.
+//
+// The tokens that end a construct are absent, so ':' and the assignment
+// operators still terminate what they terminated before.
 func juxtaposable(tok token.Token) bool {
 	switch tok {
 	case token.TEXT, token.DOLLAR,
 		token.LPAREN, token.RPAREN,
 		token.LBRACE, token.RBRACE,
-		token.COMMA:
+		token.COMMA, token.SEMI, token.PIPE:
 		return true
 	default:
 		// A built-in function name is a name only inside an expansion. Written
 		// anywhere else it is the text it spells, which is what $$(notdir x)
 		// makes of "notdir".
 		return tok.IsBuiltinFunction()
+	}
+}
+
+// startsExpression reports whether tok can begin a whitespace-delimited
+// expression. Text and the '$' of an expansion always can, and so can a ';'
+// or a '|' written as a word of its own, because make gives those two
+// characters a meaning on a target line only. A caller that reads them itself
+// never reaches this, because it stops on them before parsing another
+// expression, so "X = a ; b" is three words of a value rather than an error.
+func startsExpression(tok token.Token) bool {
+	switch tok {
+	case token.TEXT, token.DOLLAR, token.SEMI, token.PIPE:
+		return true
+	default:
+		return false
 	}
 }
 
@@ -510,9 +559,10 @@ func juxtaposable(tok token.Token) bool {
 // node it has always had.
 //
 // stop holds tokens the caller reads itself. An [ast.IfeqDir] ends an argument
-// on ',' and on ')', both of which are ordinary text anywhere else.
+// on ',' and on ')', and an [ast.Rule] ends a prerequisite on '|' and on ';',
+// all of which are ordinary text anywhere else.
 func (p *Parser) parseExpression(stop ...token.Token) ast.Expr {
-	if p.tok != token.TEXT && p.tok != token.DOLLAR {
+	if !startsExpression(p.tok) {
 		p.expectOneOf(token.TEXT, token.DOLLAR)
 		return nil
 	}
@@ -625,6 +675,7 @@ func (p *Parser) parseQuotedExpr() ast.Expr {
 	var value ast.Expr
 	if p.tok != quote {
 		if text := p.parseText(); text != nil {
+			text.Value = p.joinDelimited(text.ValuePos, text.Value)
 			value = text
 		}
 	}
@@ -909,16 +960,23 @@ func (p *Parser) parseRecipe(prefix string) *ast.Recipe {
 func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	colon := p.expect(token.COLON)
 	prereqs := []ast.Expr{}
+	// A '|' and a ';' end the prerequisite list wherever they are written, so
+	// they end a prerequisite written against them as well: "target: a|b" has
+	// one normal prerequisite and one order-only prerequisite, the same as
+	// "target: a | b".
 	for p.tok != token.PIPE && p.tok != token.SEMI && p.tok != token.NEWLINE && p.tok != token.EOF {
-		prereqs = append(prereqs, p.parseExpression())
+		prereqs = append(prereqs, p.parseExpression(token.PIPE, token.SEMI))
 	}
 
 	pipe, oprereqs := token.NoPos, []ast.Expr{}
 	if p.tok == token.PIPE {
 		pipe = p.pos
 		p.next()
+		// Only the first '|' separates. make reads a later one as a character
+		// of the prerequisite holding it, so "target: a|b|c" has the single
+		// order-only prerequisite "b|c" and the '|' is absent from stop here.
 		for p.tok != token.SEMI && p.tok != token.NEWLINE && p.tok != token.EOF {
-			oprereqs = append(oprereqs, p.parseExpression())
+			oprereqs = append(oprereqs, p.parseExpression(token.SEMI))
 		}
 	}
 
