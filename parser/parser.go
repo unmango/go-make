@@ -802,7 +802,7 @@ func (p *Parser) parseObj() ast.Obj {
 	// body of the directive is an object list like any other, so a prefixed
 	// line reached while the parser is inside a rule is read as a recipe.
 	if p.inRule && p.isRecipePrefix() {
-		return p.parseRecipe(p.recipePrefix)
+		return p.parseRecipe(recipePrefixToken(p.recipePrefix), p.recipePrefix)
 	}
 
 	switch p.tok {

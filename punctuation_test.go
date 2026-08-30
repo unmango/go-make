@@ -33,7 +33,7 @@ var _ = Describe("Semicolon", func() {
 		Expect(rule.PreReqs).To(HaveLen(1))
 		Expect(exprShape(rule.PreReqs[0])).To(Equal([]string{"*ast.Text(prereq)"}))
 		Expect(rule.Recipes).To(HaveLen(1))
-		Expect(rule.Recipes[0].Value).To(Equal("recipe"))
+		Expect(recipeAt(rule, 0).Value).To(Equal("recipe"))
 	})
 
 	It("should introduce a recipe written against it with no prerequisites", func() {
@@ -41,7 +41,7 @@ var _ = Describe("Semicolon", func() {
 
 		Expect(rule.PreReqs).To(BeEmpty())
 		Expect(rule.Recipes).To(HaveLen(1))
-		Expect(rule.Recipes[0].Value).To(Equal("recipe"))
+		Expect(recipeAt(rule, 0).Value).To(Equal("recipe"))
 	})
 
 	It("should keep the rest of the line in the recipe it introduces", func() {
@@ -50,7 +50,7 @@ var _ = Describe("Semicolon", func() {
 		Expect(rule.PreReqs).To(HaveLen(1))
 		Expect(exprShape(rule.PreReqs[0])).To(Equal([]string{"*ast.Text(a)"}))
 		Expect(rule.Recipes).To(HaveLen(1))
-		Expect(rule.Recipes[0].Value).To(Equal("b c"))
+		Expect(recipeAt(rule, 0).Value).To(Equal("b c"))
 	})
 
 	DescribeTable("should read a variable value as the words it was written from",
@@ -132,7 +132,7 @@ var _ = Describe("Pipe", func() {
 		rule := onlyRule(parseOne("target: a|b;recipe\n"))
 
 		Expect(rule.Recipes).To(HaveLen(1))
-		Expect(rule.Recipes[0].Value).To(Equal("recipe"))
+		Expect(recipeAt(rule, 0).Value).To(Equal("recipe"))
 	})
 
 	DescribeTable("should read a variable value as the words it was written from",
@@ -226,15 +226,15 @@ var _ = Describe("Semicolon introducing a recipe", func() {
 		Expect(ok).To(BeTrue(), "expected a *ast.Rule, got %T", f.Contents[1])
 		Expect(rule.Recipes).To(HaveLen(2))
 
-		Expect(rule.Recipes[0].Prefix).To(Equal(token.SEMI))
-		Expect(rule.Recipes[0].PrefixLit).To(BeEmpty())
+		Expect(recipeAt(rule, 0).Prefix).To(Equal(token.SEMI))
+		Expect(recipeAt(rule, 0).PrefixLit).To(BeEmpty())
 		// The body is reconstructed from the gap after the prefix, so the
 		// blank separating the semicolon from the command belongs to it.
-		Expect(rule.Recipes[0].Value).To(Equal(" echo semi"))
+		Expect(recipeAt(rule, 0).Value).To(Equal(" echo semi"))
 
-		Expect(rule.Recipes[1].Prefix).To(Equal(token.TEXT))
-		Expect(rule.Recipes[1].PrefixLit).To(Equal(";"))
-		Expect(rule.Recipes[1].Value).To(Equal("echo hi"))
+		Expect(recipeAt(rule, 1).Prefix).To(Equal(token.TEXT))
+		Expect(recipeAt(rule, 1).PrefixLit).To(Equal(";"))
+		Expect(recipeAt(rule, 1).Value).To(Equal("echo hi"))
 	})
 
 	It("should read every line of a .RECIPEPREFIX of a semicolon", func() {
@@ -244,12 +244,13 @@ var _ = Describe("Semicolon introducing a recipe", func() {
 		rule, ok := f.Contents[1].(*ast.Rule)
 		Expect(ok).To(BeTrue(), "expected a *ast.Rule, got %T", f.Contents[1])
 		Expect(rule.Recipes).To(HaveLen(2))
-		for _, r := range rule.Recipes {
+		for i := range rule.Recipes {
+			r := recipeAt(rule, i)
 			Expect(r.Prefix).To(Equal(token.TEXT))
 			Expect(r.PrefixText()).To(Equal(";"))
 		}
-		Expect(rule.Recipes[0].Value).To(Equal("echo hi"))
-		Expect(rule.Recipes[1].Value).To(Equal("echo bye"))
+		Expect(recipeAt(rule, 0).Value).To(Equal("echo hi"))
+		Expect(recipeAt(rule, 1).Value).To(Equal("echo bye"))
 	})
 })
 
@@ -261,7 +262,7 @@ var _ = DescribeTable("should leave a recipe body holding punctuation as the tex
 		rule := onlyRule(parseOne("target:\n\t" + body + "\n"))
 
 		Expect(rule.Recipes).To(HaveLen(1))
-		Expect(rule.Recipes[0].Value).To(Equal(body))
+		Expect(recipeAt(rule, 0).Value).To(Equal(body))
 	},
 	Entry(nil, "cd dir; ls"),
 	Entry(nil, "test -f x || echo no"),
