@@ -94,6 +94,38 @@ var Functions = []TableEntry{
 }
 
 var _ = Describe("Token", func() {
+	Describe("the zero value", func() {
+		It("should be ILLEGAL", func() {
+			var tok token.Token
+
+			Expect(tok).To(Equal(token.ILLEGAL))
+		})
+
+		It("should stringify as ILLEGAL", func() {
+			var tok token.Token
+
+			Expect(tok.String()).To(Equal("ILLEGAL"))
+		})
+
+		It("should not satisfy any token predicate", func() {
+			var tok token.Token
+
+			Expect(tok.IsLiteral()).To(BeFalse())
+			Expect(tok.IsOperator()).To(BeFalse())
+			Expect(tok.IsDirective()).To(BeFalse())
+			Expect(tok.IsBuiltinFunction()).To(BeFalse())
+		})
+	})
+
+	DescribeTable("UNSUPPORTED should not collide with", Literals, Operators, Directives, Functions,
+		Entry(nil, token.ILLEGAL),
+		Entry(nil, token.EOF),
+		Entry(nil, token.COMMENT),
+		func(tok token.Token) {
+			Expect(tok).NotTo(Equal(token.UNSUPPORTED))
+		},
+	)
+
 	Describe("IsLiteral", func() {
 		DescribeTable("true", Literals,
 			func(tok token.Token) {
@@ -151,6 +183,10 @@ var _ = Describe("Token", func() {
 	})
 
 	DescribeTable("String",
+		Entry(nil, token.ILLEGAL, "ILLEGAL"),
+		Entry(nil, token.UNSUPPORTED, "UNSUPPORTED"),
+		Entry(nil, token.EOF, "EOF"),
+		Entry(nil, token.COMMENT, "COMMENT"),
 		Entry(nil, token.TEXT, "TEXT"),
 		Entry(nil, token.LPAREN, "("),
 		Entry(nil, token.LBRACE, "{"),
