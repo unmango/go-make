@@ -613,6 +613,40 @@ var _ = Describe("Printer", func() {
 		})
 	})
 
+	Describe("positions", func() {
+		It("should not corrupt output when node positions run backwards", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.Rule{
+				Targets: []ast.Expr{
+					&ast.Text{Value: "one", ValuePos: token.Pos(1)},
+					&ast.Text{Value: "two", ValuePos: token.Pos(5)},
+					// Positioned before the targets above
+					&ast.Text{Value: "three", ValuePos: token.Pos(2)},
+				},
+				Colon: token.Pos(13),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("one twothree:\n"))
+		})
+
+		It("should reset the column after a newline", func() {
+			pos, err := printer.PrintPosition(&ast.Rule{
+				Targets: []ast.Expr{&ast.Text{
+					Value:    "target",
+					ValuePos: token.Pos(1),
+				}},
+				Colon: token.Pos(7),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(pos.Line).To(Equal(1))
+			Expect(pos.Column).To(Equal(1))
+			Expect(pos.Offset).To(Equal(8))
+		})
+	})
+
 	When("a token.File is provided", func() {
 		It("should work", func() {
 			f := token.NewFileSet().AddFile("test", 1, 5)

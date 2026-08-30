@@ -30,11 +30,15 @@ func (p *printer) posFor(pos token.Pos) token.Position {
 func (p *printer) writeLine() {
 	p.out = append(p.out, '\n')
 	p.pos.Line++
+	p.pos.Column = 1
 	p.pos.Offset++
 }
 
 func (p *printer) fill(c byte, pos token.Pos) {
-	p.writeChar(c, int(pos)-(p.pos.Offset+1))
+	// pos may precede the current offset when node positions are out of order.
+	// Writing a negative count is a no-op, but it would still rewind the tracked
+	// position and throw off every subsequent fill, so clamp the gap at 0.
+	p.writeChar(c, max(int(pos)-(p.pos.Offset+1), 0))
 }
 
 func (p *printer) fillSpace(pos token.Pos) {
