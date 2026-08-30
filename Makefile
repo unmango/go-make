@@ -20,6 +20,8 @@ format: .make/go-fmt .make/dprint-fmt
 tidy: go.sum
 dev: .envrc
 
+.PHONY: build test test_all format tidy dev cover clean validate_codecov sync-quickref
+
 test_all:
 	$(GINKGO) run -r ./
 
@@ -70,7 +72,7 @@ bin/dprint: .versions/dprint | .make/dprint/install.sh
 	@touch $@
 
 .make/go-fmt: $(shell $(DEVCTL) list --go)
-	go fmt
+	go fmt ./...
 	@touch $@
 
 # Hilariously, when the script is named `dprint-install.sh`, this line kills the install script itself
@@ -81,5 +83,5 @@ bin/dprint: .versions/dprint | .make/dprint/install.sh
 	chmod +x $@
 
 .make/dprint-fmt: README.md | bin/dprint
-	dprint fmt
+	${LOCALBIN}/dprint fmt
 	@touch $@
