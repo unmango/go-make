@@ -1,0 +1,1 @@
+CFLAGS=-DFOO=1 -DBAR=2

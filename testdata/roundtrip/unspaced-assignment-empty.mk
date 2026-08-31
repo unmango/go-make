@@ -1,0 +1,4 @@
+VAR=
+VAR?=
+VAR!=
+VAR+=
