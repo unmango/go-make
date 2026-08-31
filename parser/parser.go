@@ -207,33 +207,66 @@ func (p *Parser) parseText() *ast.Text {
 	}
 }
 
-// joinDelimited extends value with the ';' and '|' characters written against
-// it, and with the text written against those.
+// assignOps are the operators that define a variable. make reads the first one
+// on a line and takes the rest of the line as the value, so a later one is
+// ordinary text.
+var assignOps = []token.Token{
+	token.RECURSIVE_ASSIGN,
+	token.SIMPLE_ASSIGN,
+	token.POSIX_ASSIGN,
+	token.IMMEDIATE_ASSIGN,
+	token.IFNDEF_ASSIGN,
+	token.SHELL_ASSIGN,
+	token.APPEND_ASSIGN,
+}
+
+// isAssignOp reports whether tok is an operator that defines a variable.
+func isAssignOp(tok token.Token) bool {
+	return slices.Contains(assignOps, tok)
+}
+
+// joinsName reports whether tok continues a name written against it inside an
+// expansion. The characters that delimit make syntax elsewhere spell
+// themselves in a name, and the scanner splits on each of them, so the pieces
+// of $(a;b) and $(a!=b) arrive separately and are put back together.
+func joinsName(tok token.Token) bool {
+	switch tok {
+	case token.TEXT, token.SEMI, token.PIPE:
+		return true
+	default:
+		return isAssignOp(tok)
+	}
+}
+
+// joinDelimited extends value with the delimiters written against it, and with
+// the text written against those.
 //
-// Both characters are tokens of their own wherever they appear, and make gives
-// them a meaning on a target line only, so text that holds one elsewhere is
-// reassembled from the pieces the scanner split it into: $(a;b) refers to the
-// variable named "a;b" and `ifeq 'a|b' 'c'` compares against "a|b".
+// Each of those characters is a token of its own wherever it appears, and make
+// gives them a meaning of their own in particular places only, so text that
+// holds one elsewhere is reassembled from the pieces the scanner split it
+// into: $(a;b) refers to the variable named "a;b", `ifeq 'a|b' 'c'` compares
+// against "a|b", and $(a=b) refers to the variable named "a=b".
 //
 // pos is where value was written, and the scanner drops the blanks between
 // tokens, so a gap in the positions is what reports one. A piece written apart
 // from value belongs to whatever the caller reads next.
 func (p *Parser) joinDelimited(pos token.Pos, value string) string {
 	end := pos + token.Pos(len(value))
-	for p.pos == end && (p.tok == token.SEMI || p.tok == token.PIPE) {
-		value += p.tok.String()
-		end = p.pos + 1
+	for p.pos == end && joinsName(p.tok) {
+		text := p.recipeTokenText()
+		value += text
+		end = p.pos + token.Pos(len(text))
 		p.next()
-
-		if p.pos == end && p.tok == token.TEXT {
-			value += p.lit
-			end = p.pos + token.Pos(len(p.lit))
-			p.next()
-		}
 	}
 
 	return value
 }
+
+// nameStop holds the tokens parseObj reads itself. A rule and a variable are
+// both a run of expressions followed by the character that says which one the
+// line is, so that character ends the run rather than joining the expression
+// written in front of it.
+var nameStop = append([]token.Token{token.COLON}, assignOps...)
 
 // maxCallArgs is the number of arguments make passes to each built-in
 // function. Once a call has that many arguments make stops splitting, so any
@@ -523,24 +556,24 @@ func (p *Parser) parseCallArgPart() ast.Expr {
 // that only means something inside an expansion is ordinary text out here:
 // $$(notdir is the escape '$$' joined to the text '(notdir'.
 //
-// A ';' and a '|' mean something on a target line only, where the caller
-// names them in stop, so out here they join the run the way every other
-// delimiter does: "a;b" is one value and "a|b" is one variable value.
-//
-// The tokens that end a construct are absent, so ':' and the assignment
-// operators still terminate what they terminated before.
+// A ';' and a '|' mean something on a target line only, a ':' and an
+// assignment operator mean something once per line, and the caller that reads
+// one names it in stop. Out here they join the run the way every other
+// delimiter does: "a;b" is one value, "a|b" is one variable value, and
+// "CFLAGS=-DFOO=1" holds one '=' that assigns and one that is text.
 func juxtaposable(tok token.Token) bool {
 	switch tok {
 	case token.TEXT, token.DOLLAR,
 		token.LPAREN, token.RPAREN,
 		token.LBRACE, token.RBRACE,
-		token.COMMA, token.SEMI, token.PIPE:
+		token.COMMA, token.SEMI, token.PIPE,
+		token.COLON:
 		return true
 	default:
 		// A built-in function name is a name only inside an expansion. Written
 		// anywhere else it is the text it spells, which is what $$(notdir x)
 		// makes of "notdir".
-		return tok.IsBuiltinFunction()
+		return isAssignOp(tok) || tok.IsBuiltinFunction()
 	}
 }
 
@@ -559,6 +592,18 @@ func startsExpression(tok token.Token) bool {
 	}
 }
 
+// startsValue reports whether tok can begin a whitespace-delimited expression
+// of a variable value. An assignment operator can, because make reads the
+// first one on a line and takes the rest of the line as the value, so
+// "X = a = b" holds the three words "a", "=" and "b".
+//
+// Nowhere else does an operator begin an expression. A target line reads one
+// as the definition of a target-specific variable, which this package does not
+// model, so "target: VAR = value" is an error rather than three prerequisites.
+func startsValue(tok token.Token) bool {
+	return startsExpression(tok) || isAssignOp(tok)
+}
+
 // parseExpression parses one whitespace-delimited expression.
 //
 // Expressions written with nothing between them are one expression, collected
@@ -570,7 +615,19 @@ func startsExpression(tok token.Token) bool {
 // on ',' and on ')', and an [ast.Rule] ends a prerequisite on '|' and on ';',
 // all of which are ordinary text anywhere else.
 func (p *Parser) parseExpression(stop ...token.Token) ast.Expr {
-	if !startsExpression(p.tok) {
+	return p.parseExpr(startsExpression, stop)
+}
+
+// parseValue parses one whitespace-delimited expression of a variable value,
+// where an assignment operator is ordinary text.
+func (p *Parser) parseValue() ast.Expr {
+	return p.parseExpr(startsValue, nil)
+}
+
+// parseExpr parses one whitespace-delimited expression beginning with a token
+// starts accepts.
+func (p *Parser) parseExpr(starts func(token.Token) bool, stop []token.Token) ast.Expr {
+	if !starts(p.tok) {
 		p.expectOneOf(token.TEXT, token.DOLLAR)
 		return nil
 	}
@@ -817,7 +874,7 @@ func (p *Parser) parseObj() ast.Obj {
 	// of (Expr | COLON | *_ASSIGN)
 	var l []ast.Expr
 	for p.tok == token.TEXT || p.tok == token.DOLLAR {
-		l = append(l, p.parseExpression())
+		l = append(l, p.parseExpression(nameStop...))
 	}
 
 	switch p.tok {
@@ -826,10 +883,18 @@ func (p *Parser) parseObj() ast.Obj {
 	case token.SIMPLE_ASSIGN, token.POSIX_ASSIGN, token.IMMEDIATE_ASSIGN,
 		token.IFNDEF_ASSIGN, token.RECURSIVE_ASSIGN, token.SHELL_ASSIGN,
 		token.APPEND_ASSIGN:
-		if len(l) == 1 {
+		switch len(l) {
+		case 1:
 			return p.parseVar(l[0])
+		case 0:
+			// An assignment operator is a token of its own wherever it is
+			// written, so a line opening with one arrives here rather than as
+			// the text of a name. make rejects a definition with no name.
+			p.error(p.pos, "variable name is empty")
+		default:
+			p.error(p.pos, "variable may have only one name")
 		}
-		p.error(p.pos, "variable may have only one name")
+
 		fallthrough
 	default:
 		return p.parseBadObj(l)
@@ -989,7 +1054,7 @@ func (p *Parser) parseVar(name ast.Expr) ast.Obj {
 
 	var rhs []ast.Expr
 	for p.tok != token.NEWLINE && p.tok != token.EOF {
-		rhs = append(rhs, p.parseExpression())
+		rhs = append(rhs, p.parseValue())
 	}
 
 	v := &ast.Variable{
@@ -1079,7 +1144,7 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	// one normal prerequisite and one order-only prerequisite, the same as
 	// "target: a | b".
 	for p.tok != token.PIPE && p.tok != token.SEMI && p.tok != token.NEWLINE && p.tok != token.EOF {
-		prereqs = append(prereqs, p.parseExpression(token.PIPE, token.SEMI))
+		prereqs = append(prereqs, p.parseExpression(token.PIPE, token.SEMI, token.COLON))
 	}
 
 	pipe, oprereqs := token.NoPos, []ast.Expr{}
@@ -1090,7 +1155,7 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 		// of the prerequisite holding it, so "target: a|b|c" has the single
 		// order-only prerequisite "b|c" and the '|' is absent from stop here.
 		for p.tok != token.SEMI && p.tok != token.NEWLINE && p.tok != token.EOF {
-			oprereqs = append(oprereqs, p.parseExpression(token.SEMI))
+			oprereqs = append(oprereqs, p.parseExpression(token.SEMI, token.COLON))
 		}
 	}
 

@@ -23,10 +23,22 @@ func ScanTokens(data []byte, atEOF bool) (advance int, token []byte, err error) 
 		}
 
 		return 1, data[:1], nil
-	case '?':
+	case '?', '+':
+		// '?=' and '+=' are operators of their own. Neither character means
+		// anything to make on its own, so one written without the '=' is
+		// ordinary text and falls through to the search below.
 		if len(data) > 1 && data[1] == '=' {
 			return 2, data[:2], nil
 		}
+	case '!':
+		if len(data) == 1 && !atEOF {
+			return 0, nil, nil // We need more info to make a decision
+		}
+		if len(data) > 1 && data[1] == '=' {
+			return 2, data[:2], nil
+		}
+
+		return 1, data[:1], nil
 	case ':':
 		if len(data) < 4 && !atEOF {
 			return 0, nil, nil // We need more info to make a decision
@@ -44,11 +56,18 @@ func ScanTokens(data []byte, atEOF bool) (advance int, token []byte, err error) 
 		fallthrough
 	case '#':
 		fallthrough
-	case '\n', '\t', '$', '(', ')', '{', '}', ',', '\'', '"', ';', '|':
+	case '\n', '\t', '$', '(', ')', '{', '}', ',', '\'', '"', ';', '|', '=':
 		return 1, data[:1], nil
 	}
 
-	if i := bytes.IndexAny(data, ":\r\n\t (){},'\"$;|"); i > 0 {
+	if i := bytes.IndexAny(data, ":\r\n\t (){},'\"$;|=!"); i > 0 {
+		// A '+' or a '?' written against an '=' opens an operator of its own,
+		// so the token ends in front of it rather than between the two
+		// characters: "VAR+=x" is "VAR", "+=", "x".
+		if i > 1 && data[i] == '=' && (data[i-1] == '+' || data[i-1] == '?') {
+			i--
+		}
+
 		return i, data[:i], nil
 	}
 

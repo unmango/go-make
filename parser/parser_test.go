@@ -1444,6 +1444,174 @@ var _ = Describe("Parser", func() {
 		Entry(nil, "VAR = test test2", token.RECURSIVE_ASSIGN, 7),
 	)
 
+	DescribeTable("should parse an unspaced variable definition",
+		func(input string, op token.Token, opPos, vpos int) {
+			buf := bytes.NewBufferString(input)
+			s := parser.New(buf, file)
+
+			f, err := s.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(ConsistOf(&ast.Variable{
+				Name: &ast.Text{
+					Value:    "VAR",
+					ValuePos: token.Pos(1),
+				},
+				Op:    op,
+				OpPos: token.Pos(opPos),
+				Value: []ast.Expr{&ast.Text{
+					Value:    "x",
+					ValuePos: token.Pos(vpos),
+				}},
+			}))
+		},
+		Entry(nil, "VAR=x", token.RECURSIVE_ASSIGN, 4, 5),
+		Entry(nil, "VAR:=x", token.SIMPLE_ASSIGN, 4, 6),
+		Entry(nil, "VAR::=x", token.POSIX_ASSIGN, 4, 7),
+		Entry(nil, "VAR:::=x", token.IMMEDIATE_ASSIGN, 4, 8),
+		Entry(nil, "VAR?=x", token.IFNDEF_ASSIGN, 4, 6),
+		Entry(nil, "VAR!=x", token.SHELL_ASSIGN, 4, 6),
+		Entry(nil, "VAR+=x", token.APPEND_ASSIGN, 4, 6),
+	)
+
+	DescribeTable("should parse an unspaced variable declaration",
+		func(input string, op token.Token) {
+			buf := bytes.NewBufferString(input)
+			s := parser.New(buf, file)
+
+			f, err := s.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(ConsistOf(&ast.Variable{
+				Name: &ast.Text{
+					Value:    "VAR",
+					ValuePos: token.Pos(1),
+				},
+				Op:    op,
+				OpPos: token.Pos(4),
+				Value: nil,
+			}))
+		},
+		Entry(nil, "VAR=", token.RECURSIVE_ASSIGN),
+		Entry(nil, "VAR?=", token.IFNDEF_ASSIGN),
+		Entry(nil, "VAR!=", token.SHELL_ASSIGN),
+		Entry(nil, "VAR+=", token.APPEND_ASSIGN),
+	)
+
+	// make reads the first assignment operator on the line and takes the rest
+	// of the line as the value, so every operator after it is text.
+	It("should parse an assignment operator in a variable value as text", func() {
+		buf := bytes.NewBufferString("VAR = a = b")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Variable{
+			Name: &ast.Text{
+				Value:    "VAR",
+				ValuePos: token.Pos(1),
+			},
+			Op:    token.RECURSIVE_ASSIGN,
+			OpPos: token.Pos(5),
+			Value: []ast.Expr{
+				&ast.Text{Value: "a", ValuePos: token.Pos(7)},
+				&ast.Text{Value: "=", ValuePos: token.Pos(9)},
+				&ast.Text{Value: "b", ValuePos: token.Pos(11)},
+			},
+		}))
+	})
+
+	It("should join an assignment operator written against a value", func() {
+		buf := bytes.NewBufferString("VAR = a!=b")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Variable{
+			Name: &ast.Text{
+				Value:    "VAR",
+				ValuePos: token.Pos(1),
+			},
+			Op:    token.RECURSIVE_ASSIGN,
+			OpPos: token.Pos(5),
+			Value: []ast.Expr{
+				&ast.JuxtaposedExpr{Parts: []ast.Expr{
+					&ast.Text{Value: "a", ValuePos: token.Pos(7)},
+					&ast.Text{Value: "!=", ValuePos: token.Pos(8)},
+					&ast.Text{Value: "b", ValuePos: token.Pos(10)},
+				}},
+			},
+		}))
+	})
+
+	// A ':' written in a value is text as well. Only the first one on the line
+	// can open a rule, and an operator earlier in the line has already said the
+	// line is a variable.
+	It("should parse a colon in a variable value as text", func() {
+		buf := bytes.NewBufferString("a=b: c")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Variable{
+			Name: &ast.Text{
+				Value:    "a",
+				ValuePos: token.Pos(1),
+			},
+			Op:    token.RECURSIVE_ASSIGN,
+			OpPos: token.Pos(2),
+			Value: []ast.Expr{
+				&ast.JuxtaposedExpr{Parts: []ast.Expr{
+					&ast.Text{Value: "b", ValuePos: token.Pos(3)},
+					&ast.Text{Value: ":", ValuePos: token.Pos(4)},
+				}},
+				&ast.Text{Value: "c", ValuePos: token.Pos(6)},
+			},
+		}))
+	})
+
+	It("should parse a name holding an assignment operator", func() {
+		buf := bytes.NewBufferString("VAR = $(a!=b)")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(ConsistOf(&ast.Variable{
+			Name: &ast.Text{
+				Value:    "VAR",
+				ValuePos: token.Pos(1),
+			},
+			Op:    token.RECURSIVE_ASSIGN,
+			OpPos: token.Pos(5),
+			Value: []ast.Expr{&ast.VarRef{
+				Dollar: token.Pos(7),
+				Open:   token.LPAREN,
+				Name:   "a!=b",
+				Close:  token.RPAREN,
+			}},
+		}))
+	})
+
+	// make reads "target: a=b" as a target-specific variable, which this
+	// package does not model. The prerequisite it becomes instead is one word
+	// rather than three, so the line prints back as it was written.
+	It("should parse an unspaced assignment in a prerequisite as one prerequisite", func() {
+		buf := bytes.NewBufferString("target: a=b c!=d")
+		p := parser.New(buf, file)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveLen(1))
+		rule, ok := f.Contents[0].(*ast.Rule)
+		Expect(ok).To(BeTrue(), "expected a *ast.Rule, got %T", f.Contents[0])
+		Expect(rule.PreReqs).To(HaveLen(2))
+	})
+
 	DescribeTable("should parse a variable declaration",
 		func(input string, op token.Token) {
 			buf := bytes.NewBufferString(input)
@@ -2026,6 +2194,21 @@ endif
 		}))
 	})
 
+	DescribeTable("should error when an assignment has no name",
+		func(input string) {
+			buf := bytes.NewBufferString(input)
+			s := parser.New(buf, file)
+
+			_, err := s.ParseFile()
+
+			Expect(err).To(MatchError("test:1:1: variable name is empty"))
+		},
+		Entry(nil, "=x"),
+		Entry(nil, "= x"),
+		Entry(nil, "!=x"),
+		Entry(nil, "+= x"),
+	)
+
 	It("should error with extra text to the left of the assignment", func() {
 		buf := bytes.NewBufferString("VAR invalid :=")
 		s := parser.New(buf, file)
@@ -2035,10 +2218,26 @@ endif
 		Expect(err).To(MatchError("test:1:13: variable may have only one name"))
 	})
 
+	// make reads a spaced assignment operator on a target line as a
+	// target-specific variable. This package does not model one, and reading
+	// the operator as a prerequisite would print the line back with a
+	// structure make never gave it, so the operator is an error where a
+	// prerequisite was expected.
+	DescribeTable("should error on a target-specific variable",
+		func(input, msg string) {
+			buf := bytes.NewBufferString(input)
+			s := parser.New(buf, file)
+
+			_, err := s.ParseFile()
+
+			Expect(err).To(MatchError(ContainSubstring(msg)))
+		},
+		Entry(nil, "target: VAR = value", "test:1:13: expected one of 'TEXT', '$', found '='"),
+		Entry(nil, "%.o: VAR = value", "test:1:10: expected one of 'TEXT', '$', found '='"),
+		Entry(nil, "target: VAR += value", "test:1:13: expected one of 'TEXT', '$', found '+='"),
+	)
+
 	DescribeTable("should parse an unsupported line as a bad object",
-		Entry(nil, "VAR=x"),
-		Entry(nil, "VAR+=x"),
-		Entry(nil, "VAR!=x"),
 		Entry(nil, "define greeting"),
 		Entry(nil, "endef"),
 		Entry(nil, "undefine VAR"),
