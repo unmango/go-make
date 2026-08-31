@@ -1053,15 +1053,23 @@ func (p *Parser) parseVar(name ast.Expr) ast.Obj {
 	p.next()
 
 	var rhs []ast.Expr
-	for p.tok != token.NEWLINE && p.tok != token.EOF {
+	for p.tok != token.COMMENT && p.tok != token.NEWLINE && p.tok != token.EOF {
 		rhs = append(rhs, p.parseValue())
 	}
 
+	// A comment ends the value the way it ends a target line, and is recorded
+	// on the variable for the same reason: it shares the assignment's line.
+	var comment *ast.Comment
+	if p.tok == token.COMMENT {
+		comment = p.parseComment()
+	}
+
 	v := &ast.Variable{
-		Name:  name,
-		Op:    op,
-		OpPos: opPos,
-		Value: rhs,
+		Name:    name,
+		Op:      op,
+		OpPos:   opPos,
+		Value:   rhs,
+		Comment: comment,
 	}
 	// .RECIPEPREFIX is an ordinary variable that the parser reads as well,
 	// because it rebinds the character introducing a recipe for the rest of
@@ -1143,7 +1151,12 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 	// they end a prerequisite written against them as well: "target: a|b" has
 	// one normal prerequisite and one order-only prerequisite, the same as
 	// "target: a | b".
-	for p.tok != token.PIPE && p.tok != token.SEMI && p.tok != token.NEWLINE && p.tok != token.EOF {
+	//
+	// A comment ends the line, and so ends the prerequisite written against
+	// it: make removes the comment before reading the line, so
+	// "target: a# text" names the prerequisite "a".
+	for p.tok != token.PIPE && p.tok != token.SEMI && p.tok != token.COMMENT &&
+		p.tok != token.NEWLINE && p.tok != token.EOF {
 		prereqs = append(prereqs, p.parseExpression(token.PIPE, token.SEMI, token.COLON))
 	}
 
@@ -1154,9 +1167,19 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 		// Only the first '|' separates. make reads a later one as a character
 		// of the prerequisite holding it, so "target: a|b|c" has the single
 		// order-only prerequisite "b|c" and the '|' is absent from stop here.
-		for p.tok != token.SEMI && p.tok != token.NEWLINE && p.tok != token.EOF {
+		for p.tok != token.SEMI && p.tok != token.COMMENT &&
+			p.tok != token.NEWLINE && p.tok != token.EOF {
 			oprereqs = append(oprereqs, p.parseExpression(token.SEMI, token.COLON))
 		}
+	}
+
+	// A comment runs to the end of the line, so it is the last thing the
+	// target line can hold and a ';' written after one belongs to its text.
+	// It is recorded on the rule rather than beside it because an
+	// [ast.CommentGroup] is written on a line of its own.
+	var comment *ast.Comment
+	if p.tok == token.COMMENT {
+		comment = p.parseComment()
 	}
 
 	// A semicolon ends the prerequisite list and introduces a recipe on the
@@ -1190,6 +1213,7 @@ func (p *Parser) parseRule(targets []ast.Expr) *ast.Rule {
 		PreReqs:      prereqs,
 		Pipe:         pipe,
 		OrderPreReqs: oprereqs,
+		Comment:      comment,
 		Recipes:      recipes,
 	}
 }

@@ -42,6 +42,9 @@ func Walk(v Visitor, node Node) {
 		walkList(v, n.Targets)
 		walkList(v, n.PreReqs)
 		walkList(v, n.OrderPreReqs)
+		if n.Comment != nil {
+			Walk(v, n.Comment)
+		}
 		walkList(v, n.Recipes)
 	case *Recipe:
 		Walk(v, &n.Text)
@@ -63,6 +66,9 @@ func Walk(v Visitor, node Node) {
 			Walk(v, n.Name)
 		}
 		walkList(v, n.Value)
+		if n.Comment != nil {
+			Walk(v, n.Comment)
+		}
 	case *IfeqDir:
 		if n.Arg1 != nil {
 			Walk(v, n.Arg1)

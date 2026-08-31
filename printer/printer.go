@@ -303,6 +303,12 @@ func (p *printer) rule(r *ast.Rule) {
 	if len(r.OrderPreReqs) > 0 {
 		p.exprList(r.OrderPreReqs)
 	}
+	// A comment ends the target line, so it is written before the line ending
+	// and before the recipe lines that follow it.
+	if r.Comment != nil {
+		p.fillSpace(r.Comment.Pos())
+		p.comment(r.Comment)
+	}
 	if len(r.Recipes) > 0 {
 		if !startsOnRuleLine(r.Recipes) {
 			p.writeLine()
@@ -438,6 +444,10 @@ func (p *printer) variable(v *ast.Variable) {
 	p.tok(p.posFor(v.OpPos), v.Op)
 	if v.Value != nil {
 		p.exprList(v.Value)
+	}
+	if v.Comment != nil {
+		p.fillSpace(v.Comment.Pos())
+		p.comment(v.Comment)
 	}
 	p.writeLine()
 }

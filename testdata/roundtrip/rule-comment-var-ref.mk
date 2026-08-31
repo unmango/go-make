@@ -1,0 +1,1 @@
+target: $(DEPS) # a comment

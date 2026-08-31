@@ -551,3 +551,72 @@ var _ = Describe("Scanner", func() {
 		Expect(pos).To(Equal(token.Pos(1)))
 	})
 })
+
+// A '#' begins a comment wherever it is written, so a token that ends against
+// one ends there. An escaped pound is an ordinary character of the token
+// holding it.
+var _ = Describe("Pound written against text", func() {
+	type scanned struct {
+		Tok token.Token
+		Lit string
+	}
+
+	scanAll := func(input string) []scanned {
+		s := scanner.New(bytes.NewBufferString(input), nil)
+
+		toks := []scanned{}
+		for {
+			_, tok, lit := s.Scan()
+			toks = append(toks, scanned{tok, lit})
+			if tok == token.EOF {
+				return toks
+			}
+		}
+	}
+
+	DescribeTable("should scan the pieces the line was written from",
+		func(input string, expected ...scanned) {
+			Expect(scanAll(input)).To(Equal(append(expected, scanned{token.EOF, ""})))
+		},
+		Entry("a pound against the text before it", "prereq# a comment\n",
+			scanned{token.TEXT, "prereq"},
+			scanned{token.COMMENT, " a comment"},
+		),
+		Entry("a pound between two pieces of text", "a#b\n",
+			scanned{token.TEXT, "a"},
+			scanned{token.COMMENT, "b"},
+		),
+		Entry("a pound ending the input", "a#",
+			scanned{token.TEXT, "a"},
+			scanned{token.COMMENT, ""},
+		),
+		Entry("a pound against a closing delimiter", "$(FOO)#c\n",
+			scanned{token.DOLLAR, ""},
+			scanned{token.LPAREN, ""},
+			scanned{token.TEXT, "FOO"},
+			scanned{token.RPAREN, ""},
+			scanned{token.COMMENT, "c"},
+		),
+		Entry("an escaped pound", `a\#b`+"\n",
+			scanned{token.TEXT, `a\#b`},
+		),
+		Entry("an escaped pound opening the token", `\#b`+"\n",
+			scanned{token.TEXT, `\#b`},
+		),
+		Entry("an escaped pound ending the token", `a\#`+"\n",
+			scanned{token.TEXT, `a\#`},
+		),
+		Entry("a pound after an escaped backslash", `a\\#b`+"\n",
+			scanned{token.TEXT, `a\\`},
+			scanned{token.COMMENT, "b"},
+		),
+		Entry("an escaped pound after an escaped backslash", `a\\\#b`+"\n",
+			scanned{token.TEXT, `a\\\#b`},
+		),
+		Entry("a pound after a delimiter", "a;#b\n",
+			scanned{token.TEXT, "a"},
+			scanned{token.SEMI, ""},
+			scanned{token.COMMENT, "b"},
+		),
+	)
+})

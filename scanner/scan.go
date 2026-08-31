@@ -60,14 +60,7 @@ func ScanTokens(data []byte, atEOF bool) (advance int, token []byte, err error) 
 		return 1, data[:1], nil
 	}
 
-	if i := bytes.IndexAny(data, ":\r\n\t (){},'\"$;|=!"); i > 0 {
-		// A '+' or a '?' written against an '=' opens an operator of its own,
-		// so the token ends in front of it rather than between the two
-		// characters: "VAR+=x" is "VAR", "+=", "x".
-		if i > 1 && data[i] == '=' && (data[i-1] == '+' || data[i-1] == '?') {
-			i--
-		}
-
+	if i := delimiterIndex(data); i > 0 {
 		return i, data[:i], nil
 	}
 
@@ -76,4 +69,47 @@ func ScanTokens(data []byte, atEOF bool) (advance int, token []byte, err error) 
 	} else {
 		return 0, nil, nil
 	}
+}
+
+// delimiterIndex reports where the first delimiter in data is written, or -1
+// when data holds none. It is the index the token starting at data[0] ends at.
+func delimiterIndex(data []byte) int {
+	i := bytes.IndexAny(data, ":\r\n\t (){},'\"$;|=!")
+	if p := poundIndex(data); p >= 0 && (i < 0 || p < i) {
+		return p
+	}
+	// A '+' or a '?' written against an '=' opens an operator of its own, so
+	// the token ends in front of it rather than between the two characters:
+	// "VAR+=x" is "VAR", "+=", "x".
+	if i > 1 && data[i] == '=' && (data[i-1] == '+' || data[i-1] == '?') {
+		i--
+	}
+
+	return i
+}
+
+// poundIndex reports where the first '#' that begins a comment in data is
+// written, or -1 when data holds none.
+//
+// A backslash escapes the pound, so the character stands for itself there,
+// and the backslash may itself be escaped. A '#' begins a comment exactly
+// when the run of backslashes written in front of it has even length, so
+// `a\#b` is the text make expands to "a#b" and `a\\#b` is the text `a\\`
+// followed by a comment.
+func poundIndex(data []byte) int {
+	for i, b := range data {
+		if b != '#' {
+			continue
+		}
+
+		n := 0
+		for j := i - 1; j >= 0 && data[j] == '\\'; j-- {
+			n++
+		}
+		if n%2 == 0 {
+			return i
+		}
+	}
+
+	return -1
 }
