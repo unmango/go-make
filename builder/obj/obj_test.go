@@ -81,6 +81,20 @@ func ruleWithConditional() *ast.Rule {
 	}
 }
 
+// defineDir returns a define block holding a body of two lines, the second of
+// which is blank.
+func defineDir() *ast.DefineDir {
+	return &ast.DefineDir{
+		VarName: &ast.Text{Value: "FOO"},
+		Op:      token.APPEND_ASSIGN,
+		Body: []*ast.Text{
+			{Value: "one"},
+			{Value: ""},
+			{Value: "\ttwo"},
+		},
+	}
+}
+
 var _ = Describe("Obj", func() {
 	Describe("Copy", func() {
 		DescribeTable("should print the copied object",
@@ -106,6 +120,13 @@ var _ = Describe("Obj", func() {
 			Entry("a bad object", "include foo.mk\n", &ast.BadObj{Text: "include foo.mk"}),
 			Entry("a rule holding a conditional", "target:\n\tone\nifdef V\n\ttwo\nendif\n",
 				ruleWithConditional(),
+			),
+			Entry("a define block", "define FOO +=\none\n\n\ttwo\nendef\n", defineDir()),
+			Entry("a define block with an empty body", "define FOO\nendef\n",
+				&ast.DefineDir{VarName: &ast.Text{Value: "FOO"}, Op: token.ILLEGAL},
+			),
+			Entry("an undefine directive", "undefine FOO\n",
+				&ast.UndefineDir{VarName: &ast.Text{Value: "FOO"}},
 			),
 		)
 
@@ -142,6 +163,18 @@ var _ = Describe("Obj", func() {
 			Expect(v.Name.Pos()).To(Equal(token.NoPos))
 		})
 
+		It("should not alias the body of a define block", func() {
+			d := defineDir()
+
+			actual := obj.Copy(1, d).(*ast.DefineDir)
+
+			Expect(actual).NotTo(BeIdenticalTo(d))
+			Expect(actual.VarName).NotTo(BeIdenticalTo(d.VarName))
+			Expect(actual.Body[0]).NotTo(BeIdenticalTo(d.Body[0]))
+			Expect(d.Define).To(Equal(token.NoPos))
+			Expect(d.Endef).To(Equal(token.NoPos))
+		})
+
 		It("should not alias the objects of an if block", func() {
 			b := ifBlock()
 
@@ -172,6 +205,15 @@ var _ = Describe("Obj", func() {
 		),
 		Entry("a recipe", &ast.Recipe{Prefix: token.TAB, Text: ast.Text{Value: "one"}},
 			token.Pos(6), // len("\tone\n") + 1
+		),
+		Entry("a define block", defineDir(),
+			token.Pos(31), // len("define FOO +=\none\n\n\ttwo\nendef\n") + 1
+		),
+		Entry("an undefine directive", &ast.UndefineDir{VarName: &ast.Text{Value: "FOO"}},
+			token.Pos(14), // len("undefine FOO\n") + 1
+		),
+		Entry("an undefine directive without a name", &ast.UndefineDir{},
+			token.Pos(10), // len("undefine\n") + 1
 		),
 	)
 

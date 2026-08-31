@@ -91,6 +91,15 @@ func Walk(v Visitor, node Node) {
 		}
 		walkList(v, n.Text)
 		walkList(v, n.Else)
+	case *DefineDir:
+		if n.VarName != nil {
+			Walk(v, n.VarName)
+		}
+		walkList(v, n.Body)
+	case *UndefineDir:
+		if n.VarName != nil {
+			Walk(v, n.VarName)
+		}
 	}
 }
 

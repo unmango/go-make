@@ -1,0 +1,3 @@
+define FOO +=
+appended
+endef
