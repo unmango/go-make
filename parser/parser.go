@@ -220,7 +220,10 @@ var assignOps = []token.Token{
 	token.APPEND_ASSIGN,
 }
 
-// isAssignOp reports whether tok is an operator that defines a variable.
+// isAssignOp reports whether tok is an operator that defines a variable. A
+// define directive accepts every operator an ordinary assignment accepts:
+// `define FOO +=` appends its body to FOO and `define FOO ?=` defines FOO only
+// when it has no value.
 func isAssignOp(tok token.Token) bool {
 	return slices.Contains(assignOps, tok)
 }
@@ -851,21 +854,6 @@ func (p *Parser) parseIfBlock() *ast.IfBlock {
 		Text:      text,
 		Else:      eblocks,
 		Endif:     endif,
-	}
-}
-
-// isAssignOp reports whether tok is an assignment operator. A define directive
-// accepts every operator an ordinary assignment accepts: `define FOO +=`
-// appends its body to FOO and `define FOO ?=` defines FOO only when it has no
-// value.
-func isAssignOp(tok token.Token) bool {
-	switch tok {
-	case token.RECURSIVE_ASSIGN, token.SIMPLE_ASSIGN, token.POSIX_ASSIGN,
-		token.IMMEDIATE_ASSIGN, token.IFNDEF_ASSIGN, token.SHELL_ASSIGN,
-		token.APPEND_ASSIGN:
-		return true
-	default:
-		return false
 	}
 }
 
