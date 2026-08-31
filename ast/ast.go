@@ -160,6 +160,10 @@ func (c *Comment) End() token.Pos {
 // written under a target line selects which recipe lines the rule runs and so
 // belongs to the rule rather than beside it.
 //
+// Comment is the comment ending the target line. A comment written there is
+// not an object of its own: it shares a line with the rule, and a
+// [CommentGroup] beside the rule would be printed on a line of its own.
+//
 // [Rule Syntax]: https://www.gnu.org/software/make/manual/html_node/Rule-Syntax.html
 type Rule struct {
 	Targets      []Expr      // rule targets
@@ -167,6 +171,7 @@ type Rule struct {
 	PreReqs      []Expr      // rule pre-requisites
 	Pipe         token.Pos   // position of '|' separating normal and order-only prerequisites
 	OrderPreReqs []Expr      // order-only pre-requisites
+	Comment      *Comment    // comment ending the target line, if any
 	Recipes      []RecipeObj // recipe lines and the conditionals selecting them
 }
 
@@ -183,6 +188,9 @@ func (r *Rule) End() token.Pos {
 		if r.Recipes[i] != nil {
 			return r.Recipes[i].End()
 		}
+	}
+	if r.Comment != nil {
+		return r.Comment.End()
 	}
 	for i := len(r.OrderPreReqs) - 1; i >= 0; i-- {
 		if r.OrderPreReqs[i] != nil {
@@ -526,11 +534,16 @@ func (r *Recipe) End() token.Pos {
 }
 
 // An Variable represents a make variable.
+//
+// Comment is the comment ending the assignment line. A comment written there
+// is not an object of its own: it shares a line with the assignment, and a
+// [CommentGroup] beside the variable would be printed on a line of its own.
 type Variable struct {
-	Name  Expr        // left-hand side of the assignment
-	Op    token.Token // =, :=, ::=, :::=, !=, ?=
-	OpPos token.Pos   // position of Op
-	Value []Expr      // right-hand side of the assignment
+	Name    Expr        // left-hand side of the assignment
+	Op      token.Token // =, :=, ::=, :::=, !=, ?=
+	OpPos   token.Pos   // position of Op
+	Value   []Expr      // right-hand side of the assignment
+	Comment *Comment    // comment ending the assignment line, if any
 }
 
 func (*Variable) objNode() {}
@@ -542,6 +555,9 @@ func (s *Variable) Pos() token.Pos {
 
 // End implements Node
 func (s *Variable) End() token.Pos {
+	if s.Comment != nil {
+		return s.Comment.End()
+	}
 	for i := len(s.Value) - 1; i >= 0; i-- {
 		if s.Value[i] != nil {
 			return s.Value[i].End()
