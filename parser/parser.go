@@ -220,7 +220,10 @@ var assignOps = []token.Token{
 	token.APPEND_ASSIGN,
 }
 
-// isAssignOp reports whether tok is an operator that defines a variable.
+// isAssignOp reports whether tok is an operator that defines a variable. A
+// define directive accepts every operator an ordinary assignment accepts:
+// `define FOO +=` appends its body to FOO and `define FOO ?=` defines FOO only
+// when it has no value.
 func isAssignOp(tok token.Token) bool {
 	return slices.Contains(assignOps, tok)
 }
@@ -854,6 +857,175 @@ func (p *Parser) parseIfBlock() *ast.IfBlock {
 	}
 }
 
+// newlineWidth is the width of the newline the parser is looking at. The
+// scanner reports the text of a CRLF ending in the literal and reports an LF
+// ending with none, so an absent literal is the single byte of an LF.
+func (p *Parser) newlineWidth() token.Pos {
+	if p.lit != "" {
+		return token.Pos(len(p.lit))
+	}
+
+	return 1
+}
+
+// appendExprs adds the expressions of src to dst, leaving out the ones that
+// are not there. A recovering parse yields no node for an expression it could
+// not read, and a nil carries no position for [Parser.parseBadObj] to write
+// its text at.
+func appendExprs(dst, src []ast.Expr) []ast.Expr {
+	for _, e := range src {
+		if e != nil {
+			dst = append(dst, e)
+		}
+	}
+
+	return dst
+}
+
+// parseDefineDir parses a multi-line variable definition, the block written
+// between a define directive and the endef terminating it.
+//
+// The name is one expression, so a define written with blanks in its name is
+// left to [Parser.parseBadObj] the way an assignment written with several
+// names is. Anything else left on the line after the name and the optional
+// assignment operator is unsupported syntax, and the line reaches the printer
+// as the text it was written with rather than as a block that would print
+// back missing it.
+func (p *Parser) parseDefineDir() ast.Obj {
+	pos := p.pos
+	p.next()
+
+	// The directive is kept as text so a line that turns out to be
+	// unsupported reaches parseBadObj as the whole line it was written as.
+	parsed := []ast.Expr{&ast.Text{ValuePos: pos, Value: token.DEFINE.String()}}
+
+	var names []ast.Expr
+	for p.tok == token.TEXT || p.tok == token.DOLLAR {
+		names = append(names, p.parseExpression())
+	}
+	if len(names) > 1 {
+		p.error(p.pos, "variable may have only one name")
+		return p.parseBadObj(appendExprs(parsed, names))
+	}
+
+	d := &ast.DefineDir{Define: pos, Op: token.ILLEGAL}
+	if len(names) == 1 {
+		d.VarName = names[0]
+	}
+	if isAssignOp(p.tok) {
+		d.Op, d.OpPos = p.tok, p.pos
+		p.next()
+	}
+	if p.tok != token.NEWLINE && p.tok != token.EOF {
+		parsed = appendExprs(parsed, names)
+		if d.Op != token.ILLEGAL {
+			parsed = append(parsed, &ast.Text{
+				ValuePos: d.OpPos,
+				Value:    d.Op.String(),
+			})
+		}
+
+		return p.parseBadObj(parsed)
+	}
+
+	p.parseDefineBody(d)
+
+	return d
+}
+
+// parseDefineBody reads the lines between a define directive and the endef
+// terminating it, and records the position of that endef.
+//
+// make records the body of a define as the literal text it was written with,
+// so every line is kept verbatim rather than parsed as make syntax. A line
+// holds no node the printer could pad up to, so the blanks a line begins with
+// are part of the text it carries, and a blank line is a line of the value
+// like any other rather than a gap between two nodes.
+//
+// A line holding nothing but endef terminates the block. A define written in
+// the body opens a block of its own that the endef matching it closes, which
+// make counts the same way, so the value of the outer variable holds the inner
+// block as text. A line whose endef carries text after it, or whose endef
+// follows a tab, terminates nothing, matching make for the second and keeping
+// the line intact for the first, which make warns about and this parser does
+// not read.
+func (p *Parser) parseDefineBody(d *ast.DefineDir) {
+	depth := 1
+	for p.tok == token.NEWLINE {
+		lineStart := p.pos + p.newlineWidth()
+		p.next()
+
+		first, firstPos, n := p.tok, p.pos, 0
+		b, nextPos := &strings.Builder{}, lineStart
+		for p.tok != token.NEWLINE && p.tok != token.EOF {
+			text := p.recipeTokenText()
+			for range int(p.pos - nextPos) {
+				b.WriteByte(' ')
+			}
+
+			b.WriteString(text)
+			nextPos = p.pos + token.Pos(len(text))
+			n++
+			p.next()
+		}
+
+		// The newline that ends the file opens no line of its own, so a body
+		// that runs to the end of the file ends with the last line written
+		// rather than with an empty one.
+		if n == 0 && p.tok == token.EOF {
+			break
+		}
+
+		if first == token.ENDEF && n == 1 {
+			if depth--; depth == 0 {
+				d.Endef = firstPos
+				return
+			}
+		} else if first == token.DEFINE {
+			depth++
+		}
+
+		d.Body = append(d.Body, &ast.Text{
+			ValuePos: lineStart,
+			Value:    b.String(),
+		})
+	}
+
+	// A block that runs to the end of the file was never terminated, which
+	// make reports as well. The error is recorded the way a conditional
+	// records a missing endif.
+	d.Endef = p.expect(token.ENDEF)
+}
+
+// parseUndefineDir parses an undefine directive. The name is read the way a
+// define reads its own, so a directive naming several variables, or carrying
+// syntax the parser does not understand, is left to [Parser.parseBadObj].
+func (p *Parser) parseUndefineDir() ast.Obj {
+	pos := p.pos
+	p.next()
+
+	parsed := []ast.Expr{&ast.Text{ValuePos: pos, Value: token.UNDEFINE.String()}}
+
+	var names []ast.Expr
+	for p.tok == token.TEXT || p.tok == token.DOLLAR {
+		names = append(names, p.parseExpression())
+	}
+	if len(names) > 1 {
+		p.error(p.pos, "variable may have only one name")
+		return p.parseBadObj(appendExprs(parsed, names))
+	}
+	if p.tok != token.NEWLINE && p.tok != token.EOF {
+		return p.parseBadObj(appendExprs(parsed, names))
+	}
+
+	d := &ast.UndefineDir{Undefine: pos}
+	if len(names) == 1 {
+		d.VarName = names[0]
+	}
+
+	return d
+}
+
 func (p *Parser) parseObj() ast.Obj {
 	// A conditional directive inside a rule body holds recipe lines, and the
 	// body of the directive is an object list like any other, so a prefixed
@@ -867,6 +1039,10 @@ func (p *Parser) parseObj() ast.Obj {
 		return p.parseCommentGroup()
 	case token.IFDEF, token.IFNDEF, token.IFEQ, token.IFNEQ:
 		return p.parseIfBlock()
+	case token.DEFINE:
+		return p.parseDefineDir()
+	case token.UNDEFINE:
+		return p.parseUndefineDir()
 	}
 
 	// TODO: refactor to improve the error message

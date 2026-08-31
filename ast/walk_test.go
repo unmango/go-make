@@ -388,6 +388,31 @@ var _ = Describe("Walk", func() {
 		Expect(v.nodes).To(HaveExactElements(f, d2, t2, v2, e, d1, t1, v1))
 	})
 
+	It("should walk a define directive", func() {
+		v := &visitor{}
+		name := &ast.Text{}
+		first := &ast.Text{}
+		second := &ast.Text{}
+		d := &ast.DefineDir{
+			VarName: name,
+			Body:    []*ast.Text{first, second},
+		}
+
+		ast.Walk(v, d)
+
+		Expect(v.nodes).To(HaveExactElements(d, name, first, second))
+	})
+
+	It("should walk an undefine directive", func() {
+		v := &visitor{}
+		name := &ast.Text{}
+		d := &ast.UndefineDir{VarName: name}
+
+		ast.Walk(v, d)
+
+		Expect(v.nodes).To(HaveExactElements(d, name))
+	})
+
 	Describe("nil children", func() {
 		DescribeTable("should not pass a nil child to the visitor",
 			func(node ast.Node) {
@@ -406,6 +431,11 @@ var _ = Describe("Walk", func() {
 			Entry("ifdef directive without a variable name", &ast.IfdefDir{}),
 			Entry("else block without a condition", &ast.ElseBlock{}),
 			Entry("if block without a directive", &ast.IfBlock{}),
+			Entry("define directive without a variable name", &ast.DefineDir{}),
+			Entry("define directive without a body line",
+				&ast.DefineDir{Body: []*ast.Text{nil}},
+			),
+			Entry("undefine directive without a variable name", &ast.UndefineDir{}),
 		)
 
 		It("should skip nil entries in a list", func() {

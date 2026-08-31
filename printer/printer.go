@@ -421,6 +421,57 @@ func (p *printer) ifBlock(b *ast.IfBlock) {
 	p.writeLine()
 }
 
+// defineDir writes a multi-line variable definition.
+//
+// Every line of the body carries the blanks it begins with, so a line is
+// written where the printer stands rather than padded up to its position the
+// way an expression is. A blank line of the body is a line the node holds, so
+// it is written as the empty text it is rather than recreated from a gap.
+func (p *printer) defineDir(d *ast.DefineDir) {
+	p.tok(p.posFor(d.Define), token.DEFINE)
+	// A name is optional, so a directive without one prints as the directive
+	// alone rather than as a directive followed by a space leading nowhere.
+	if d.VarName != nil {
+		p.fillSpace(d.VarName.Pos())
+		p.expr(d.VarName)
+	}
+	// [token.ILLEGAL] marks an absent operator, which `define FOO` is written
+	// with, rather than a literal.
+	if d.Op != token.ILLEGAL {
+		p.fillSpace(d.OpPos)
+		p.tok(p.posFor(d.OpPos), d.Op)
+	}
+	p.writeLine()
+
+	for _, line := range d.Body {
+		// A line a hand-built node left out is absent, not written as a blank
+		// line, so it contributes nothing at all.
+		if line == nil {
+			continue
+		}
+
+		p.text(line)
+		p.writeLine()
+	}
+
+	// Every line of the body is a node, blank ones included, so the printer
+	// already stands at the beginning of the line the endef is written on and
+	// the gap in front of it is the blanks it is indented by.
+	p.fillSpace(d.Endef)
+	p.tok(p.posFor(d.Endef), token.ENDEF)
+	p.writeLine()
+}
+
+func (p *printer) undefineDir(d *ast.UndefineDir) {
+	p.tok(p.posFor(d.Undefine), token.UNDEFINE)
+	// A name is optional for the same reason it is on a define directive.
+	if d.VarName != nil {
+		p.fillSpace(d.VarName.Pos())
+		p.expr(d.VarName)
+	}
+	p.writeLine()
+}
+
 func (p *printer) directive(d ast.Dir) {
 	if d == nil {
 		return
@@ -429,6 +480,10 @@ func (p *printer) directive(d ast.Dir) {
 	switch n := d.(type) {
 	case *ast.IfBlock:
 		p.ifBlock(n)
+	case *ast.DefineDir:
+		p.defineDir(n)
+	case *ast.UndefineDir:
+		p.undefineDir(n)
 	default:
 		p.unsupported(d)
 	}

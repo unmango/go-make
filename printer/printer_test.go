@@ -1145,6 +1145,176 @@ var _ = Describe("Printer", func() {
 			Expect(buf.String()).To(Equal("ifdef foo\nbar:\nelse ifdef baz\nbin:\nendif\n"))
 			Expect(n).To(Equal(41))
 		})
+
+		It("should print a define block", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.DefineDir{
+				Define: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "FOO",
+					ValuePos: token.Pos(8),
+				},
+				Op: token.ILLEGAL,
+				Body: []*ast.Text{
+					{Value: "one", ValuePos: token.Pos(12)},
+					{Value: "two", ValuePos: token.Pos(16)},
+				},
+				Endef: token.Pos(20),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("define FOO\none\ntwo\nendef\n"))
+			Expect(n).To(Equal(25))
+		})
+
+		It("should print the assignment operator of a define block", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.DefineDir{
+				Define: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "FOO",
+					ValuePos: token.Pos(8),
+				},
+				Op:    token.APPEND_ASSIGN,
+				OpPos: token.Pos(12),
+				Body:  []*ast.Text{{Value: "one", ValuePos: token.Pos(15)}},
+				Endef: token.Pos(19),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("define FOO +=\none\nendef\n"))
+			Expect(n).To(Equal(24))
+		})
+
+		It("should print a define block with an empty body", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.DefineDir{
+				Define: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "FOO",
+					ValuePos: token.Pos(8),
+				},
+				Op:    token.ILLEGAL,
+				Endef: token.Pos(12),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("define FOO\nendef\n"))
+			Expect(n).To(Equal(17))
+		})
+
+		// A blank line of a body is a line of the value, so it is a node of
+		// the block rather than a gap between two of them.
+		It("should print a blank line of a define body", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.DefineDir{
+				Define: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "FOO",
+					ValuePos: token.Pos(8),
+				},
+				Op: token.ILLEGAL,
+				Body: []*ast.Text{
+					{Value: "one", ValuePos: token.Pos(12)},
+					{Value: "", ValuePos: token.Pos(16)},
+					{Value: "two", ValuePos: token.Pos(17)},
+				},
+				Endef: token.Pos(21),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("define FOO\none\n\ntwo\nendef\n"))
+			Expect(n).To(Equal(26))
+		})
+
+		// The blanks a body line begins with are text of the value, so the
+		// line carries them rather than the printer padding up to it.
+		It("should print the blanks a define body line begins with", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.DefineDir{
+				Define: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "FOO",
+					ValuePos: token.Pos(8),
+				},
+				Op:    token.ILLEGAL,
+				Body:  []*ast.Text{{Value: "\techo hi", ValuePos: token.Pos(12)}},
+				Endef: token.Pos(21),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("define FOO\n\techo hi\nendef\n"))
+		})
+
+		It("should print a define block without a name", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.DefineDir{
+				Define: token.Pos(1),
+				Op:     token.ILLEGAL,
+				Endef:  token.Pos(8),
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("define\nendef\n"))
+		})
+
+		It("should print an undefine directive", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.UndefineDir{
+				Undefine: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "FOO",
+					ValuePos: token.Pos(10),
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("undefine FOO\n"))
+			Expect(n).To(Equal(13))
+		})
+
+		It("should print an undefine directive without a name", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.UndefineDir{Undefine: token.Pos(1)})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("undefine\n"))
+		})
+
+		It("should print a define block among the objects of a file", func() {
+			buf := &bytes.Buffer{}
+
+			_, err := printer.Fprint(buf, &ast.File{Contents: []ast.Obj{
+				&ast.DefineDir{
+					Define: token.Pos(1),
+					VarName: &ast.Text{
+						Value:    "FOO",
+						ValuePos: token.Pos(8),
+					},
+					Op:    token.ILLEGAL,
+					Body:  []*ast.Text{{Value: "one", ValuePos: token.Pos(12)}},
+					Endef: token.Pos(16),
+				},
+				&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{
+						Value:    "target",
+						ValuePos: token.Pos(23),
+					}},
+					Colon: token.Pos(29),
+				},
+			}})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("define FOO\none\nendef\n\ntarget:\n"))
+		})
 	})
 
 	// A blank line between two nodes of a conditional is the byte gap between

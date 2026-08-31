@@ -664,6 +664,73 @@ func (d *IfdefDir) End() token.Pos {
 	return d.VarName.End()
 }
 
+// A DefineDir represents a multi-line variable definition, the block written
+// between a define directive and the endef that terminates it. [Multi-Line]
+//
+// Body holds the lines between the two directives verbatim, one [Text] per
+// line, excluding the line ending. make records the body of a define as the
+// literal text it was written with rather than as make syntax, so a line that
+// looks like a rule, a conditional, or another define is text of the value
+// like any other line. A blank line inside the body is a line of the value as
+// well, so it is recorded as an empty [Text] rather than left to the gap
+// between two nodes the way a blank line between objects is.
+//
+// Op is the assignment operator written after the variable name, and
+// [token.ILLEGAL] when the definition carries none. make accepts every
+// operator an ordinary assignment accepts, so `define FOO +=` appends the body
+// to FOO and `define FOO ?=` defines it only when FOO has no value.
+//
+// [Multi-Line]: https://www.gnu.org/software/make/manual/html_node/Multi_002dLine.html
+type DefineDir struct {
+	Define  token.Pos   // position of 'define'
+	VarName Expr        // variable name, nil when the definition carries none
+	Op      token.Token // =, :=, ::=, :::=, +=, ?=, !=, or ILLEGAL when absent
+	OpPos   token.Pos   // position of Op
+	Body    []*Text     // lines of the body, verbatim, excluding the line ending
+	Endef   token.Pos   // position of 'endef'
+}
+
+func (*DefineDir) objNode() {}
+func (*DefineDir) dirNode() {}
+
+// Pos implements Node
+func (d *DefineDir) Pos() token.Pos {
+	return d.Define
+}
+
+// End implements Node
+func (d *DefineDir) End() token.Pos {
+	return d.Endef + tokenLen(token.ENDEF)
+}
+
+// An UndefineDir represents an undefine directive. [Undefine Directive]
+//
+// [Undefine Directive]: https://www.gnu.org/software/make/manual/html_node/Undefine-Directive.html
+type UndefineDir struct {
+	Undefine token.Pos // position of 'undefine'
+	VarName  Expr      // variable name, nil when the directive carries none
+}
+
+func (*UndefineDir) objNode() {}
+func (*UndefineDir) dirNode() {}
+
+// Pos implements Node
+func (d *UndefineDir) Pos() token.Pos {
+	return d.Undefine
+}
+
+// End implements Node.
+//
+// A directive naming no variable ends after the directive itself, so the name
+// is only read when there is one.
+func (d *UndefineDir) End() token.Pos {
+	if d.VarName != nil {
+		return d.VarName.End()
+	}
+
+	return d.Undefine + tokenLen(token.UNDEFINE)
+}
+
 // tokenLen is the width of tok as the printer writes it. [token.ILLEGAL] marks
 // an absent token rather than a literal, so it has no width.
 func tokenLen(tok token.Token) token.Pos {

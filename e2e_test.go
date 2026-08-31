@@ -81,6 +81,36 @@ var _ = Describe("E2E", func() {
 		Expect(rule.Recipes[1]).To(HaveField("Value", "second"))
 	})
 
+	It("should parse a define block as a single object", func() {
+		data, err := testdata.ReadFile("testdata/roundtrip/define-endef.mk")
+		Expect(err).NotTo(HaveOccurred())
+		p := make.NewParser(bytes.NewBuffer(data), nil)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveLen(1))
+		d, ok := f.Contents[0].(*ast.DefineDir)
+		Expect(ok).To(BeTrue(), "expected a *ast.DefineDir, got %T", f.Contents[0])
+		Expect(d.VarName).To(HaveField("Value", "greeting"))
+		Expect(d.Body).To(HaveLen(1))
+		Expect(d.Body[0]).To(HaveField("Value", "\techo hello"))
+	})
+
+	It("should parse an undefine directive as a single object", func() {
+		data, err := testdata.ReadFile("testdata/roundtrip/override-private.mk")
+		Expect(err).NotTo(HaveOccurred())
+		p := make.NewParser(bytes.NewBuffer(data), nil)
+
+		f, err := p.ParseFile()
+
+		Expect(err).NotTo(HaveOccurred())
+		Expect(f.Contents).To(HaveLen(3))
+		d, ok := f.Contents[2].(*ast.UndefineDir)
+		Expect(ok).To(BeTrue(), "expected a *ast.UndefineDir, got %T", f.Contents[2])
+		Expect(d.VarName).To(HaveField("Value", "VAR"))
+	})
+
 	// A file records one line ending, so a file that mixes them is normalized
 	// to the one that terminates the majority of its lines instead of round
 	// tripping byte for byte. Blank lines are recreated from the byte gap

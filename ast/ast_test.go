@@ -787,6 +787,75 @@ var _ = Describe("Ast", func() {
 		})
 	})
 
+	Describe("DefineDir", func() {
+		It("should be a directive", func() {
+			var d ast.Dir = &ast.DefineDir{}
+
+			Expect(d).To(BeAssignableToTypeOf(&ast.DefineDir{}))
+		})
+
+		It("should return the position of the define token", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.DefineDir{Define: token.Pos(n)}
+
+				return d.Pos() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the endef directive", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.DefineDir{Endef: token.Pos(n)}
+
+				return d.End() == token.Pos(n+5)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("UndefineDir", func() {
+		It("should be a directive", func() {
+			var d ast.Dir = &ast.UndefineDir{}
+
+			Expect(d).To(BeAssignableToTypeOf(&ast.UndefineDir{}))
+		})
+
+		It("should return the position of the undefine token", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.UndefineDir{Undefine: token.Pos(n)}
+
+				return d.Pos() == token.Pos(n)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the variable name", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.UndefineDir{VarName: &ast.Text{
+					Value:    "VAR",
+					ValuePos: token.Pos(n),
+				}}
+
+				return d.End() == token.Pos(n+3)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the directive when it names no variable", func() {
+			err := quick.Check(func(n int) bool {
+				d := &ast.UndefineDir{Undefine: token.Pos(n)}
+
+				return d.End() == token.Pos(n+8)
+			}, nil)
+
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
 	Describe("IfBlock", func() {
 		It("should be an entry a recipe list can hold", func() {
 			var r ast.RecipeObj = &ast.IfBlock{}
@@ -912,6 +981,24 @@ var _ = Describe("End", func() {
 	It("should span the recipe including the prefix", func() {
 		assertSpans("target: dep\n\techo hi\n", "\techo hi", func(f *ast.File) ast.Node {
 			return f.Contents[0].(*ast.Rule).Recipes[0]
+		})
+	})
+
+	It("should span the define block including the endef", func() {
+		assertSpans("define FOO\nbody\nendef\n", "define FOO\nbody\nendef", func(f *ast.File) ast.Node {
+			return f.Contents[0]
+		})
+	})
+
+	It("should span the line of the define body", func() {
+		assertSpans("define FOO\nbody\nendef\n", "body", func(f *ast.File) ast.Node {
+			return f.Contents[0].(*ast.DefineDir).Body[0]
+		})
+	})
+
+	It("should span the undefine directive including the name", func() {
+		assertSpans("undefine FOO\n", "undefine FOO", func(f *ast.File) ast.Node {
+			return f.Contents[0]
 		})
 	})
 

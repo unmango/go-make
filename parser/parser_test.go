@@ -2237,10 +2237,261 @@ endif
 		Entry(nil, "target: VAR += value", "test:1:13: expected one of 'TEXT', '$', found '+='"),
 	)
 
+	Describe("definition blocks", func() {
+		It("should parse a define block as a single object", func() {
+			buf := bytes.NewBufferString("define greeting\nhello\nendef\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(ConsistOf(&ast.DefineDir{
+				Define: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "greeting",
+					ValuePos: token.Pos(8),
+				},
+				Op:    token.ILLEGAL,
+				Body:  []*ast.Text{{Value: "hello", ValuePos: token.Pos(17)}},
+				Endef: token.Pos(23),
+			}))
+		})
+
+		DescribeTable("should parse the assignment operator of a define",
+			func(input string, op token.Token) {
+				p := parser.New(bytes.NewBufferString(input), file)
+
+				f, err := p.ParseFile()
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(f.Contents).To(HaveLen(1))
+				Expect(f.Contents[0]).To(HaveField("Op", op))
+			},
+			Entry(nil, "define FOO\nx\nendef\n", token.ILLEGAL),
+			Entry(nil, "define FOO =\nx\nendef\n", token.RECURSIVE_ASSIGN),
+			Entry(nil, "define FOO :=\nx\nendef\n", token.SIMPLE_ASSIGN),
+			Entry(nil, "define FOO ::=\nx\nendef\n", token.POSIX_ASSIGN),
+			Entry(nil, "define FOO :::=\nx\nendef\n", token.IMMEDIATE_ASSIGN),
+			Entry(nil, "define FOO +=\nx\nendef\n", token.APPEND_ASSIGN),
+			Entry(nil, "define FOO ?=\nx\nendef\n", token.IFNDEF_ASSIGN),
+			Entry(nil, "define FOO !=\nx\nendef\n", token.SHELL_ASSIGN),
+		)
+
+		It("should record the position of the assignment operator", func() {
+			buf := bytes.NewBufferString("define FOO +=\nx\nendef\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(ConsistOf(&ast.DefineDir{
+				Define: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "FOO",
+					ValuePos: token.Pos(8),
+				},
+				Op:    token.APPEND_ASSIGN,
+				OpPos: token.Pos(12),
+				Body:  []*ast.Text{{Value: "x", ValuePos: token.Pos(15)}},
+				Endef: token.Pos(17),
+			}))
+		})
+
+		It("should parse a body of several lines", func() {
+			buf := bytes.NewBufferString("define FOO\none\ntwo\nendef\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(HaveLen(1))
+			Expect(f.Contents[0]).To(HaveField("Body", []*ast.Text{
+				{Value: "one", ValuePos: token.Pos(12)},
+				{Value: "two", ValuePos: token.Pos(16)},
+			}))
+		})
+
+		It("should parse a define with an empty body", func() {
+			buf := bytes.NewBufferString("define FOO\nendef\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(ConsistOf(&ast.DefineDir{
+				Define: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "FOO",
+					ValuePos: token.Pos(8),
+				},
+				Op:    token.ILLEGAL,
+				Endef: token.Pos(12),
+			}))
+		})
+
+		// make reads the body of a define as the text it was written with, so
+		// a line that looks like make syntax is a line of the value.
+		DescribeTable("should keep a body line as text",
+			func(input string, body ...string) {
+				p := parser.New(bytes.NewBufferString(input), file)
+
+				f, err := p.ParseFile()
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(f.Contents).To(HaveLen(1))
+				d, ok := f.Contents[0].(*ast.DefineDir)
+				Expect(ok).To(BeTrue(), "expected a *ast.DefineDir, got %T", f.Contents[0])
+
+				values := make([]string, len(d.Body))
+				for i, line := range d.Body {
+					values[i] = line.Value
+				}
+				Expect(values).To(Equal(body))
+			},
+			Entry("a rule", "define FOO\ntarget: prereq\nendef\n",
+				"target: prereq",
+			),
+			Entry("a recipe", "define FOO\ntarget:\n\techo hi\nendef\n",
+				"target:", "\techo hi",
+			),
+			Entry("a conditional", "define FOO\nifeq (a,b)\nx = 1\nendif\nendef\n",
+				"ifeq (a,b)", "x = 1", "endif",
+			),
+			Entry("a comment", "define FOO\n# comment\nendef\n",
+				"# comment",
+			),
+			Entry("an expansion", "define FOO\n$(shell date)\nendef\n",
+				"$(shell date)",
+			),
+			Entry("a blank line", "define FOO\none\n\ntwo\nendef\n",
+				"one", "", "two",
+			),
+			Entry("the blanks a line begins with", "define FOO\n  indented\nendef\n",
+				"  indented",
+			),
+		)
+
+		// make counts a define written in a body, so the endef matching it
+		// closes the inner block rather than the outer one and the value of
+		// the outer variable holds the inner block as text.
+		It("should parse a nested define as text of the outer body", func() {
+			buf := bytes.NewBufferString("define OUTER\ndefine INNER\nx\nendef\ntail\nendef\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(HaveLen(1))
+			Expect(f.Contents[0]).To(HaveField("Body", []*ast.Text{
+				{Value: "define INNER", ValuePos: token.Pos(14)},
+				{Value: "x", ValuePos: token.Pos(27)},
+				{Value: "endef", ValuePos: token.Pos(29)},
+				{Value: "tail", ValuePos: token.Pos(35)},
+			}))
+		})
+
+		// make ends a define at a line holding nothing but endef, so an endef
+		// written behind a tab is a line of the body. Here it leaves the block
+		// unterminated, which make reports as well.
+		DescribeTable("should not end a define at",
+			func(input string) {
+				p := parser.New(bytes.NewBufferString(input), file)
+
+				_, err := p.ParseFile()
+
+				Expect(err).To(MatchError(ContainSubstring("expected 'endef'")))
+			},
+			Entry("an endef behind a tab", "define FOO\n\tendef\n"),
+			Entry("an endef carrying text", "define FOO\nendef x\n"),
+		)
+
+		It("should error when a define reaches the end of the file", func() {
+			buf := bytes.NewBufferString("define greeting\nhello\n")
+			p := parser.New(buf, file)
+
+			_, err := p.ParseFile()
+
+			Expect(err).To(MatchError("test:2:6: expected 'endef', found 'EOF'"))
+		})
+
+		DescribeTable("should keep a directive the parser cannot read as text",
+			func(input, text string) {
+				p := parser.New(bytes.NewBufferString(input), file)
+
+				f, _ := p.ParsePartial()
+
+				Expect(f.Contents).To(ContainElement(&ast.BadObj{
+					From: token.Pos(1),
+					To:   token.Pos(1 + len(text)),
+					Text: text,
+				}))
+			},
+			Entry("a name written with blanks",
+				"define FOO bar\nx\nendef\n", "define FOO bar",
+			),
+			Entry("text after the assignment operator",
+				"define FOO := x\nendef\n", "define FOO := x",
+			),
+			Entry("an undefine naming several variables",
+				"undefine FOO bar\n", "undefine FOO bar",
+			),
+		)
+	})
+
+	Describe("undefine directives", func() {
+		It("should parse an undefine directive", func() {
+			buf := bytes.NewBufferString("undefine VAR\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(ConsistOf(&ast.UndefineDir{
+				Undefine: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "VAR",
+					ValuePos: token.Pos(10),
+				},
+			}))
+		})
+
+		It("should parse a variable reference as the name", func() {
+			buf := bytes.NewBufferString("undefine $(VAR)\n")
+			p := parser.New(buf, file)
+
+			f, err := p.ParseFile()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(f.Contents).To(ConsistOf(&ast.UndefineDir{
+				Undefine: token.Pos(1),
+				VarName: &ast.VarRef{
+					Dollar: token.Pos(10),
+					Open:   token.LPAREN,
+					Name:   "VAR",
+					Close:  token.RPAREN,
+				},
+			}))
+		})
+	})
+
+	// make reads the whole line before the operator as the name of the
+	// variable, this parser reads one expression the way it does for an
+	// ordinary assignment, and the line it cannot read is kept as the text it
+	// was written with.
+	DescribeTable("should error when a directive names several variables",
+		func(input, message string) {
+			p := parser.New(bytes.NewBufferString(input), file)
+
+			_, err := p.ParseFile()
+
+			Expect(err).To(MatchError(message))
+		},
+		Entry(nil, "define FOO bar\nx\nendef\n", "test:1:15: variable may have only one name"),
+		Entry(nil, "undefine FOO bar\n", "test:1:17: variable may have only one name"),
+	)
+
 	DescribeTable("should parse an unsupported line as a bad object",
-		Entry(nil, "define greeting"),
 		Entry(nil, "endef"),
-		Entry(nil, "undefine VAR"),
 		Entry(nil, "override VAR = x"),
 		Entry(nil, "export VAR"),
 		Entry(nil, "unexport VAR"),

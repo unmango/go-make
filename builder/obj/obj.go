@@ -48,6 +48,40 @@ func SetPos(pos token.Pos, obj ast.Obj) token.Pos {
 		n.To = pos + token.Pos(len(n.Text))
 
 		return n.To + 1 // '\n'
+	case *ast.DefineDir:
+		n.Define = pos
+		pos += length(token.DEFINE)
+		if n.VarName != nil {
+			pos = expr.SetPos(pos+1, n.VarName) // ' '
+		}
+		// [token.ILLEGAL] marks an absent operator rather than a literal, so
+		// a definition written without one takes up no room for it.
+		if n.Op != token.ILLEGAL {
+			n.OpPos = pos + 1 // ' '
+			pos = n.OpPos + length(n.Op)
+		}
+		pos++ // '\n'
+		// Every line of the body carries the blanks it begins with, so a line
+		// is laid out where the one before it ended rather than indented.
+		for _, line := range n.Body {
+			if line == nil {
+				continue
+			}
+
+			line.ValuePos = pos
+			pos += token.Pos(len(line.Value)) + 1 // '\n'
+		}
+		n.Endef = pos
+
+		return End(n)
+	case *ast.UndefineDir:
+		n.Undefine = pos
+		pos += length(token.UNDEFINE)
+		if n.VarName != nil {
+			pos = expr.SetPos(pos+1, n.VarName) // ' '
+		}
+
+		return pos + 1 // '\n'
 	case *ast.IfBlock:
 		pos = setDirPos(pos, n.Directive) + 1 // '\n'
 		for _, o := range n.Text {
@@ -111,6 +145,14 @@ func End(obj ast.Obj) token.Pos {
 		return n.OpPos + length(n.Op) + 1 // '\n'
 	case *ast.BadObj:
 		return n.To + 1 // '\n'
+	case *ast.DefineDir:
+		return n.Endef + length(token.ENDEF) + 1 // '\n'
+	case *ast.UndefineDir:
+		if n.VarName != nil {
+			return expr.End(n.VarName) + 1 // '\n'
+		}
+
+		return n.Undefine + length(token.UNDEFINE) + 1 // '\n'
 	case *ast.IfBlock:
 		return n.Endif + length(token.ENDIF) + 1 // '\n'
 	default:
@@ -169,6 +211,29 @@ func clone(obj ast.Obj) ast.Obj {
 		return &c
 	case *ast.BadObj:
 		c := *n
+
+		return &c
+	case *ast.DefineDir:
+		c := *n
+		if n.VarName != nil {
+			c.VarName = expr.Copy(n.VarName.Pos(), n.VarName)
+		}
+		c.Body = nil
+		for _, line := range n.Body {
+			if line == nil {
+				continue
+			}
+
+			lc := *line
+			c.Body = append(c.Body, &lc)
+		}
+
+		return &c
+	case *ast.UndefineDir:
+		c := *n
+		if n.VarName != nil {
+			c.VarName = expr.Copy(n.VarName.Pos(), n.VarName)
+		}
 
 		return &c
 	case *ast.IfBlock:
