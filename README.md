@@ -264,7 +264,6 @@ go-make is itself built using `make`.
 ### Developer Environment
 
 Apart from the Go toolchain, the only main dependency is the `ginkgo` cli to run tests.
-This repo also uses [devctl](https://github.com/unmango/devctl) but its use is optional.
 Targets will obtain dependencies automatically as needed.
 
 Binaries are stored in a `.gitignore`d `bin/` directory at the root of the repository.
