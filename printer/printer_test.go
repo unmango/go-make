@@ -1064,6 +1064,79 @@ var _ = Describe("Printer", func() {
 			Expect(n).To(Equal(21))
 		})
 
+		It("should print a directive whose line ends in a comment", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfdefDir{
+				Tok:    token.IFDEF,
+				TokPos: token.Pos(1),
+				VarName: &ast.Text{
+					Value:    "foo",
+					ValuePos: token.Pos(7),
+				},
+				Comment: &ast.Comment{
+					Pound: token.Pos(11),
+					Text:  " a comment",
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifdef foo # a comment"))
+			Expect(n).To(Equal(21))
+		})
+
+		It("should print a directive with no variable name whose line ends in a comment", func() {
+			buf := &bytes.Buffer{}
+
+			n, err := printer.Fprint(buf, &ast.IfdefDir{
+				Tok:    token.IFDEF,
+				TokPos: token.Pos(1),
+				Comment: &ast.Comment{
+					Pound: token.Pos(7),
+					Text:  " a comment",
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal("ifdef # a comment"))
+			Expect(n).To(Equal(17))
+		})
+
+		// The comment shares the line of the node holding it, so the body of
+		// the block still begins on the line below the directive rather than
+		// being pushed down by a line the comment took for itself.
+		It("should print an if block whose every line ends in a comment", func() {
+			buf := &bytes.Buffer{}
+			src := "ifdef foo # one\nbar:\nelse # two\nbaz:\nendif # three\n"
+
+			n, err := printer.Fprint(buf, &ast.IfBlock{
+				Directive: &ast.IfdefDir{
+					Tok:     token.IFDEF,
+					TokPos:  token.Pos(1),
+					VarName: &ast.Text{Value: "foo", ValuePos: token.Pos(7)},
+					Comment: &ast.Comment{Pound: token.Pos(11), Text: " one"},
+				},
+				Text: []ast.Obj{&ast.Rule{
+					Targets: []ast.Expr{&ast.Text{Value: "bar", ValuePos: token.Pos(17)}},
+					Colon:   token.Pos(20),
+				}},
+				Else: []*ast.ElseBlock{{
+					Else:    token.Pos(22),
+					Comment: &ast.Comment{Pound: token.Pos(27), Text: " two"},
+					Text: []ast.Obj{&ast.Rule{
+						Targets: []ast.Expr{&ast.Text{Value: "baz", ValuePos: token.Pos(33)}},
+						Colon:   token.Pos(36),
+					}},
+				}},
+				Endif:        token.Pos(38),
+				EndifComment: &ast.Comment{Pound: token.Pos(44), Text: " three"},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(buf.String()).To(Equal(src))
+			Expect(n).To(Equal(len(src)))
+		})
+
 		It("should print an if block with an else", func() {
 			buf := &bytes.Buffer{}
 

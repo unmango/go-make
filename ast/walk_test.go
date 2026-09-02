@@ -388,6 +388,57 @@ var _ = Describe("Walk", func() {
 		Expect(v.nodes).To(HaveExactElements(f, d2, t2, v2, e, d1, t1, v1))
 	})
 
+	It("should walk the comment ending an ifeq directive", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		t2 := &ast.Text{}
+		c := &ast.Comment{}
+		d := &ast.IfeqDir{Arg1: t1, Arg2: t2, Comment: c}
+
+		ast.Walk(v, d)
+
+		Expect(v.nodes).To(HaveExactElements(d, t1, t2, c))
+	})
+
+	It("should walk the comment ending an ifdef directive", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		c := &ast.Comment{}
+		d := &ast.IfdefDir{VarName: t1, Comment: c}
+
+		ast.Walk(v, d)
+
+		Expect(v.nodes).To(HaveExactElements(d, t1, c))
+	})
+
+	It("should walk the comment ending a bare else", func() {
+		v := &visitor{}
+		v1 := &ast.Variable{}
+		c := &ast.Comment{}
+		e := &ast.ElseBlock{Comment: c, Text: []ast.Obj{v1}}
+
+		ast.Walk(v, e)
+
+		Expect(v.nodes).To(HaveExactElements(e, c, v1))
+	})
+
+	It("should walk the comment ending an endif", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		v1 := &ast.Variable{}
+		c := &ast.Comment{}
+		d := &ast.IfdefDir{VarName: t1}
+		f := &ast.IfBlock{
+			Directive:    d,
+			Text:         []ast.Obj{v1},
+			EndifComment: c,
+		}
+
+		ast.Walk(v, f)
+
+		Expect(v.nodes).To(HaveExactElements(f, d, t1, v1, c))
+	})
+
 	It("should walk a define directive", func() {
 		v := &visitor{}
 		name := &ast.Text{}

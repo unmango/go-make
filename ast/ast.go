@@ -567,11 +567,17 @@ func (s *Variable) End() token.Pos {
 }
 
 // IfBlock represents a conditional directive and its parts.
+//
+// EndifComment is the comment ending the endif line. The block spans several
+// lines and each one that can end in a comment records its own, so the comment
+// on the opening directive is held by Directive and the one on an else by the
+// [ElseBlock] it ends.
 type IfBlock struct {
-	Directive IfDir        // conditional directive
-	Text      []Obj        // text-if-true
-	Else      []*ElseBlock // else directive blocks
-	Endif     token.Pos    // position of ENDIF
+	Directive    IfDir        // conditional directive
+	Text         []Obj        // text-if-true
+	Else         []*ElseBlock // else directive blocks
+	Endif        token.Pos    // position of ENDIF
+	EndifComment *Comment     // comment ending the endif line, if any
 }
 
 func (*IfBlock) objNode()       {}
@@ -585,13 +591,23 @@ func (b *IfBlock) Pos() token.Pos {
 
 // End implements Node
 func (b *IfBlock) End() token.Pos {
+	if b.EndifComment != nil {
+		return b.EndifComment.End()
+	}
+
 	return b.Endif + 5 // pos + len("endif")
 }
 
 // ElseBlock represents and `else` clause in a conditional directive.
+//
+// Comment is the comment ending a bare else line. An else written with a
+// condition ends its line with the condition, so the comment belongs to the
+// [IfDir] in Condition rather than here, the same way a comment on the opening
+// directive belongs to the directive.
 type ElseBlock struct {
 	Else      token.Pos // position of ELSE
 	Condition IfDir     // condition, if it exists; nil otherwise
+	Comment   *Comment  // comment ending a bare else line, if any
 	Text      []Obj     // text-if-true when a condition exists; text-if-false otherwise
 }
 
@@ -604,22 +620,32 @@ func (b *ElseBlock) Pos() token.Pos {
 func (b *ElseBlock) End() token.Pos {
 	if n := len(b.Text); n > 0 {
 		return b.Text[n-1].End()
-	} else if b.Condition != nil {
-		return b.Condition.End()
-	} else {
-		return b.Else + 4 // pos + len("else")
 	}
+	if b.Comment != nil {
+		return b.Comment.End()
+	}
+	if b.Condition != nil {
+		return b.Condition.End()
+	}
+
+	return b.Else + 4 // pos + len("else")
 }
 
 // IfeqDir represents a conditional directive block using `ifeq` or `ifneq`.
+//
+// Comment is the comment ending the directive line. A comment written there is
+// not an object of its own: it shares a line with the directive, and a
+// [CommentGroup] in the body of the block would be printed on a line of its
+// own.
 type IfeqDir struct {
-	Tok    token.Token // IFEQ or IFNEQ
-	TokPos token.Pos   // position of Tok
-	Open   token.Pos   // position of '(', if it exists
-	Arg1   Expr        // first argument in the condition
-	Comma  token.Pos   // position of ',', if it exists
-	Arg2   Expr        // second argument in the condition
-	Close  token.Pos   // position of ')', if it exists
+	Tok     token.Token // IFEQ or IFNEQ
+	TokPos  token.Pos   // position of Tok
+	Open    token.Pos   // position of '(', if it exists
+	Arg1    Expr        // first argument in the condition
+	Comma   token.Pos   // position of ',', if it exists
+	Arg2    Expr        // second argument in the condition
+	Close   token.Pos   // position of ')', if it exists
+	Comment *Comment    // comment ending the directive line, if any
 }
 
 func (*IfeqDir) ifDirNode() {}
@@ -632,6 +658,8 @@ func (d *IfeqDir) Pos() token.Pos {
 // End implements node
 func (d *IfeqDir) End() token.Pos {
 	switch {
+	case d.Comment != nil:
+		return d.Comment.End()
 	case d.Close.IsValid():
 		return d.Close + 1 // pos + len(')')
 	case d.Arg2 != nil:
@@ -645,11 +673,17 @@ func (d *IfeqDir) End() token.Pos {
 	}
 }
 
-// IfeqDir represents a conditional directive block using `ifdef` or `ifndef`.
+// IfdefDir represents a conditional directive block using `ifdef` or `ifndef`.
+//
+// Comment is the comment ending the directive line. A comment written there is
+// not an object of its own: it shares a line with the directive, and a
+// [CommentGroup] in the body of the block would be printed on a line of its
+// own.
 type IfdefDir struct {
 	Tok     token.Token // IFDEF or IFNDEF
 	TokPos  token.Pos   // position of Tok
 	VarName Expr        // variable-name
+	Comment *Comment    // comment ending the directive line, if any
 }
 
 func (*IfdefDir) ifDirNode() {}
@@ -661,7 +695,19 @@ func (d *IfdefDir) Pos() token.Pos {
 
 // End implements node
 func (d *IfdefDir) End() token.Pos {
-	return d.VarName.End()
+	if d.Comment != nil {
+		return d.Comment.End()
+	}
+	if d.VarName != nil {
+		return d.VarName.End()
+	}
+
+	// A directive with no variable name ends after the directive itself, the
+	// way an ifeq with no arguments does. A name is missing from a directive
+	// the parser recovered from, and that node is walked and printed like any
+	// other.
+
+	return d.TokPos + tokenLen(d.Tok)
 }
 
 // A DefineDir represents a multi-line variable definition, the block written
