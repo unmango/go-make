@@ -598,7 +598,7 @@ func (b *IfBlock) End() token.Pos {
 	return b.Endif + 5 // pos + len("endif")
 }
 
-// ElseBlock represents and `else` clause in a conditional directive.
+// ElseBlock represents an `else` clause in a conditional directive.
 //
 // Comment is the comment ending a bare else line. An else written with a
 // condition ends its line with the condition, so the comment belongs to the

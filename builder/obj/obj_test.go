@@ -143,6 +143,35 @@ var _ = Describe("Obj", func() {
 				"ifdef test # one\ntargetA:\nelse # two\ntargetB:\nendif # three\n",
 				ifBlockWithComments(),
 			),
+			// An argument is nil when it is empty, and a directive the parser
+			// recovered from has no name at all. Neither is text that was
+			// written, so neither is laid out as any.
+			Entry("an ifeq with two empty arguments", "ifeq (,)\nendif\n", &ast.IfBlock{
+				Directive: &ast.IfeqDir{
+					Tok:   token.IFEQ,
+					Open:  token.Pos(1),
+					Close: token.Pos(1),
+				},
+			}),
+			Entry("an ifeq with an empty second argument", "ifeq (a,)\nendif\n", &ast.IfBlock{
+				Directive: &ast.IfeqDir{
+					Tok:   token.IFEQ,
+					Open:  token.Pos(1),
+					Arg1:  &ast.Text{Value: "a"},
+					Close: token.Pos(1),
+				},
+			}),
+			Entry("an ifeq with an empty first argument", "ifeq (, b)\nendif\n", &ast.IfBlock{
+				Directive: &ast.IfeqDir{
+					Tok:   token.IFEQ,
+					Open:  token.Pos(1),
+					Arg2:  &ast.Text{Value: "b"},
+					Close: token.Pos(1),
+				},
+			}),
+			Entry("an ifdef with no variable name", "ifdef\nendif\n", &ast.IfBlock{
+				Directive: &ast.IfdefDir{Tok: token.IFDEF},
+			}),
 			Entry("a bad object", "include foo.mk\n", &ast.BadObj{Text: "include foo.mk"}),
 			Entry("a rule holding a conditional", "target:\n\tone\nifdef V\n\ttwo\nendif\n",
 				ruleWithConditional(),
