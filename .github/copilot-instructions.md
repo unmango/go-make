@@ -9,3 +9,4 @@ Keep these Copilot-specific reminders in mind while using it:
 - For focused testing, use Ginkgo directly, for example `go tool ginkgo run ./parser` or `go tool ginkgo --focus='single character variable reference and extra text' run ./parser`.
 - Preserve `token.Pos` data when changing parser, printer, builder, or AST code. Tests check exact positions.
 - Treat `testdata/roundtrip/*.mk` as the round-trip contract for parser/printer behavior.
+- `.github/skills/code-review/SKILL.md` holds what to check when reviewing a change here.
