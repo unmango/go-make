@@ -693,6 +693,21 @@ func (p *Parser) parseComment() *ast.Comment {
 	}
 }
 
+// parseLineComment parses the comment ending the line the parser stands on,
+// and reports none when the line ends without one.
+//
+// A comment sharing a line with the node that opened it is a field of that
+// node rather than an object beside it, because a [ast.CommentGroup] is
+// printed on a line of its own. The scanner reports a newline as a token, so
+// the comment is the current token only when nothing has ended the line.
+func (p *Parser) parseLineComment() *ast.Comment {
+	if p.tok != token.COMMENT {
+		return nil
+	}
+
+	return p.parseComment()
+}
+
 func (p *Parser) parseCommentGroup() *ast.CommentGroup {
 	g := &ast.CommentGroup{}
 	for p.tok == token.COMMENT {
@@ -714,6 +729,7 @@ func (p *Parser) parseIfdefDir() *ast.IfdefDir {
 		Tok:     tok,
 		TokPos:  pos,
 		VarName: arg,
+		Comment: p.parseLineComment(),
 	}
 }
 
@@ -790,13 +806,14 @@ func (p *Parser) parseIfeqDir() *ast.IfeqDir {
 	}
 
 	return &ast.IfeqDir{
-		Tok:    tok,
-		TokPos: pos,
-		Open:   lparen,
-		Arg1:   arg1,
-		Comma:  comma,
-		Arg2:   arg2,
-		Close:  rparen,
+		Tok:     tok,
+		TokPos:  pos,
+		Open:    lparen,
+		Arg1:    arg1,
+		Comma:   comma,
+		Arg2:    arg2,
+		Close:   rparen,
+		Comment: p.parseLineComment(),
 	}
 }
 
@@ -815,12 +832,18 @@ func (p *Parser) parseElseBlock() *ast.ElseBlock {
 	pos := p.expect(token.ELSE)
 	condition := p.parseIfDir()
 
+	// An else written with a condition ends its line with the condition, which
+	// has already taken the comment ending it. Only a bare else reaches one
+	// here.
+	comment := p.parseLineComment()
+
 	p.skipNewlines()
 	text := p.parseObjList()
 
 	return &ast.ElseBlock{
 		Else:      pos,
 		Condition: condition,
+		Comment:   comment,
 		Text:      text,
 	}
 }
@@ -850,10 +873,11 @@ func (p *Parser) parseIfBlock() *ast.IfBlock {
 	endif := p.expect(token.ENDIF)
 
 	return &ast.IfBlock{
-		Directive: ifdir,
-		Text:      text,
-		Else:      eblocks,
-		Endif:     endif,
+		Directive:    ifdir,
+		Text:         text,
+		Else:         eblocks,
+		Endif:        endif,
+		EndifComment: p.parseLineComment(),
 	}
 }
 

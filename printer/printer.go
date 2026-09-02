@@ -324,6 +324,18 @@ func (p *printer) comment(c *ast.Comment) {
 	p.writeString(p.pos, c.Text)
 }
 
+// lineComment writes the comment ending the line the printer stands on. The
+// comment shares the line with the node holding it, so no line ending is
+// written here; the caller ends the line as it does without one.
+func (p *printer) lineComment(c *ast.Comment) {
+	if c == nil {
+		return
+	}
+
+	p.fillSpace(c.Pos())
+	p.comment(c)
+}
+
 func (p *printer) commentGroup(g *ast.CommentGroup) {
 	if g == nil {
 		return
@@ -364,18 +376,18 @@ func (p *printer) ifeqDir(d *ast.IfeqDir) {
 		p.arg(d.Arg1)
 		p.arg(d.Arg2)
 	}
+	p.lineComment(d.Comment)
 }
 
 func (p *printer) ifdefDir(d *ast.IfdefDir) {
 	p.tok(p.posFor(d.TokPos), d.Tok)
 	// VarName is optional, so a directive without one prints as the directive
 	// alone rather than as a directive followed by a space leading nowhere.
-	if d.VarName == nil {
-		return
+	if d.VarName != nil {
+		p.fillSpace(d.VarName.Pos())
+		p.expr(d.VarName)
 	}
-
-	p.fillSpace(d.VarName.Pos())
-	p.expr(d.VarName)
+	p.lineComment(d.Comment)
 }
 
 func (p *printer) ifDir(d ast.IfDir) {
@@ -404,6 +416,7 @@ func (p *printer) elseBlock(b *ast.ElseBlock) {
 		p.fillSpace(b.Condition.Pos())
 		p.ifDir(b.Condition)
 	}
+	p.lineComment(b.Comment)
 	p.writeLine()
 	p.objList(b.Text)
 }
@@ -418,6 +431,7 @@ func (p *printer) ifBlock(b *ast.IfBlock) {
 	// are in front of an else.
 	p.fillLines(b.Endif)
 	p.tok(p.posFor(b.Endif), token.ENDIF)
+	p.lineComment(b.EndifComment)
 	p.writeLine()
 }
 

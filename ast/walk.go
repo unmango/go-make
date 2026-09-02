@@ -76,13 +76,22 @@ func Walk(v Visitor, node Node) {
 		if n.Arg2 != nil {
 			Walk(v, n.Arg2)
 		}
+		if n.Comment != nil {
+			Walk(v, n.Comment)
+		}
 	case *IfdefDir:
 		if n.VarName != nil {
 			Walk(v, n.VarName)
 		}
+		if n.Comment != nil {
+			Walk(v, n.Comment)
+		}
 	case *ElseBlock:
 		if n.Condition != nil {
 			Walk(v, n.Condition)
+		}
+		if n.Comment != nil {
+			Walk(v, n.Comment)
 		}
 		walkList(v, n.Text)
 	case *IfBlock:
@@ -91,6 +100,9 @@ func Walk(v Visitor, node Node) {
 		}
 		walkList(v, n.Text)
 		walkList(v, n.Else)
+		if n.EndifComment != nil {
+			Walk(v, n.EndifComment)
+		}
 	case *DefineDir:
 		if n.VarName != nil {
 			Walk(v, n.VarName)

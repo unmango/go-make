@@ -14,6 +14,11 @@ var _ = Describe("nil AST list entries", func() {
 		Expect(file.End()).To(Equal(token.Pos(7)))
 	})
 
+	It("should end an ifdef directive with no variable name after the directive", func() {
+		dir := &ast.IfdefDir{Tok: token.IFDEF, TokPos: 1}
+		Expect(dir.End()).To(Equal(token.Pos(6)))
+	})
+
 	It("should skip nil variable values when finding the end", func() {
 		variable := &ast.Variable{OpPos: 5, Op: token.Token(0), Value: []ast.Expr{&ast.Text{ValuePos: 10}, nil}}
 		Expect(variable.End()).To(Equal(token.Pos(10)))

@@ -93,12 +93,14 @@ func SetPos(pos token.Pos, obj ast.Obj) token.Pos {
 			if e.Condition != nil {
 				pos = setDirPos(pos+1, e.Condition) // ' '
 			}
+			pos = setCommentPos(pos, e.Comment)
 			pos++ // '\n'
 			for _, o := range e.Text {
 				pos = SetPos(pos, o)
 			}
 		}
 		n.Endif = pos
+		setCommentPos(n.Endif+length(token.ENDIF), n.EndifComment)
 
 		return End(n)
 	default:
@@ -154,10 +156,38 @@ func End(obj ast.Obj) token.Pos {
 
 		return n.Undefine + length(token.UNDEFINE) + 1 // '\n'
 	case *ast.IfBlock:
+		if n.EndifComment != nil {
+			return n.EndifComment.End() + 1 // '\n'
+		}
+
 		return n.Endif + length(token.ENDIF) + 1 // '\n'
 	default:
 		panic(fmt.Sprintf("builder/obj: End: unsupported object type %T", obj))
 	}
+}
+
+// setArgPos lays out an argument of a conditional directive beginning at pos
+// and returns the position after it. An empty argument is absent rather than
+// empty text, so it moves nothing and takes up no room.
+func setArgPos(pos token.Pos, e ast.Expr) token.Pos {
+	if e == nil {
+		return pos
+	}
+
+	return expr.SetPos(pos, e)
+}
+
+// setCommentPos lays out the comment ending the line the caller stands on,
+// separated from what precedes it by a single space, and returns the position
+// after it. A line with no comment ends where it already did.
+func setCommentPos(pos token.Pos, c *ast.Comment) token.Pos {
+	if c == nil {
+		return pos
+	}
+
+	c.Pound = pos + 1 // ' '
+
+	return c.End()
 }
 
 // setDirPos lays a conditional directive out beginning at pos and returns the
@@ -166,19 +196,34 @@ func setDirPos(pos token.Pos, dir ast.IfDir) token.Pos {
 	switch n := dir.(type) {
 	case *ast.IfdefDir:
 		n.TokPos = pos
-		return expr.SetPos(pos+length(n.Tok)+1, n.VarName) // ' '
+		pos += length(n.Tok)
+		if n.VarName != nil {
+			pos = expr.SetPos(pos+1, n.VarName) // ' '
+		}
+
+		return setCommentPos(pos, n.Comment)
 	case *ast.IfeqDir:
 		n.TokPos = pos
 		pos += length(n.Tok)
+		// An argument is nil when it is empty, as in `ifeq ($(CI),)`. The
+		// punctuation still carries a position, so the delimiters are laid out
+		// around the room the argument does not take up.
 		if n.Open.IsValid() {
-			n.Open = pos + 1                         // ' '
-			n.Comma = expr.SetPos(n.Open+1, n.Arg1)  // '('
-			n.Close = expr.SetPos(n.Comma+2, n.Arg2) // ',' and ' '
-			return n.Close + length(token.RPAREN)
+			n.Open = pos + 1                      // ' '
+			n.Comma = setArgPos(n.Open+1, n.Arg1) // '('
+			pos = n.Comma + 1                     // ','
+			if n.Arg2 != nil {
+				pos = expr.SetPos(pos+1, n.Arg2) // ' '
+			}
+			n.Close = pos
+
+			return setCommentPos(n.Close+length(token.RPAREN), n.Comment)
 		}
 
-		pos = expr.SetPos(pos+1, n.Arg1)  // ' '
-		return expr.SetPos(pos+1, n.Arg2) // ' '
+		pos = setArgPos(pos+1, n.Arg1) // ' '
+		pos = setArgPos(pos+1, n.Arg2) // ' '
+
+		return setCommentPos(pos, n.Comment)
 	default:
 		panic(fmt.Sprintf("builder/obj: SetPos: unsupported directive type %T", dir))
 	}
@@ -237,13 +282,13 @@ func clone(obj ast.Obj) ast.Obj {
 
 		return &c
 	case *ast.IfBlock:
-		c := &ast.IfBlock{Endif: n.Endif}
+		c := &ast.IfBlock{Endif: n.Endif, EndifComment: cloneComment(n.EndifComment)}
 		c.Directive = cloneDir(n.Directive)
 		for _, o := range n.Text {
 			c.Text = append(c.Text, clone(o))
 		}
 		for _, e := range n.Else {
-			ec := &ast.ElseBlock{Else: e.Else}
+			ec := &ast.ElseBlock{Else: e.Else, Comment: cloneComment(e.Comment)}
 			if e.Condition != nil {
 				ec.Condition = cloneDir(e.Condition)
 			}
@@ -259,16 +304,44 @@ func clone(obj ast.Obj) ast.Obj {
 	}
 }
 
+// copyArg copies an argument of a conditional directive. An argument that is
+// absent stays absent: an empty `ifeq ($(CI),)` argument and the name missing
+// from a directive the parser recovered from are both nil, and neither is
+// copied into text that was never written.
+func copyArg(e ast.Expr) ast.Expr {
+	if e == nil {
+		return nil
+	}
+
+	return expr.Copy(e.Pos(), e)
+}
+
+// cloneComment copies a comment so that the copy carries a position of its
+// own. A comment is reached through a pointer, so a struct copy of the node
+// holding it would leave the two sharing one, and laying the copy out would
+// move the comment of the original.
+func cloneComment(c *ast.Comment) *ast.Comment {
+	if c == nil {
+		return nil
+	}
+
+	cc := *c
+
+	return &cc
+}
+
 func cloneDir(dir ast.IfDir) ast.IfDir {
 	switch n := dir.(type) {
 	case *ast.IfdefDir:
 		c := *n
-		c.VarName = expr.Copy(n.VarName.Pos(), n.VarName)
+		c.VarName = copyArg(n.VarName)
+		c.Comment = cloneComment(n.Comment)
 		return &c
 	case *ast.IfeqDir:
 		c := *n
-		c.Arg1 = expr.Copy(n.Arg1.Pos(), n.Arg1)
-		c.Arg2 = expr.Copy(n.Arg2.Pos(), n.Arg2)
+		c.Arg1 = copyArg(n.Arg1)
+		c.Arg2 = copyArg(n.Arg2)
+		c.Comment = cloneComment(n.Comment)
 		return &c
 	default:
 		panic(fmt.Sprintf("builder/obj: Copy: unsupported directive type %T", dir))

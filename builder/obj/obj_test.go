@@ -61,6 +61,28 @@ func ifBlock() *ast.IfBlock {
 	}
 }
 
+// ifBlockWithComments returns a conditional whose every line ends in a
+// comment.
+func ifBlockWithComments() *ast.IfBlock {
+	return &ast.IfBlock{
+		Directive: &ast.IfdefDir{
+			Tok:     token.IFDEF,
+			VarName: &ast.Text{Value: "test"},
+			Comment: &ast.Comment{Text: " one"},
+		},
+		Text: []ast.Obj{
+			&ast.Rule{Targets: []ast.Expr{&ast.Text{Value: "targetA"}}},
+		},
+		Else: []*ast.ElseBlock{{
+			Comment: &ast.Comment{Text: " two"},
+			Text: []ast.Obj{
+				&ast.Rule{Targets: []ast.Expr{&ast.Text{Value: "targetB"}}},
+			},
+		}},
+		EndifComment: &ast.Comment{Text: " three"},
+	}
+}
+
 // ruleWithConditional returns a rule whose recipe list holds a recipe line and
 // a conditional wrapping another.
 func ruleWithConditional() *ast.Rule {
@@ -117,6 +139,39 @@ var _ = Describe("Obj", func() {
 			Entry("an if block", "ifdef test\ntargetA:\nelse ifeq (a, b)\ntargetB:\nendif\n",
 				ifBlock(),
 			),
+			Entry("an if block whose lines end in comments",
+				"ifdef test # one\ntargetA:\nelse # two\ntargetB:\nendif # three\n",
+				ifBlockWithComments(),
+			),
+			// An argument is nil when it is empty, and a directive the parser
+			// recovered from has no name at all. Neither is text that was
+			// written, so neither is laid out as any.
+			Entry("an ifeq with two empty arguments", "ifeq (,)\nendif\n", &ast.IfBlock{
+				Directive: &ast.IfeqDir{
+					Tok:   token.IFEQ,
+					Open:  token.Pos(1),
+					Close: token.Pos(1),
+				},
+			}),
+			Entry("an ifeq with an empty second argument", "ifeq (a,)\nendif\n", &ast.IfBlock{
+				Directive: &ast.IfeqDir{
+					Tok:   token.IFEQ,
+					Open:  token.Pos(1),
+					Arg1:  &ast.Text{Value: "a"},
+					Close: token.Pos(1),
+				},
+			}),
+			Entry("an ifeq with an empty first argument", "ifeq (, b)\nendif\n", &ast.IfBlock{
+				Directive: &ast.IfeqDir{
+					Tok:   token.IFEQ,
+					Open:  token.Pos(1),
+					Arg2:  &ast.Text{Value: "b"},
+					Close: token.Pos(1),
+				},
+			}),
+			Entry("an ifdef with no variable name", "ifdef\nendif\n", &ast.IfBlock{
+				Directive: &ast.IfdefDir{Tok: token.IFDEF},
+			}),
 			Entry("a bad object", "include foo.mk\n", &ast.BadObj{Text: "include foo.mk"}),
 			Entry("a rule holding a conditional", "target:\n\tone\nifdef V\n\ttwo\nendif\n",
 				ruleWithConditional(),
@@ -185,6 +240,20 @@ var _ = Describe("Obj", func() {
 			Expect(actual.Else[0].Text[0]).NotTo(BeIdenticalTo(b.Else[0].Text[0]))
 			Expect(b.Endif).To(Equal(token.NoPos))
 		})
+
+		// A comment is reached through a pointer, so a copy that shares one
+		// with the original moves the original's comment when it is laid out.
+		It("should not alias the comments of an if block", func() {
+			b := ifBlockWithComments()
+
+			actual := obj.Copy(1, b).(*ast.IfBlock)
+
+			Expect(actual.EndifComment).NotTo(BeIdenticalTo(b.EndifComment))
+			Expect(actual.Else[0].Comment).NotTo(BeIdenticalTo(b.Else[0].Comment))
+			dir := actual.Directive.(*ast.IfdefDir)
+			Expect(dir.Comment).NotTo(BeIdenticalTo(b.Directive.(*ast.IfdefDir).Comment))
+			Expect(b.EndifComment.Pound).To(Equal(token.NoPos))
+		})
 	})
 
 	DescribeTable("End",
@@ -197,6 +266,10 @@ var _ = Describe("Obj", func() {
 		Entry("a comment group", commentGroup(" a comment"), token.Pos(13)),
 		Entry("a variable", variable("FOO", "bar"), token.Pos(12)),
 		Entry("an if block", ifBlock(), token.Pos(53)),
+		Entry("an if block whose lines end in comments", ifBlockWithComments(),
+			// len("ifdef test # one\ntargetA:\nelse # two\ntargetB:\nendif # three\n") + 1
+			token.Pos(61),
+		),
 		Entry("a bad object", &ast.BadObj{Text: "include foo.mk"},
 			token.Pos(16), // len("include foo.mk\n") + 1
 		),

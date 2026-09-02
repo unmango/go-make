@@ -714,6 +714,17 @@ var _ = Describe("Ast", func() {
 
 			Expect(d.End()).To(Equal(token.Pos(5)))
 		})
+
+		It("should return the position after the comment ending the line", func() {
+			d := &ast.IfeqDir{
+				Tok:     token.IFEQ,
+				TokPos:  token.Pos(1),
+				Close:   token.Pos(10),
+				Comment: &ast.Comment{Pound: token.Pos(12), Text: " text"},
+			}
+
+			Expect(d.End()).To(Equal(token.Pos(18)))
+		})
 	})
 
 	Describe("IfdefDir", func() {
@@ -738,6 +749,23 @@ var _ = Describe("Ast", func() {
 			}, nil)
 
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the directive token when the arg is absent", func() {
+			d := &ast.IfdefDir{Tok: token.IFDEF, TokPos: token.Pos(1)}
+
+			Expect(d.End()).To(Equal(token.Pos(6)))
+		})
+
+		It("should return the position after the comment ending the line", func() {
+			d := &ast.IfdefDir{
+				Tok:     token.IFDEF,
+				TokPos:  token.Pos(1),
+				VarName: &ast.Text{ValuePos: token.Pos(7), Value: "FOO"},
+				Comment: &ast.Comment{Pound: token.Pos(11), Text: " text"},
+			}
+
+			Expect(d.End()).To(Equal(token.Pos(17)))
 		})
 	})
 
@@ -771,6 +799,25 @@ var _ = Describe("Ast", func() {
 			}, nil)
 
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the comment ending a bare else", func() {
+			d := &ast.ElseBlock{
+				Else:    token.Pos(1),
+				Comment: &ast.Comment{Pound: token.Pos(6), Text: " text"},
+			}
+
+			Expect(d.End()).To(Equal(token.Pos(12)))
+		})
+
+		It("should return the position after the body rather than the comment", func() {
+			d := &ast.ElseBlock{
+				Else:    token.Pos(1),
+				Comment: &ast.Comment{Pound: token.Pos(6), Text: " text"},
+				Text:    []ast.Obj{&ast.BadObj{To: token.Pos(20)}},
+			}
+
+			Expect(d.End()).To(Equal(token.Pos(20)))
 		})
 
 		It("should return the position after the text", func() {
@@ -883,6 +930,15 @@ var _ = Describe("Ast", func() {
 			}, nil)
 
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should return the position after the comment ending the endif line", func() {
+			d := &ast.IfBlock{
+				Endif:        token.Pos(1),
+				EndifComment: &ast.Comment{Pound: token.Pos(7), Text: " text"},
+			}
+
+			Expect(d.End()).To(Equal(token.Pos(13)))
 		})
 	})
 })
