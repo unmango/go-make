@@ -1,0 +1,1124 @@
+package ast_test
+
+import (
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+
+	"github.com/unmango/go-make/ast"
+)
+
+type visitor struct {
+	nodes []ast.Node
+}
+
+// Visit implements ast.Visitor.
+func (v *visitor) Visit(node ast.Node) (w ast.Visitor) {
+	v.nodes = append(v.nodes, node)
+	return v
+}
+
+// strictVisitor fails the spec when Walk hands it a nil node.
+type strictVisitor struct {
+	nodes []ast.Node
+}
+
+// Visit implements ast.Visitor.
+func (v *strictVisitor) Visit(node ast.Node) (w ast.Visitor) {
+	GinkgoHelper()
+	Expect(node).NotTo(BeNil(), "Walk passed a nil node to the Visitor")
+	v.nodes = append(v.nodes, node)
+	return v
+}
+
+var _ = Describe("Walk", func() {
+	It("should walk nil", func() {
+		v := &visitor{}
+
+		ast.Walk(v, nil)
+
+		Expect(v.nodes).To(HaveExactElements(nil))
+	})
+
+	It("should walk a bad object", func() {
+		v := &visitor{}
+		bad := &ast.BadObj{Text: "include foo.mk"}
+
+		ast.Walk(v, bad)
+
+		Expect(v.nodes).To(HaveExactElements(bad))
+	})
+
+	It("should walk a file with a bad object", func() {
+		v := &visitor{}
+		bad := &ast.BadObj{Text: "include foo.mk"}
+		file := &ast.File{Contents: []ast.Obj{bad}}
+
+		ast.Walk(v, file)
+
+		Expect(v.nodes).To(HaveExactElements(file, bad))
+	})
+
+	It("should walk an empty file", func() {
+		v := &visitor{}
+		file := &ast.File{}
+
+		ast.Walk(v, file)
+
+		Expect(v.nodes).To(HaveExactElements(file))
+	})
+
+	It("should walk a file with an empty rule", func() {
+		v := &visitor{}
+		rule := &ast.Rule{}
+		file := &ast.File{Contents: []ast.Obj{rule}}
+
+		ast.Walk(v, file)
+
+		Expect(v.nodes).To(HaveExactElements(file, rule))
+	})
+
+	It("should walk an empty rule", func() {
+		v := &visitor{}
+		rule := &ast.Rule{}
+
+		ast.Walk(v, rule)
+
+		Expect(v.nodes).To(HaveExactElements(rule))
+	})
+
+	It("should walk a juxtaposed expression", func() {
+		v := &visitor{}
+		p1 := &ast.Text{}
+		p2 := &ast.VarRef{}
+		e := &ast.JuxtaposedExpr{Parts: []ast.Expr{p1, p2}}
+
+		ast.Walk(v, e)
+
+		Expect(v.nodes).To(HaveExactElements(e, p1, p2))
+	})
+
+	It("should walk an empty juxtaposed expression", func() {
+		v := &visitor{}
+		e := &ast.JuxtaposedExpr{}
+
+		ast.Walk(v, e)
+
+		Expect(v.nodes).To(HaveExactElements(e))
+	})
+
+	It("should walk a rule with a juxtaposed prereq", func() {
+		v := &visitor{}
+		p1 := &ast.Text{}
+		p2 := &ast.VarRef{}
+		e := &ast.JuxtaposedExpr{Parts: []ast.Expr{p1, p2}}
+		rule := &ast.Rule{PreReqs: []ast.Expr{e}}
+
+		ast.Walk(v, rule)
+
+		Expect(v.nodes).To(HaveExactElements(rule, e, p1, p2))
+	})
+
+	It("should walk a rule with targets", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		t2 := &ast.Text{}
+		rule := &ast.Rule{Targets: []ast.Expr{t1, t2}}
+
+		ast.Walk(v, rule)
+
+		Expect(v.nodes).To(HaveExactElements(rule, t1, t2))
+	})
+
+	It("should walk a rule with prereqs", func() {
+		v := &visitor{}
+		p1 := &ast.Text{}
+		p2 := &ast.Text{}
+		rule := &ast.Rule{PreReqs: []ast.Expr{p1, p2}}
+
+		ast.Walk(v, rule)
+
+		Expect(v.nodes).To(HaveExactElements(rule, p1, p2))
+	})
+
+	It("should walk a rule with targets and prereqs", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		t2 := &ast.Text{}
+		p1 := &ast.Text{}
+		p2 := &ast.Text{}
+		rule := &ast.Rule{
+			Targets: []ast.Expr{t1, t2},
+			PreReqs: []ast.Expr{p1, p2},
+		}
+
+		ast.Walk(v, rule)
+
+		Expect(v.nodes).To(HaveExactElements(rule, t1, t2, p1, p2))
+	})
+
+	It("should walk a rule with order-only prereqs", func() {
+		v := &visitor{}
+		p1 := &ast.Text{}
+		p2 := &ast.Text{}
+		rule := &ast.Rule{OrderPreReqs: []ast.Expr{p1, p2}}
+
+		ast.Walk(v, rule)
+
+		Expect(v.nodes).To(HaveExactElements(rule, p1, p2))
+	})
+
+	It("should walk a rule with prereqs and order-only prereqs", func() {
+		v := &visitor{}
+		p1 := &ast.Text{}
+		p2 := &ast.Text{}
+		p3 := &ast.Text{}
+		p4 := &ast.Text{}
+		rule := &ast.Rule{
+			PreReqs:      []ast.Expr{p3, p4},
+			OrderPreReqs: []ast.Expr{p1, p2},
+		}
+
+		ast.Walk(v, rule)
+
+		Expect(v.nodes).To(HaveExactElements(rule, p3, p4, p1, p2))
+	})
+
+	It("should walk a rule with targets and recipes", func() {
+		v := &visitor{}
+		t1 := ast.Text{}
+		t2 := &ast.Text{}
+		r1 := &ast.Recipe{Text: t1}
+		rule := &ast.Rule{
+			Targets: []ast.Expr{t2},
+			Recipes: []ast.RecipeObj{r1},
+		}
+
+		ast.Walk(v, rule)
+
+		Expect(v.nodes).To(HaveExactElements(rule, t2, r1, &t1))
+	})
+
+	It("should walk a conditional in a recipe list", func() {
+		v := &visitor{}
+		name := &ast.Text{Value: "VERBOSE"}
+		dir := &ast.IfdefDir{VarName: name}
+		recipe := &ast.Recipe{Text: ast.Text{Value: "echo building"}}
+		block := &ast.IfBlock{Directive: dir, Text: []ast.Obj{recipe}}
+		target := &ast.Text{Value: "target"}
+		rule := &ast.Rule{
+			Targets: []ast.Expr{target},
+			Recipes: []ast.RecipeObj{block},
+		}
+
+		ast.Walk(v, rule)
+
+		Expect(v.nodes).To(HaveExactElements(
+			rule, target, block, dir, name, recipe, &recipe.Text,
+		))
+	})
+
+	It("should walk a recipe", func() {
+		v := &visitor{}
+		t1 := ast.Text{}
+		r1 := &ast.Recipe{Text: t1}
+
+		ast.Walk(v, r1)
+
+		Expect(v.nodes).To(HaveExactElements(r1, &t1))
+	})
+
+	It("should walk text", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+
+		ast.Walk(v, t1)
+
+		Expect(v.nodes).To(HaveExactElements(t1))
+	})
+
+	It("should walk a variable reference", func() {
+		v := &visitor{}
+		v1 := &ast.VarRef{}
+
+		ast.Walk(v, v1)
+
+		Expect(v.nodes).To(HaveExactElements(v1))
+	})
+
+	It("should walk a function call", func() {
+		v := &visitor{}
+		name := &ast.Text{Value: "shell"}
+		part := &ast.Text{Value: "pwd"}
+		arg := &ast.FuncArg{Parts: []ast.Expr{part}}
+		call := &ast.FuncCall{Name: name, Args: []*ast.FuncArg{arg}}
+
+		ast.Walk(v, call)
+
+		Expect(v.nodes).To(HaveExactElements(call, name, arg, part))
+	})
+
+	It("should walk a nested function call", func() {
+		v := &strictVisitor{}
+		inner := &ast.FuncCall{Name: &ast.Text{Value: "wildcard"}}
+		outer := &ast.FuncCall{
+			Name: &ast.Text{Value: "dir"},
+			Args: []*ast.FuncArg{{Parts: []ast.Expr{inner}}},
+		}
+
+		ast.Walk(v, outer)
+
+		Expect(v.nodes).To(ContainElement(inner))
+	})
+
+	It("should walk a function call without a name", func() {
+		v := &strictVisitor{}
+		call := &ast.FuncCall{}
+
+		ast.Walk(v, call)
+
+		Expect(v.nodes).To(HaveExactElements(call))
+	})
+
+	It("should walk a comment group", func() {
+		v := &visitor{}
+		c := &ast.Comment{}
+		cg := &ast.CommentGroup{
+			List: []*ast.Comment{c},
+		}
+
+		ast.Walk(v, cg)
+
+		Expect(v.nodes).To(HaveExactElements(cg, c))
+	})
+
+	It("should walk a comment group", func() {
+		v := &visitor{}
+		c := &ast.Comment{}
+
+		ast.Walk(v, c)
+
+		Expect(v.nodes).To(HaveExactElements(c))
+	})
+
+	It("should walk a quoted expression", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		q := &ast.QuotedExpr{Value: t1}
+
+		ast.Walk(v, q)
+
+		Expect(v.nodes).To(HaveExactElements(q, t1))
+	})
+
+	It("should walk an empty variable", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		v1 := &ast.Variable{Name: t1}
+
+		ast.Walk(v, v1)
+
+		Expect(v.nodes).To(HaveExactElements(v1, t1))
+	})
+
+	It("should walk a variable", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		t2 := &ast.Text{}
+		t3 := &ast.Text{}
+		v1 := &ast.Variable{
+			Name:  t1,
+			Value: []ast.Expr{t2, t3},
+		}
+
+		ast.Walk(v, v1)
+
+		Expect(v.nodes).To(HaveExactElements(v1, t1, t2, t3))
+	})
+
+	It("should walk an ifeq directive", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		t2 := &ast.Text{}
+		d := &ast.IfeqDir{Arg1: t1, Arg2: t2}
+
+		ast.Walk(v, d)
+
+		Expect(v.nodes).To(HaveExactElements(d, t1, t2))
+	})
+
+	It("should walk an ifdef directive", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		d := &ast.IfdefDir{VarName: t1}
+
+		ast.Walk(v, d)
+
+		Expect(v.nodes).To(HaveExactElements(d, t1))
+	})
+
+	It("should walk an else block", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		v1 := &ast.Variable{}
+		d := &ast.IfdefDir{VarName: t1}
+		e := &ast.ElseBlock{Condition: d, Text: []ast.Obj{v1}}
+
+		ast.Walk(v, e)
+
+		Expect(v.nodes).To(HaveExactElements(e, d, t1, v1))
+	})
+
+	It("should walk an if block", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		t2 := &ast.Text{}
+		v1 := &ast.Variable{}
+		v2 := &ast.Variable{}
+		d1 := &ast.IfdefDir{VarName: t1}
+		d2 := &ast.IfdefDir{VarName: t2}
+		e := &ast.ElseBlock{Condition: d1, Text: []ast.Obj{v1}}
+		f := &ast.IfBlock{
+			Directive: d2,
+			Text:      []ast.Obj{v2},
+			Else:      []*ast.ElseBlock{e},
+		}
+
+		ast.Walk(v, f)
+
+		Expect(v.nodes).To(HaveExactElements(f, d2, t2, v2, e, d1, t1, v1))
+	})
+
+	It("should walk the comment ending an ifeq directive", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		t2 := &ast.Text{}
+		c := &ast.Comment{}
+		d := &ast.IfeqDir{Arg1: t1, Arg2: t2, Comment: c}
+
+		ast.Walk(v, d)
+
+		Expect(v.nodes).To(HaveExactElements(d, t1, t2, c))
+	})
+
+	It("should walk the comment ending an ifdef directive", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		c := &ast.Comment{}
+		d := &ast.IfdefDir{VarName: t1, Comment: c}
+
+		ast.Walk(v, d)
+
+		Expect(v.nodes).To(HaveExactElements(d, t1, c))
+	})
+
+	It("should walk the comment ending a bare else", func() {
+		v := &visitor{}
+		v1 := &ast.Variable{}
+		c := &ast.Comment{}
+		e := &ast.ElseBlock{Comment: c, Text: []ast.Obj{v1}}
+
+		ast.Walk(v, e)
+
+		Expect(v.nodes).To(HaveExactElements(e, c, v1))
+	})
+
+	It("should walk the comment ending an endif", func() {
+		v := &visitor{}
+		t1 := &ast.Text{}
+		v1 := &ast.Variable{}
+		c := &ast.Comment{}
+		d := &ast.IfdefDir{VarName: t1}
+		f := &ast.IfBlock{
+			Directive:    d,
+			Text:         []ast.Obj{v1},
+			EndifComment: c,
+		}
+
+		ast.Walk(v, f)
+
+		Expect(v.nodes).To(HaveExactElements(f, d, t1, v1, c))
+	})
+
+	It("should walk a define directive", func() {
+		v := &visitor{}
+		name := &ast.Text{}
+		first := &ast.Text{}
+		second := &ast.Text{}
+		d := &ast.DefineDir{
+			VarName: name,
+			Body:    []*ast.Text{first, second},
+		}
+
+		ast.Walk(v, d)
+
+		Expect(v.nodes).To(HaveExactElements(d, name, first, second))
+	})
+
+	It("should walk an undefine directive", func() {
+		v := &visitor{}
+		name := &ast.Text{}
+		d := &ast.UndefineDir{VarName: name}
+
+		ast.Walk(v, d)
+
+		Expect(v.nodes).To(HaveExactElements(d, name))
+	})
+
+	Describe("nil children", func() {
+		DescribeTable("should not pass a nil child to the visitor",
+			func(node ast.Node) {
+				v := &strictVisitor{}
+
+				ast.Walk(v, node)
+
+				Expect(v.nodes).To(HaveExactElements(node))
+			},
+			Entry("quoted expression without a value", &ast.QuotedExpr{}),
+			Entry("variable without a name", &ast.Variable{}),
+			Entry("ifeq directive without arguments", &ast.IfeqDir{}),
+			Entry("ifeq directive without a second argument",
+				&ast.IfeqDir{Arg1: nil, Arg2: nil},
+			),
+			Entry("ifdef directive without a variable name", &ast.IfdefDir{}),
+			Entry("else block without a condition", &ast.ElseBlock{}),
+			Entry("if block without a directive", &ast.IfBlock{}),
+			Entry("define directive without a variable name", &ast.DefineDir{}),
+			Entry("define directive without a body line",
+				&ast.DefineDir{Body: []*ast.Text{nil}},
+			),
+			Entry("undefine directive without a variable name", &ast.UndefineDir{}),
+		)
+
+		It("should skip nil entries in a list", func() {
+			v := &strictVisitor{}
+			rule := &ast.Rule{
+				Targets: []ast.Expr{nil},
+				Recipes: []ast.RecipeObj{nil},
+			}
+			file := &ast.File{Contents: []ast.Obj{nil, rule}}
+
+			ast.Walk(v, file)
+
+			Expect(v.nodes).To(HaveExactElements(file, rule))
+		})
+
+		It("should walk the non-nil argument of an ifeq directive", func() {
+			v := &strictVisitor{}
+			t1 := &ast.Text{}
+			d := &ast.IfeqDir{Arg2: t1}
+
+			ast.Walk(v, d)
+
+			Expect(v.nodes).To(HaveExactElements(d, t1))
+		})
+
+		It("should walk the text of an else block without a condition", func() {
+			v := &strictVisitor{}
+			v1 := &ast.Variable{Name: &ast.Text{}}
+			e := &ast.ElseBlock{Text: []ast.Obj{v1}}
+
+			ast.Walk(v, e)
+
+			Expect(v.nodes).To(HaveExactElements(e, v1, v1.Name))
+		})
+
+		It("should visit every child of a fully populated tree", func() {
+			v := &strictVisitor{}
+			name := &ast.Text{Value: "VAR"}
+			value := &ast.Text{Value: "value"}
+			variable := &ast.Variable{Name: name, Value: []ast.Expr{value}}
+			quoted := &ast.QuotedExpr{Value: &ast.Text{Value: "quoted"}}
+			arg1 := &ast.Text{Value: "a"}
+			ifeq := &ast.IfeqDir{Arg1: arg1, Arg2: quoted}
+			elseName := &ast.Text{Value: "ELSE"}
+			elseDir := &ast.IfdefDir{VarName: elseName}
+			elseObj := &ast.Variable{Name: &ast.Text{Value: "E"}}
+			elseBlock := &ast.ElseBlock{Condition: elseDir, Text: []ast.Obj{elseObj}}
+			ifBlock := &ast.IfBlock{
+				Directive: ifeq,
+				Text:      []ast.Obj{variable},
+				Else:      []*ast.ElseBlock{elseBlock},
+			}
+			target := &ast.Text{Value: "all"}
+			preReq := &ast.Text{Value: "dep"}
+			orderPreReq := &ast.Text{Value: "order"}
+			recipe := &ast.Recipe{Text: ast.Text{Value: "echo hi"}}
+			rule := &ast.Rule{
+				Targets:      []ast.Expr{target},
+				PreReqs:      []ast.Expr{preReq},
+				OrderPreReqs: []ast.Expr{orderPreReq},
+				Recipes:      []ast.RecipeObj{recipe},
+			}
+			comment := &ast.Comment{}
+			group := &ast.CommentGroup{List: []*ast.Comment{comment}}
+			bad := &ast.BadObj{Text: "include foo.mk"}
+			file := &ast.File{Contents: []ast.Obj{rule, ifBlock, bad}}
+
+			ast.Walk(v, file)
+			ast.Walk(v, group)
+
+			Expect(v.nodes).To(HaveExactElements(
+				file,
+				rule, target, preReq, orderPreReq, recipe, &recipe.Text,
+				ifBlock, ifeq, arg1, quoted, quoted.Value,
+				variable, name, value,
+				elseBlock, elseDir, elseName, elseObj, elseObj.Name,
+				bad,
+				group, comment,
+			))
+		})
+	})
+
+	Describe("Inspect", func() {
+		It("should inspect nil", func() {
+			var nodes []ast.Node
+
+			ast.Inspect(nil, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(nil))
+		})
+
+		It("should inspect an empty file", func() {
+			var nodes []ast.Node
+			file := &ast.File{}
+
+			ast.Inspect(file, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(file))
+		})
+
+		It("should inspect a file with an empty rule", func() {
+			var nodes []ast.Node
+			rule := &ast.Rule{}
+			file := &ast.File{Contents: []ast.Obj{rule}}
+
+			ast.Inspect(file, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(file, rule))
+		})
+
+		It("should inspect an empty rule", func() {
+			var nodes []ast.Node
+			rule := &ast.Rule{}
+
+			ast.Inspect(rule, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(rule))
+		})
+
+		It("should inspect a rule with targets", func() {
+			var nodes []ast.Node
+			t1 := &ast.Text{}
+			t2 := &ast.Text{}
+			rule := &ast.Rule{Targets: []ast.Expr{t1, t2}}
+
+			ast.Inspect(rule, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(rule, t1, t2))
+		})
+
+		It("should inspect a rule with prereqs", func() {
+			var nodes []ast.Node
+			p1 := &ast.Text{}
+			p2 := &ast.Text{}
+			rule := &ast.Rule{PreReqs: []ast.Expr{p1, p2}}
+
+			ast.Inspect(rule, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(rule, p1, p2))
+		})
+
+		It("should inspect a rule with targets and prereqs", func() {
+			var nodes []ast.Node
+			t1 := &ast.Text{}
+			t2 := &ast.Text{}
+			p1 := &ast.Text{}
+			p2 := &ast.Text{}
+			rule := &ast.Rule{
+				Targets: []ast.Expr{t1, t2},
+				PreReqs: []ast.Expr{p1, p2},
+			}
+
+			ast.Inspect(rule, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(rule, t1, t2, p1, p2))
+		})
+
+		It("should inspect a rule with order-only prereqs", func() {
+			var nodes []ast.Node
+			p1 := &ast.Text{}
+			p2 := &ast.Text{}
+			rule := &ast.Rule{OrderPreReqs: []ast.Expr{p1, p2}}
+
+			ast.Inspect(rule, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(rule, p1, p2))
+		})
+
+		It("should inspect a rule with prereqs and order-only prereqs", func() {
+			var nodes []ast.Node
+			p1 := &ast.Text{}
+			p2 := &ast.Text{}
+			p3 := &ast.Text{}
+			p4 := &ast.Text{}
+			rule := &ast.Rule{
+				PreReqs:      []ast.Expr{p3, p4},
+				OrderPreReqs: []ast.Expr{p1, p2},
+			}
+
+			ast.Inspect(rule, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(rule, p3, p4, p1, p2))
+		})
+
+		It("should inspect a rule with targets and recipes", func() {
+			var nodes []ast.Node
+			t1 := ast.Text{}
+			t2 := &ast.Text{}
+			r1 := &ast.Recipe{Text: t1}
+			rule := &ast.Rule{
+				Targets: []ast.Expr{t2},
+				Recipes: []ast.RecipeObj{r1},
+			}
+
+			ast.Inspect(rule, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(rule, t2, r1, &t1))
+		})
+
+		It("should inspect a recipe", func() {
+			var nodes []ast.Node
+			t1 := ast.Text{}
+			r1 := &ast.Recipe{Text: t1}
+
+			ast.Inspect(r1, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(r1, &t1))
+		})
+
+		It("should inspect text", func() {
+			var nodes []ast.Node
+			t1 := &ast.Text{}
+
+			ast.Inspect(t1, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(t1))
+		})
+
+		It("should inspect a variable reference", func() {
+			var nodes []ast.Node
+			v1 := &ast.VarRef{}
+
+			ast.Inspect(v1, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(v1))
+		})
+
+		It("should inspect a comment group", func() {
+			var nodes []ast.Node
+			c := &ast.Comment{}
+			cg := &ast.CommentGroup{
+				List: []*ast.Comment{c},
+			}
+
+			ast.Inspect(cg, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(cg, c))
+		})
+
+		It("should inspect a comment group", func() {
+			var nodes []ast.Node
+			c := &ast.Comment{}
+
+			ast.Inspect(c, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(c))
+		})
+
+		It("should inspect a quoted expression", func() {
+			var nodes []ast.Node
+			t1 := &ast.Text{}
+			q := &ast.QuotedExpr{Value: t1}
+
+			ast.Inspect(q, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(q, t1))
+		})
+
+		It("should inspect an empty variable", func() {
+			var nodes []ast.Node
+			t1 := &ast.Text{}
+			v1 := &ast.Variable{Name: t1}
+
+			ast.Inspect(v1, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(v1, t1))
+		})
+
+		It("should inspect a variable", func() {
+			var nodes []ast.Node
+			t1 := &ast.Text{}
+			t2 := &ast.Text{}
+			t3 := &ast.Text{}
+			v1 := &ast.Variable{
+				Name:  t1,
+				Value: []ast.Expr{t2, t3},
+			}
+
+			ast.Inspect(v1, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(v1, t1, t2, t3))
+		})
+
+		It("should inspect an ifeq directive", func() {
+			var nodes []ast.Node
+			t1 := &ast.Text{}
+			t2 := &ast.Text{}
+			d := &ast.IfeqDir{Arg1: t1, Arg2: t2}
+
+			ast.Inspect(d, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(d, t1, t2))
+		})
+
+		It("should inspect an ifdef directive", func() {
+			var nodes []ast.Node
+			t1 := &ast.Text{}
+			d := &ast.IfdefDir{VarName: t1}
+
+			ast.Inspect(d, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(d, t1))
+		})
+
+		It("should inspect an else block", func() {
+			var nodes []ast.Node
+			t1 := &ast.Text{}
+			v1 := &ast.Variable{}
+			d := &ast.IfdefDir{VarName: t1}
+			e := &ast.ElseBlock{Condition: d, Text: []ast.Obj{v1}}
+
+			ast.Inspect(e, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(e, d, t1, v1))
+		})
+
+		It("should inspect an if block", func() {
+			var nodes []ast.Node
+			t1 := &ast.Text{}
+			t2 := &ast.Text{}
+			v1 := &ast.Variable{}
+			v2 := &ast.Variable{}
+			d1 := &ast.IfdefDir{VarName: t1}
+			d2 := &ast.IfdefDir{VarName: t2}
+			e := &ast.ElseBlock{Condition: d1, Text: []ast.Obj{v1}}
+			f := &ast.IfBlock{
+				Directive: d2,
+				Text:      []ast.Obj{v2},
+				Else:      []*ast.ElseBlock{e},
+			}
+
+			ast.Inspect(f, func(n ast.Node) bool {
+				nodes = append(nodes, n)
+				return true
+			})
+
+			Expect(nodes).To(HaveExactElements(f, d2, t2, v2, e, d1, t1, v1))
+		})
+	})
+
+	Describe("Preorder", func() {
+		It("should order nil", func() {
+			nodes := ast.Preorder(nil)
+
+			Expect(nodes).To(BeEmpty())
+		})
+
+		It("should sequence an empty file", func() {
+			file := &ast.File{}
+
+			nodes := ast.Preorder(file)
+
+			Expect(nodes).To(HaveExactElements(file))
+		})
+
+		It("should sequence a file with an empty rule", func() {
+			rule := &ast.Rule{}
+			file := &ast.File{Contents: []ast.Obj{rule}}
+
+			nodes := ast.Preorder(file)
+
+			Expect(nodes).To(HaveExactElements(file, rule))
+		})
+
+		It("should sequence an empty rule", func() {
+			rule := &ast.Rule{}
+
+			nodes := ast.Preorder(rule)
+
+			Expect(nodes).To(HaveExactElements(rule))
+		})
+
+		It("should sequence a rule with targets", func() {
+			t1 := &ast.Text{}
+			t2 := &ast.Text{}
+			rule := &ast.Rule{Targets: []ast.Expr{t1, t2}}
+
+			nodes := ast.Preorder(rule)
+
+			Expect(nodes).To(HaveExactElements(rule, t1, t2))
+		})
+
+		It("should sequence a rule with prereqs", func() {
+			p1 := &ast.Text{}
+			p2 := &ast.Text{}
+			rule := &ast.Rule{PreReqs: []ast.Expr{p1, p2}}
+
+			nodes := ast.Preorder(rule)
+
+			Expect(nodes).To(HaveExactElements(rule, p1, p2))
+		})
+
+		It("should sequence a rule with targets and prereqs", func() {
+			t1 := &ast.Text{}
+			t2 := &ast.Text{}
+			p1 := &ast.Text{}
+			p2 := &ast.Text{}
+			rule := &ast.Rule{
+				Targets: []ast.Expr{t1, t2},
+				PreReqs: []ast.Expr{p1, p2},
+			}
+
+			nodes := ast.Preorder(rule)
+
+			Expect(nodes).To(HaveExactElements(rule, t1, t2, p1, p2))
+		})
+
+		It("should sequence a rule with order-only prereqs", func() {
+			p1 := &ast.Text{}
+			p2 := &ast.Text{}
+			rule := &ast.Rule{OrderPreReqs: []ast.Expr{p1, p2}}
+
+			nodes := ast.Preorder(rule)
+
+			Expect(nodes).To(HaveExactElements(rule, p1, p2))
+		})
+
+		It("should sequence a rule with prereqs and order-only prereqs", func() {
+			p1 := &ast.Text{}
+			p2 := &ast.Text{}
+			p3 := &ast.Text{}
+			p4 := &ast.Text{}
+			rule := &ast.Rule{
+				PreReqs:      []ast.Expr{p3, p4},
+				OrderPreReqs: []ast.Expr{p1, p2},
+			}
+
+			nodes := ast.Preorder(rule)
+
+			Expect(nodes).To(HaveExactElements(rule, p3, p4, p1, p2))
+		})
+
+		It("should sequence a rule with targets and recipes", func() {
+			t1 := ast.Text{}
+			t2 := &ast.Text{}
+			r1 := &ast.Recipe{Text: t1}
+			rule := &ast.Rule{
+				Targets: []ast.Expr{t2},
+				Recipes: []ast.RecipeObj{r1},
+			}
+
+			nodes := ast.Preorder(rule)
+
+			Expect(nodes).To(HaveExactElements(rule, t2, r1, &t1))
+		})
+
+		It("should sequence a recipe", func() {
+			t1 := ast.Text{}
+			recipe := &ast.Recipe{Text: t1}
+
+			nodes := ast.Preorder(recipe)
+
+			Expect(nodes).To(HaveExactElements(recipe, &t1))
+		})
+
+		It("should sequence text", func() {
+			text := &ast.Text{}
+
+			nodes := ast.Preorder(text)
+
+			Expect(nodes).To(HaveExactElements(text))
+		})
+
+		It("should sequence a variable reference", func() {
+			varref := &ast.VarRef{}
+
+			nodes := ast.Preorder(varref)
+
+			Expect(nodes).To(HaveExactElements(varref))
+		})
+
+		It("should sequence a comment group", func() {
+			c := &ast.Comment{}
+			cg := &ast.CommentGroup{
+				List: []*ast.Comment{c},
+			}
+
+			nodes := ast.Preorder(cg)
+
+			Expect(nodes).To(HaveExactElements(cg, c))
+		})
+
+		It("should sequence a comment group", func() {
+			c := &ast.Comment{}
+
+			nodes := ast.Preorder(c)
+
+			Expect(nodes).To(HaveExactElements(c))
+		})
+
+		It("should sequence a quoted expression", func() {
+			t1 := &ast.Text{}
+			expr := &ast.QuotedExpr{Value: t1}
+
+			nodes := ast.Preorder(expr)
+
+			Expect(nodes).To(HaveExactElements(expr, t1))
+		})
+
+		It("should sequence an empty variable", func() {
+			t1 := &ast.Text{}
+			variable := &ast.Variable{Name: t1}
+
+			nodes := ast.Preorder(variable)
+
+			Expect(nodes).To(HaveExactElements(variable, t1))
+		})
+
+		It("should sequence a variable", func() {
+			t1 := &ast.Text{}
+			t2 := &ast.Text{}
+			t3 := &ast.Text{}
+			variable := &ast.Variable{
+				Name:  t1,
+				Value: []ast.Expr{t2, t3},
+			}
+
+			nodes := ast.Preorder(variable)
+
+			Expect(nodes).To(HaveExactElements(variable, t1, t2, t3))
+		})
+
+		It("should sequence an ifeq directive", func() {
+			t1 := &ast.Text{}
+			t2 := &ast.Text{}
+			directive := &ast.IfeqDir{Arg1: t1, Arg2: t2}
+
+			nodes := ast.Preorder(directive)
+
+			Expect(nodes).To(HaveExactElements(directive, t1, t2))
+		})
+
+		It("should sequence an ifdef directive", func() {
+			t1 := &ast.Text{}
+			directive := &ast.IfdefDir{VarName: t1}
+
+			nodes := ast.Preorder(directive)
+
+			Expect(nodes).To(HaveExactElements(directive, t1))
+		})
+
+		It("should sequence an else block", func() {
+			t1 := &ast.Text{}
+			v1 := &ast.Variable{}
+			d := &ast.IfdefDir{VarName: t1}
+			block := &ast.ElseBlock{Condition: d, Text: []ast.Obj{v1}}
+
+			nodes := ast.Preorder(block)
+
+			Expect(nodes).To(HaveExactElements(block, d, t1, v1))
+		})
+
+		It("should sequence an if block", func() {
+			t1 := &ast.Text{}
+			t2 := &ast.Text{}
+			v1 := &ast.Variable{}
+			v2 := &ast.Variable{}
+			d1 := &ast.IfdefDir{VarName: t1}
+			d2 := &ast.IfdefDir{VarName: t2}
+			e := &ast.ElseBlock{Condition: d1, Text: []ast.Obj{v1}}
+			block := &ast.IfBlock{
+				Directive: d2,
+				Text:      []ast.Obj{v2},
+				Else:      []*ast.ElseBlock{e},
+			}
+
+			nodes := ast.Preorder(block)
+
+			Expect(nodes).To(HaveExactElements(block, d2, t2, v2, e, d1, t1, v1))
+		})
+	})
+})

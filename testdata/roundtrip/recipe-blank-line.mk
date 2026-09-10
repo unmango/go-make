@@ -1,0 +1,4 @@
+target:
+	first
+
+	second

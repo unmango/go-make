@@ -1,0 +1,3 @@
+ifeq (,)
+target:
+endif

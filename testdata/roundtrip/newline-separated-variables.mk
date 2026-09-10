@@ -1,0 +1,3 @@
+FOO := test
+
+BAR := test

@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    # For code coverage reports
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Build and Test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Codecov uploads with use_oidc: true
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - run: make build
+      - run: make test
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v7
+        with:
+          use_oidc: true
+          files: cover.profile
+
+  nix:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31.11.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+      - run: nix flake check --all-systems
+      - run: nix build

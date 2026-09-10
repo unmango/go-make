@@ -1,0 +1,6 @@
+.make/
+bin/
+*.test
+.envrc
+cover.profile
+result
