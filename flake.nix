@@ -3,7 +3,7 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
-    systems.url = "github:nix-systems/default";
+    systems.url = "github:UnstoppableMango/nix-systems";
     flake-parts.url = "github:hercules-ci/flake-parts";
 
     gomod2nix = {
@@ -22,7 +22,10 @@
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = import inputs.systems;
 
-      imports = [ inputs.treefmt-nix.flakeModule ];
+      imports = [
+        inputs.systems.flakeModule
+        inputs.treefmt-nix.flakeModule
+      ];
 
       perSystem =
         {
