@@ -6,6 +6,7 @@
 ![Codecov](https://img.shields.io/codecov/c/github/unmango/go-make)
 ![GitHub Release](https://img.shields.io/github/v/release/unmango/go-make)
 ![GitHub Release Date](https://img.shields.io/github/release-date/unmango/go-make)
+[![Hercules CI](https://hercules-ci.com/api/v1/site/github/account/unmango/project/go-make/badge)](https://hercules-ci.com/github/unmango/go-make)
 
 Makefile parsing and utilities in Go
 
