@@ -114,11 +114,11 @@
     },
     "systems_2": {
       "locked": {
-        "lastModified": 1789010989,
-        "narHash": "sha256-irfHSRNJFce/bqbVtioyeZHhYeCPNitpdTL2ljyHVSk=",
+        "lastModified": 1792385634,
+        "narHash": "sha256-4AMTfwJjLy0Yty7owWLea0Ox0SxXmcgFPdzyJU4/HPI=",
         "owner": "UnstoppableMango",
         "repo": "nix-systems",
-        "rev": "65a92fc9e5f34414623b90dd0f795d9c2ddf4c40",
+        "rev": "c38327a70768643a7b4c943638e3c48dd35a6cc1",
         "type": "github"
       },
       "original": {
