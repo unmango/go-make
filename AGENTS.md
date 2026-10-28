@@ -34,3 +34,17 @@ This is the canonical repository guide for coding agents in this repo.
 - Tests are written with Ginkgo/Gomega. Follow the existing suite structure and use `Describe`, `It`, `Entry`, and `DescribeTable` patterns rather than switching styles within a package.
 - Output behavior usually lives in `printer/`, not `writer/`; `writer/` mainly forwards to the printer package.
 - Keep the root `make` package small and facade-like. Most implementation belongs in the underlying packages, with the root package re-exporting stable entry points.
+
+## Agent skills
+
+### Issue tracker
+
+Issues are tracked in this repo's GitHub Issues, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Uses the five default triage labels (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
